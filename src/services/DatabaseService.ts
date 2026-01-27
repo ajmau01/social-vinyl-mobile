@@ -6,6 +6,10 @@ export interface Release {
     artist: string;
     thumb_url: string | null;
     added_at: number;
+    year?: string;
+    genres?: string;
+    label?: string;
+    format?: string;
 }
 
 class DatabaseService {
@@ -28,18 +32,29 @@ class DatabaseService {
             console.log('[DB] Initializing SQLite...');
             this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
 
+            // WARN: Destructive schema update for Phase 2.5
+            // Dropping table to ensure clean schema with new columns.
+            await this.db.execAsync('DROP TABLE IF EXISTS releases');
+            console.warn('[DB] Schema upgrade: Dropped releases table (Data Loss Expected for Dev)');
+
             await this.db.execAsync(`
                 CREATE TABLE IF NOT EXISTS releases (
                     id INTEGER PRIMARY KEY NOT NULL,
                     title TEXT NOT NULL,
                     artist TEXT NOT NULL,
                     thumb_url TEXT,
-                    added_at INTEGER NOT NULL
+                    added_at INTEGER NOT NULL,
+                    year TEXT,
+                    genres TEXT,
+                    label TEXT,
+                    format TEXT
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
                 CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
                 CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
+                CREATE INDEX IF NOT EXISTS idx_releases_year ON releases(year);
+                CREATE INDEX IF NOT EXISTS idx_releases_genres ON releases(genres);
             `);
             console.log('[DB] Initialized successfully');
         } catch (error) {
@@ -53,12 +68,16 @@ class DatabaseService {
 
         try {
             await this.db!.runAsync(
-                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at) VALUES (?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
                 release.title,
                 release.artist,
                 release.thumb_url,
-                release.added_at
+                release.added_at,
+                release.year || null,
+                release.genres || null,
+                release.label || null,
+                release.format || null
             );
         } catch (error) {
             console.error('[DB] Failed to save release', error);
@@ -73,12 +92,16 @@ class DatabaseService {
             await this.db!.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await this.db!.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at) VALUES (?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
                         release.title,
                         release.artist,
                         release.thumb_url,
-                        release.added_at
+                        release.added_at,
+                        release.year || null,
+                        release.genres || null,
+                        release.label || null,
+                        release.format || null
                     );
                 }
             });
