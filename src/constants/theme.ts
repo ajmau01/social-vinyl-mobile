@@ -42,9 +42,15 @@ export const BLUR = {
   lg: 50,
 };
 
+export const LAYOUT = {
+  tabBarHeight: 60,
+  bannerHeight: 64, // Height of the Now Playing banner
+};
+
 export const THEME = {
   colors: COLORS,
   spacing: SPACING,
   radius: RADIUS,
   blur: BLUR,
+  layout: LAYOUT,
 };

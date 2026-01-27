@@ -20,7 +20,7 @@ export default function RootLayout() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
       </Stack>
 
       {/* Persistent Banner Overlay */}

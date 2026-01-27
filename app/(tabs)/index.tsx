@@ -1,10 +1,11 @@
-import { StyleSheet, Text, View, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { StatusBar } from 'expo-status-bar';
 
 export default function Index() {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
       <View style={styles.content}>
         <Text style={styles.title}>Social Vinyl</Text>
