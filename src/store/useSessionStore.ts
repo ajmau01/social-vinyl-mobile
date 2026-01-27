@@ -23,8 +23,10 @@ interface SessionState {
 
     // Sync State
     syncStatus: 'idle' | 'syncing' | 'error' | 'success';
+    syncProgress: number | null;
     lastSyncTime: number | null;
     setSyncStatus: (status: 'idle' | 'syncing' | 'error' | 'success') => void;
+    setSyncProgress: (progress: number | null) => void;
     setLastSyncTime: (time: number) => void;
 }
 
@@ -40,7 +42,9 @@ export const useSessionStore = create<SessionState>((set) => ({
     setNowPlaying: (track) => set({ nowPlaying: track }),
 
     syncStatus: 'idle',
+    syncProgress: null,
     lastSyncTime: null,
     setSyncStatus: (status) => set({ syncStatus: status }),
+    setSyncProgress: (progress) => set({ syncProgress: progress }),
     setLastSyncTime: (time) => set({ lastSyncTime: time }),
 }));

@@ -8,6 +8,7 @@ interface CollectionResponse {
         title: string;
         artist: string;
         thumb_url: string;
+        thumb?: string; // Some endpoints use 'thumb' instead
         // API might return other fields, mapped to added_at later or if API provides it
         // Assuming API returns 'added_at' or we use current time for now if missing
         added_at?: number;
@@ -27,12 +28,13 @@ class CollectionSyncService {
         if (this.isSyncing) return;
         this.isSyncing = true;
         useSessionStore.getState().setSyncStatus('syncing');
+        useSessionStore.getState().setSyncProgress(0);
 
         try {
             let page = 1;
             let totalPages = 1;
 
-            // TODO: In future, get lastSyncTime to optimized fetch
+            // TODO: In future, get lastSyncTime to optimize fetch
             // For now, full sync or simple pagination loop
 
             console.log('[Sync] Starting sync for user:', userId);
@@ -47,14 +49,20 @@ class CollectionSyncService {
             // Fetch remaining pages
             while (page < totalPages) {
                 page++;
+                // Update progress
+                const progress = Math.round(((page - 1) / totalPages) * 100);
+                useSessionStore.getState().setSyncProgress(progress);
+
                 const nextPage = await this.fetchPage(userId, page);
-                if (nextPage) {
-                    await this.savePage(nextPage.items);
+                if (!nextPage) {
+                    throw new Error(`Failed to fetch page ${page}`);
                 }
+                await this.savePage(nextPage.items);
             }
 
             console.log('[Sync] Complete');
-            useSessionStore.getState().setSyncStatus('idle'); // Or 'success' if we want detailed state
+            useSessionStore.getState().setSyncStatus('success');
+            useSessionStore.getState().setSyncProgress(100);
             useSessionStore.getState().setLastSyncTime(Date.now());
 
         } catch (error) {
@@ -67,7 +75,7 @@ class CollectionSyncService {
 
     private async fetchPage(userId: string, page: number): Promise<CollectionResponse | null> {
         try {
-            // NOTE: Adjust API endpoint endpoint schema as per actual backend implementation
+            // NOTE: Adjust API endpoint schema as per actual backend implementation
             const url = `${CONFIG.API_URL}/api/v1/users/${userId}/collection?page=${page}&per_page=50`;
             const response = await fetch(url);
             if (!response.ok) {
@@ -80,7 +88,7 @@ class CollectionSyncService {
         }
     }
 
-    private async savePage(items: any[]) {
+    private async savePage(items: CollectionResponse['items']) {
         const releases: Release[] = items.map(item => ({
             id: item.id,
             title: item.title,

@@ -51,7 +51,8 @@ describe('CollectionSyncService', () => {
 
         // Verify store updates
         const state = useSessionStore.getState();
-        expect(state.syncStatus).toBe('idle'); // or whatever 'success' state you settled on
+        expect(state.syncStatus).toBe('success');
+        expect(state.syncProgress).toBe(100);
         expect(state.lastSyncTime).not.toBeNull();
     });
 
@@ -66,5 +67,24 @@ describe('CollectionSyncService', () => {
         const state = useSessionStore.getState();
         expect(state.syncStatus).toBe('error');
         expect(dbService.saveReleasesBatch).not.toHaveBeenCalled();
+    });
+
+    it('should prevent concurrent syncs', async () => {
+        // Mock a slow fetch
+        (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
+            ok: true,
+            json: async () => ({
+                items: [],
+                meta: { total: 0, page: 1, per_page: 50, total_pages: 1 }
+            })
+        }), 100)));
+
+        const sync1 = syncService.syncCollection(mockUserId);
+        const sync2 = syncService.syncCollection(mockUserId);
+
+        await Promise.all([sync1, sync2]);
+
+        // Should only be called once
+        expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 });
