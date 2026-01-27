@@ -2,23 +2,19 @@ import { useSessionStore } from '../store/useSessionStore';
 import { dbService, Release } from './DatabaseService';
 import { CONFIG } from '../config';
 
-interface CollectionResponse {
-    items: {
-        id: number;
-        title: string;
-        artist: string;
-        thumb_url: string;
-        thumb?: string; // Some endpoints use 'thumb' instead
-        // API might return other fields, mapped to added_at later or if API provides it
-        // Assuming API returns 'added_at' or we use current time for now if missing
-        added_at?: number;
-    }[];
-    meta: {
-        total: number;
-        page: number;
-        per_page: number;
-        total_pages: number;
-    };
+interface BackendAlbum {
+    releaseId: number;
+    title: string;
+    artist: string;
+    coverImage: string;
+    year?: string;
+    // ... other fields provided by backend
+}
+
+interface ScanResponse {
+    albums: BackendAlbum[];
+    count: number;
+    username: string;
 }
 
 class CollectionSyncService {
@@ -28,39 +24,25 @@ class CollectionSyncService {
         if (this.isSyncing) return;
         this.isSyncing = true;
         useSessionStore.getState().setSyncStatus('syncing');
-        useSessionStore.getState().setSyncProgress(0);
+        useSessionStore.getState().setSyncProgress(10); // Started
 
         try {
-            let page = 1;
-            let totalPages = 1;
-
-            // TODO: In future, get lastSyncTime to optimize fetch
-            // For now, full sync or simple pagination loop
-
             console.log('[Sync] Starting sync for user:', userId);
 
-            // Fetch first page to get metadata
-            const firstPage = await this.fetchPage(userId, page);
-            if (!firstPage) throw new Error('Failed to fetch first page');
+            // Fetch cached data (Read-Only)
+            const data = await this.fetchScan(userId);
 
-            totalPages = firstPage.meta.total_pages;
-            await this.savePage(firstPage.items);
-
-            // Fetch remaining pages
-            while (page < totalPages) {
-                page++;
-                // Update progress
-                const progress = Math.round(((page - 1) / totalPages) * 100);
-                useSessionStore.getState().setSyncProgress(progress);
-
-                const nextPage = await this.fetchPage(userId, page);
-                if (!nextPage) {
-                    throw new Error(`Failed to fetch page ${page}`);
-                }
-                await this.savePage(nextPage.items);
+            if (!data || !data.albums) {
+                // If fetchScan threw (e.g. Not Scanned), it might be caught there.
+                // If it returned null, we throw generic.
+                throw new Error('Failed to fetch collection');
             }
 
-            console.log('[Sync] Complete');
+            useSessionStore.getState().setSyncProgress(50); // Downloaded
+
+            await this.saveReleases(data.albums);
+
+            console.log('[Sync] Complete. Items:', data.albums.length);
             useSessionStore.getState().setSyncStatus('success');
             useSessionStore.getState().setSyncProgress(100);
             useSessionStore.getState().setLastSyncTime(Date.now());
@@ -73,28 +55,70 @@ class CollectionSyncService {
         }
     }
 
-    private async fetchPage(userId: string, page: number): Promise<CollectionResponse | null> {
+    private async fetchScan(userId: string): Promise<ScanResponse | null> {
         try {
-            // NOTE: Adjust API endpoint schema as per actual backend implementation
-            const url = `${CONFIG.API_URL}/api/v1/users/${userId}/collection?page=${page}&per_page=50`;
+            // Use format=json to get cached collection (Read-Only)
+            // mode=scan is restricted to the host machine (403 Forbidden)
+            const url = `${CONFIG.API_URL}/collection?format=json&username=${userId}`;
+            console.log('[Sync] Fetching:', url);
+
             const response = await fetch(url);
+
+            // Check for "Scan Required" HTML response (which returns 200 OK)
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                throw new Error('Collection not scanned. Please visit the Web Dashboard to scan your collection first.');
+            }
+
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status}`);
             }
-            return await response.json();
+
+            const rawData = await response.json();
+
+            // The backend returns albums grouped by Genre: { "Rock": [...], "Jazz": [...] }
+            // We need to flatten this into a single list AND deduplicate
+            // Albums with multiple genres appear in multiple categories
+            if (rawData && rawData.albums && !Array.isArray(rawData.albums)) {
+                const allAlbums = Object.values(rawData.albums).flat() as BackendAlbum[];
+
+                // Deduplicate by releaseId
+                const uniqueAlbumsMap = new Map<number, BackendAlbum>();
+                for (const album of allAlbums) {
+                    if (!uniqueAlbumsMap.has(album.releaseId)) {
+                        uniqueAlbumsMap.set(album.releaseId, album);
+                    }
+                }
+
+                const flatAlbums = Array.from(uniqueAlbumsMap.values());
+
+                return {
+                    albums: flatAlbums,
+                    count: flatAlbums.length, // Update count to match unique items
+                    username: rawData.username || userId
+                };
+            }
+
+            return rawData;
         } catch (error) {
-            console.error(`[Sync] Failed to fetch page ${page}`, error);
+            console.error(`[Sync] Failed to fetch collection`, error);
+            // Re-throw if it's our specific "Not Scanned" error so the UI can show it
+            if (error instanceof Error && error.message.includes('not scanned')) {
+                throw error;
+            }
             return null;
         }
     }
 
-    private async savePage(items: CollectionResponse['items']) {
-        const releases: Release[] = items.map(item => ({
-            id: item.id,
+    private async saveReleases(items: BackendAlbum[]) {
+        const releases: Release[] = items.map((item, index) => ({
+            id: item.releaseId,
             title: item.title,
             artist: item.artist,
-            thumb_url: item.thumb_url || item.thumb || null,
-            added_at: item.added_at ? new Date(item.added_at).getTime() : Date.now() // Fallback
+            thumb_url: item.coverImage || null,
+            // Preserve relative order by offsetting timestamp
+            // Newer items (index 0) get higher timestamp
+            added_at: Date.now() - index
         }));
 
         await dbService.saveReleasesBatch(releases);

@@ -12,9 +12,13 @@ export const NowPlayingBanner = () => {
     // Design Decision: We show "Connecting..." even if track is null to give feedback.
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
+    // Dynamic bottom position to sit above the tab bar (which includes safe area)
+    const bottomPadding = Math.max(insets.bottom, 10);
+    const tabBarHeight = THEME.layout.tabBarHeight + bottomPadding;
+
     return (
-        <View style={styles.wrapper}>
-            <BlurView intensity={80} tint="dark" style={[styles.container, { paddingBottom: insets.bottom + THEME.spacing.xs }]}>
+        <View style={[styles.wrapper, { bottom: tabBarHeight }]}>
+            <BlurView intensity={80} tint="dark" style={[styles.container, { paddingBottom: THEME.spacing.sm }]}>
                 <View style={styles.content}>
                     {/* Album Art Placeholder or Image */}
                     <View style={styles.artwork}>
@@ -54,7 +58,7 @@ export const NowPlayingBanner = () => {
 const styles = StyleSheet.create({
     wrapper: {
         position: 'absolute',
-        bottom: 0,
+        // bottom set dynamically
         left: 0,
         right: 0,
         overflow: 'hidden',

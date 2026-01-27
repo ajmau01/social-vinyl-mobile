@@ -22,32 +22,38 @@ describe('CollectionSyncService', () => {
     });
 
     it('should sync full collection successfully', async () => {
-        // Mock Page 1
+        // Mock Backend Response (Genre-Grouped)
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,
+            headers: { get: () => 'application/json' },
             json: async () => ({
-                items: [{ id: 1, title: 'Album 1', artist: 'Artist 1', thumb_url: 'url1', added_at: '2023-01-01' }],
-                meta: { total: 2, page: 1, per_page: 1, total_pages: 2 }
-            }),
-        });
-
-        // Mock Page 2
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
-                items: [{ id: 2, title: 'Album 2', artist: 'Artist 2', thumb_url: 'url2', added_at: '2023-01-02' }],
-                meta: { total: 2, page: 2, per_page: 1, total_pages: 2 }
+                albums: {
+                    "Rock": [
+                        { releaseId: 101, title: 'Album A', artist: 'Band A', coverImage: 'url1' },
+                        { releaseId: 102, title: 'Album B', artist: 'Band B', coverImage: 'url2' }
+                    ],
+                    "Jazz": [
+                        { releaseId: 103, title: 'Album C', artist: 'Band C', coverImage: 'url3' }
+                    ]
+                },
+                totalCount: 3,
+                username: mockUserId
             }),
         });
 
         await syncService.syncCollection(mockUserId);
 
-        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledWith(
+            `${CONFIG.API_URL}/collection?format=json&username=${mockUserId}`
+        );
 
-        // Use regex for URL matching since exact URL depends on constant
-        expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`/api/v1/users/${mockUserId}/collection`));
-
-        expect(dbService.saveReleasesBatch).toHaveBeenCalledTimes(2);
+        // Should flatten and save all 3 items
+        expect(dbService.saveReleasesBatch).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ id: 101, title: 'Album A' }),
+            expect.objectContaining({ id: 102, title: 'Album B' }),
+            expect.objectContaining({ id: 103, title: 'Album C' })
+        ]));
 
         // Verify store updates
         const state = useSessionStore.getState();
@@ -56,9 +62,48 @@ describe('CollectionSyncService', () => {
         expect(state.lastSyncTime).not.toBeNull();
     });
 
-    it('should handle API error gracefully', async () => {
+    it('should deduplicate albums appearing in multiple genres', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({
+                albums: {
+                    "Rock": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url' }],
+                    "Pop": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url' }]
+                },
+                totalCount: 1, // Logic should derive real count from deduped list
+                username: mockUserId
+            }),
+        });
+
+        await syncService.syncCollection(mockUserId);
+
+        // Should save only 1 item
+        const saveCall = (dbService.saveReleasesBatch as jest.Mock).mock.calls[0][0];
+        expect(saveCall).toHaveLength(1);
+        expect(saveCall[0].id).toBe(500);
+    });
+
+    it('should detect "Scan Required" HTML response', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            headers: { get: () => 'text/html; charset=utf-8' },
+            // Body doesn't matter, header check comes first
+            json: async () => ({})
+        });
+
+        await syncService.syncCollection(mockUserId);
+
+        const state = useSessionStore.getState();
+        // Since we swallow the error in syncCollection but log it, status should be 'error'
+        expect(state.syncStatus).toBe('error');
+        expect(dbService.saveReleasesBatch).not.toHaveBeenCalled();
+    });
+
+    it('should handle API 500 error', async () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: false,
+            headers: { get: () => 'application/json' },
             status: 500
         });
 
@@ -73,10 +118,8 @@ describe('CollectionSyncService', () => {
         // Mock a slow fetch
         (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
             ok: true,
-            json: async () => ({
-                items: [],
-                meta: { total: 0, page: 1, per_page: 50, total_pages: 1 }
-            })
+            headers: { get: () => 'application/json' },
+            json: async () => ({ albums: {} })
         }), 100)));
 
         const sync1 = syncService.syncCollection(mockUserId);
