@@ -111,12 +111,14 @@ class CollectionSyncService {
     }
 
     private async saveReleases(items: BackendAlbum[]) {
-        const releases: Release[] = items.map(item => ({
+        const releases: Release[] = items.map((item, index) => ({
             id: item.releaseId,
             title: item.title,
             artist: item.artist,
             thumb_url: item.coverImage || null,
-            added_at: Date.now() // API doesn't return added_at, use current time
+            // Preserve relative order by offsetting timestamp
+            // Newer items (index 0) get higher timestamp
+            added_at: Date.now() - index
         }));
 
         await dbService.saveReleasesBatch(releases);

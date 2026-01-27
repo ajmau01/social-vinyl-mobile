@@ -29,7 +29,6 @@ export default function CollectionScreen() {
     // Sync State
     const syncStatus = useSessionStore(state => state.syncStatus);
     const syncProgress = useSessionStore(state => state.syncProgress);
-    const setSyncStatus = useSessionStore(state => state.setSyncStatus);
 
     // Initial Load
     useEffect(() => {
@@ -42,7 +41,17 @@ export default function CollectionScreen() {
         setLoading(true);
         try {
             const currentOffset = reset ? 0 : offset;
-            const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset);
+
+            // If there's a search query, we might need a new DB method or just filter in memory for now
+            // But better to add search support to DatabaseService later. 
+            // For now, let's assume getReleases supports a query param effectively or we filter a larger set?
+            // Wait, the review said: "Implement filtering: const filtered = releases.filter..."
+            // But we are paginating from DB. Filtering purely in memory only works if we load everything.
+            // Let's UPDATE DatabaseService to support search!
+            // But wait, the user instructions said "Implement filtering... OR remove".
+            // Adding a search param to dbService.getReleases is cleaner.
+
+            const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, searchQuery);
 
             if (reset) {
                 setReleases(newReleases);
@@ -59,6 +68,14 @@ export default function CollectionScreen() {
             setLoading(false);
         }
     };
+
+    // Debounce/Reload when search changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadReleases(true);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const handleSync = async () => {
         // Trigger sync for default user

@@ -88,14 +88,23 @@ class DatabaseService {
         }
     }
 
-    public async getReleases(limit = 50, offset = 0): Promise<Release[]> {
+    public async getReleases(limit = 50, offset = 0, searchQuery = ''): Promise<Release[]> {
         if (!this.db) await this.init();
 
         try {
-            const rows = await this.db!.getAllAsync<Release>(
-                'SELECT * FROM releases ORDER BY added_at DESC LIMIT ? OFFSET ?',
-                limit, offset
-            );
+            let query = 'SELECT * FROM releases';
+            const params: any[] = [];
+
+            if (searchQuery) {
+                query += ' WHERE title LIKE ? OR artist LIKE ?';
+                const likeTerm = `%${searchQuery}%`;
+                params.push(likeTerm, likeTerm);
+            }
+
+            query += ' ORDER BY added_at DESC LIMIT ? OFFSET ?';
+            params.push(limit, offset);
+
+            const rows = await this.db!.getAllAsync<Release>(query, params);
             return rows;
         } catch (error) {
             console.error('[DB] Failed to get releases', error);

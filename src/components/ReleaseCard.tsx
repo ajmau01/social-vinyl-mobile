@@ -44,11 +44,11 @@ const styles = StyleSheet.create({
         flex: 1,
         margin: THEME.spacing.xs,
         maxWidth: '48%', // For 2-column grid
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: THEME.colors.glass,
         borderRadius: THEME.radius.md,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: THEME.colors.glassBorder,
     },
     pressed: {
         opacity: 0.8,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     imageContainer: {
         aspectRatio: 1,
         width: '100%',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: THEME.colors.surfaceLight, // Fallback while loading
     },
     image: {
         width: '100%',
