@@ -112,7 +112,6 @@ class CollectionSyncService {
 
             return rawData;
         } catch (error) {
-            // ... (error handling unchanged)
             console.error(`[Sync] Failed to fetch collection`, error);
             if (error instanceof Error && error.message.includes('not scanned')) {
                 throw error;
@@ -130,7 +129,7 @@ class CollectionSyncService {
             added_at: Date.now() - index, // Preserve relative order
             year: item.year,
             genres: item.genres ? item.genres.join(', ') : undefined,
-            labels: item.label,
+            label: item.label,
             format: item.format
         }));
 

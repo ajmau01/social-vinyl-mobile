@@ -55,7 +55,7 @@ describe('CollectionSyncService', () => {
                 title: 'Album A',
                 year: '1990',
                 genres: 'Rock',
-                labels: 'Label A',
+                label: 'Label A',
                 format: 'LP'
             }),
             expect.objectContaining({
