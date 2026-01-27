@@ -1,7 +1,7 @@
 export const CONFIG = {
     // Cloudflare Tunnel
     API_URL: 'https://vista-lives-start-methods.trycloudflare.com',
-    WS_URL: 'wss://vista-lives-start-methods.trycloudflare.com/listening-bin',
+    WS_URL: 'wss://vista-lives-start-methods.trycloudflare.com/ws/listening-bin',
 
     // Local Dev (Commented Out)
     // API_URL: 'http://localhost:9080', 
