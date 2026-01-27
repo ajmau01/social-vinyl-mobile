@@ -58,12 +58,25 @@ describe('WebSocketService', () => {
         wsService.connect();
         const mockSocket = MockWebSocket.instances[0];
 
-        const payload = { title: 'Test Track', artist: 'Test Artist' };
-        const event = { data: JSON.stringify({ type: 'NOW_PLAYING', payload }) };
+        const rawPayload = {
+            type: 'NOW_PLAYING',
+            album: {
+                title: 'Test Track',
+                artist: 'Test Artist',
+                releaseId: 12345,
+                coverImage: 'http://example.com/cover.jpg'
+            }
+        };
+        const event = { data: JSON.stringify(rawPayload) };
 
         // Simulate Message
         mockSocket.onmessage?.(event);
 
-        expect(useSessionStore.getState().nowPlaying).toEqual(payload);
+        expect(useSessionStore.getState().nowPlaying).toEqual({
+            title: 'Test Track',
+            artist: 'Test Artist',
+            releaseId: '12345',
+            coverInfo: { pixelUri: 'http://example.com/cover.jpg' }
+        });
     });
 });

@@ -1,9 +1,14 @@
 export const CONFIG = {
     // Cloudflare Tunnel
     API_URL: 'https://vista-lives-start-methods.trycloudflare.com',
-    WS_URL: 'wss://vista-lives-start-methods.trycloudflare.com/listening-bin',
+    WS_URL: 'wss://vista-lives-start-methods.trycloudflare.com/ws/listening-bin',
 
     // Local Dev (Commented Out)
     // API_URL: 'http://localhost:9080', 
     // WS_URL: 'ws://localhost:9080/listening-bin',
+
+    // Defaults & Debug
+    DEFAULT_USERNAME: 'MobileGuest',
+    DEFAULT_WATCHED_USERNAME: 'ajmau',
+    DEBUG_WS: false,
 };

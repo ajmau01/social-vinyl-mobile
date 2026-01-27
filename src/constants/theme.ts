@@ -12,6 +12,11 @@ export const COLORS = {
   transparent: 'transparent',
   glass: 'rgba(255, 255, 255, 0.1)',
   glassBorder: 'rgba(255, 255, 255, 0.2)',
+  status: {
+    success: '#00ff44',
+    warning: '#ffaa00',
+    error: '#ff4444',
+  },
 };
 
 export const SPACING = {

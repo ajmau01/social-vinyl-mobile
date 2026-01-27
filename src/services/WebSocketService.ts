@@ -27,9 +27,17 @@ class WebSocketService {
         if (this.socket?.readyState === WebSocket.OPEN) return;
 
         useSessionStore.getState().setConnecting(true);
-        console.log('[WS] Connecting to:', CONFIG.WS_URL);
 
-        this.socket = new WebSocket(CONFIG.WS_URL);
+        // TODO: Get actual username/watchedUsername from user profile or settings
+        const params = new URLSearchParams({
+            username: CONFIG.DEFAULT_USERNAME,
+            watchedUsername: CONFIG.DEFAULT_WATCHED_USERNAME
+        });
+
+        const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
+        if (CONFIG.DEBUG_WS) console.log('[WS] Connecting to:', wsUrlWithParams);
+
+        this.socket = new WebSocket(wsUrlWithParams);
 
         this.socket.onopen = this.handleOpen;
         this.socket.onmessage = this.handleMessage;
@@ -61,19 +69,41 @@ class WebSocketService {
 
     private handleMessage = (event: MessageEvent) => {
         try {
-            const data = JSON.parse(event.data) as WebSocketMessage;
-            console.log('[WS] Received:', data.type);
+            const rawData = JSON.parse(event.data);
+            if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', rawData);
 
-            switch (data.type) {
+            // Handle both UPPER_CASE and kebab-case types
+            const type = rawData.type || rawData.messageType;
+
+            switch (type) {
                 case 'WELCOME':
-                    if (data.payload?.sessionId) {
-                        useSessionStore.getState().setSessionId(data.payload.sessionId);
+                case 'welcome':
+                case 'ACCESS_LEVEL':
+                case 'access-level':
+                    // If session ID is present, store it.
+                    // Note: Current backend might send 'access-level' instead of 'welcome'
+                    if (rawData.sessionId) {
+                        useSessionStore.getState().setSessionId(rawData.sessionId);
                     }
+                    if (CONFIG.DEBUG_WS) console.log('[WS] Welcome/Access:', rawData);
                     break;
                 case 'NOW_PLAYING':
-                    useSessionStore.getState().setNowPlaying(data.payload);
+                case 'now-playing':
+                    // Protocol: 'now-playing' has nested 'album' object
+                    if (rawData.album) {
+                        const { album } = rawData;
+                        useSessionStore.getState().setNowPlaying({
+                            title: album.title,
+                            artist: album.artist,
+                            releaseId: String(album.releaseId),
+                            coverInfo: {
+                                pixelUri: album.coverImage
+                            }
+                        });
+                    }
                     break;
                 case 'SESSION_ENDED':
+                case 'session-ended':
                     useSessionStore.getState().setSessionId(null);
                     useSessionStore.getState().setNowPlaying(null);
                     break;
