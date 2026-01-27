@@ -8,7 +8,7 @@ export interface Release {
     added_at: number;
     year?: string;
     genres?: string;
-    labels?: string;
+    label?: string;
     format?: string;
 }
 
@@ -32,18 +32,12 @@ class DatabaseService {
             console.log('[DB] Initializing SQLite...');
             this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
 
-            // Drop table if exists to force schema update (Sync Cache)
-            // In production scenarios, migrating is better, but this is a sync cache.
-            // await this.db.execAsync('DROP TABLE IF EXISTS releases'); 
-            // WAIT - Re-creating wipes user's offline data. If they have 5000 items, resync is annoying.
-            // But phase 2.5 is "Advanced Browsing". 
-            // I'll add the columns using ALTER TABLE if they don't exist?
-            // Expo SQLite doesn't support easy "IF COLUMN NOT EXISTS".
-            // Given this is Alpha/Dev, dropping the table is acceptable to ensure clean state.
-            // I'll add a version check later. For now, DROP is safest for development.
+            // WARN: Destructive schema update for Phase 2.5
+            // Dropping table to ensure clean schema with new columns.
+            await this.db.execAsync('DROP TABLE IF EXISTS releases');
+            console.warn('[DB] Schema upgrade: Dropped releases table (Data Loss Expected for Dev)');
 
             await this.db.execAsync(`
-                DROP TABLE IF EXISTS releases;
                 CREATE TABLE IF NOT EXISTS releases (
                     id INTEGER PRIMARY KEY NOT NULL,
                     title TEXT NOT NULL,
@@ -52,7 +46,7 @@ class DatabaseService {
                     added_at INTEGER NOT NULL,
                     year TEXT,
                     genres TEXT,
-                    labels TEXT,
+                    label TEXT,
                     format TEXT
                 );
 
@@ -74,7 +68,7 @@ class DatabaseService {
 
         try {
             await this.db!.runAsync(
-                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, labels, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
                 release.title,
                 release.artist,
@@ -82,7 +76,7 @@ class DatabaseService {
                 release.added_at,
                 release.year || null,
                 release.genres || null,
-                release.labels || null,
+                release.label || null,
                 release.format || null
             );
         } catch (error) {
@@ -98,7 +92,7 @@ class DatabaseService {
             await this.db!.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await this.db!.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, labels, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
                         release.title,
                         release.artist,
@@ -106,7 +100,7 @@ class DatabaseService {
                         release.added_at,
                         release.year || null,
                         release.genres || null,
-                        release.labels || null,
+                        release.label || null,
                         release.format || null
                     );
                 }
