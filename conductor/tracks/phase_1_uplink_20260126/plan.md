@@ -4,7 +4,7 @@
 - [x] Task: Initialize project structure and install core dependencies (Zustand, WebSocket utils).
     - [ ] Sub-task: Install `zustand`, `clsx`, `tailwind-merge` (if using).
     - [ ] Sub-task: Configure `expo-router` basic layout (`_layout.tsx`).
-- [ ] Task: Create the global theme and design tokens (Colors, Typography) matching `product-guidelines.md`.
+- [~] Task: Create the global theme and design tokens (Colors, Typography) matching `product-guidelines.md`.
     - [ ] Sub-task: Create `src/constants/theme.ts`.
 - [ ] Task: Conductor - User Manual Verification 'Foundation Setup' (Protocol in workflow.md)
 
