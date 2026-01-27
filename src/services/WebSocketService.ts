@@ -29,14 +29,13 @@ class WebSocketService {
         useSessionStore.getState().setConnecting(true);
 
         // TODO: Get actual username/watchedUsername from user profile or settings
-        // For now, hardcode to match the backend expectation (from legacy client analysis)
         const params = new URLSearchParams({
-            username: 'MobileGuest',
-            watchedUsername: 'ajmau' // Target the likely host
+            username: CONFIG.DEFAULT_USERNAME,
+            watchedUsername: CONFIG.DEFAULT_WATCHED_USERNAME
         });
 
         const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
-        console.log('[WS] Connecting to:', wsUrlWithParams);
+        if (CONFIG.DEBUG_WS) console.log('[WS] Connecting to:', wsUrlWithParams);
 
         this.socket = new WebSocket(wsUrlWithParams);
 
@@ -71,6 +70,7 @@ class WebSocketService {
     private handleMessage = (event: MessageEvent) => {
         try {
             const rawData = JSON.parse(event.data);
+            if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', rawData);
 
             // Handle both UPPER_CASE and kebab-case types
             const type = rawData.type || rawData.messageType;
@@ -78,7 +78,14 @@ class WebSocketService {
             switch (type) {
                 case 'WELCOME':
                 case 'welcome':
-                    // TODO: Check structure
+                case 'ACCESS_LEVEL':
+                case 'access-level':
+                    // If session ID is present, store it.
+                    // Note: Current backend might send 'access-level' instead of 'welcome'
+                    if (rawData.sessionId) {
+                        useSessionStore.getState().setSessionId(rawData.sessionId);
+                    }
+                    if (CONFIG.DEBUG_WS) console.log('[WS] Welcome/Access:', rawData);
                     break;
                 case 'NOW_PLAYING':
                 case 'now-playing':

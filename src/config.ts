@@ -6,4 +6,9 @@ export const CONFIG = {
     // Local Dev (Commented Out)
     // API_URL: 'http://localhost:9080', 
     // WS_URL: 'ws://localhost:9080/listening-bin',
+
+    // Defaults & Debug
+    DEFAULT_USERNAME: 'MobileGuest',
+    DEFAULT_WATCHED_USERNAME: 'ajmau',
+    DEBUG_WS: false,
 };

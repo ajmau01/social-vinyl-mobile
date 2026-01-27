@@ -3,16 +3,18 @@ import { StyleSheet, Text, View, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSessionStore } from '@/store/useSessionStore';
 import { THEME } from '@/constants/theme';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useSessionStore();
+    const insets = useSafeAreaInsets();
 
+    // Design Decision: We show "Connecting..." even if track is null to give feedback.
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
     return (
         <View style={styles.wrapper}>
-            <BlurView intensity={80} tint="dark" style={styles.container}>
+            <BlurView intensity={80} tint="dark" style={[styles.container, { paddingBottom: insets.bottom + THEME.spacing.xs }]}>
                 <View style={styles.content}>
                     {/* Album Art Placeholder or Image */}
                     <View style={styles.artwork}>
@@ -44,7 +46,6 @@ export const NowPlayingBanner = () => {
                         isConnecting && styles.statusConnecting
                     ]} />
                 </View>
-                <SafeAreaView edges={['bottom']} />
             </BlurView>
         </View>
     );
@@ -69,7 +70,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: THEME.spacing.lg,
-        paddingBottom: THEME.spacing.xs, // Reduced because SafeAreaView adds padding
         gap: THEME.spacing.md,
     },
     artwork: {
@@ -108,13 +108,13 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     statusConnected: {
-        backgroundColor: '#00ff44', // Bright green for success
-        shadowColor: '#00ff44',
+        backgroundColor: THEME.colors.status.success,
+        shadowColor: THEME.colors.status.success,
         shadowOpacity: 0.5,
         shadowRadius: 4,
     },
     statusConnecting: {
-        backgroundColor: '#ffaa00', // Orange
+        backgroundColor: THEME.colors.status.warning,
     },
     statusDisconnected: {
         backgroundColor: THEME.colors.textMuted,
