@@ -36,6 +36,10 @@ class DatabaseService {
                     thumb_url TEXT,
                     added_at INTEGER NOT NULL
                 );
+
+                CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
+                CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
+                CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
             `);
             console.log('[DB] Initialized successfully');
         } catch (error) {
@@ -62,6 +66,28 @@ class DatabaseService {
         }
     }
 
+    public async saveReleasesBatch(releases: Release[]) {
+        if (!this.db) await this.init();
+
+        try {
+            await this.db!.withTransactionAsync(async () => {
+                for (const release of releases) {
+                    await this.db!.runAsync(
+                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at) VALUES (?, ?, ?, ?, ?)',
+                        release.id,
+                        release.title,
+                        release.artist,
+                        release.thumb_url,
+                        release.added_at
+                    );
+                }
+            });
+        } catch (error) {
+            console.error('[DB] Failed to batch save releases', error);
+            throw error;
+        }
+    }
+
     public async getReleases(limit = 50, offset = 0): Promise<Release[]> {
         if (!this.db) await this.init();
 
@@ -80,6 +106,13 @@ class DatabaseService {
     public async clear() {
         if (!this.db) await this.init();
         await this.db!.execAsync('DELETE FROM releases');
+    }
+
+    // Only for testing
+    public _resetForTesting() {
+        this.db = null;
+        // @ts-ignore - clearing singleton for test isolation
+        DatabaseService.instance = null;
     }
 }
 

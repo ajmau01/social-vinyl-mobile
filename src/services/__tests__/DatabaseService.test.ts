@@ -7,6 +7,7 @@ jest.mock('expo-sqlite', () => ({
         execAsync: jest.fn(),
         runAsync: jest.fn(),
         getAllAsync: jest.fn(),
+        withTransactionAsync: jest.fn(async (cb) => await cb()),
     }),
 }));
 
@@ -15,18 +16,19 @@ describe('DatabaseService', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
-        // Reset singleton instance logic if possible, 
-        // or just rely on re-initializing mock behavior
+        // Reset singleton logic using new method
+        dbService._resetForTesting();
 
-        // Get the mock DB object that openDatabaseAsync returns
+        // Get the mock DB object
         mockDb = await (SQLite.openDatabaseAsync as jest.Mock)();
     });
 
-    it('should initialize the database and create table', async () => {
+    it('should initialize the database with indexes', async () => {
         await dbService.init();
 
         expect(SQLite.openDatabaseAsync).toHaveBeenCalledWith('social_vinyl.db');
         expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE IF NOT EXISTS releases'));
+        expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('CREATE INDEX IF NOT EXISTS idx_releases_added_at'));
     });
 
     it('should save a release', async () => {
@@ -48,6 +50,22 @@ describe('DatabaseService', () => {
         );
     });
 
+    it('should save releases in batch', async () => {
+        await dbService.init();
+
+        const releases = [
+            { id: 1, title: 'A', artist: 'A', thumb_url: 'u1', added_at: 100 },
+            { id: 2, title: 'B', artist: 'B', thumb_url: 'u2', added_at: 200 }
+        ];
+
+        await dbService.saveReleasesBatch(releases);
+
+        // Transaction should be called
+        expect(mockDb.withTransactionAsync).toHaveBeenCalled();
+        // Two inserts
+        expect(mockDb.runAsync).toHaveBeenCalledTimes(2);
+    });
+
     it('should get releases with pagination', async () => {
         await dbService.init();
 
@@ -57,5 +75,11 @@ describe('DatabaseService', () => {
             expect.stringContaining('SELECT * FROM releases'),
             10, 5
         );
+    });
+
+    it('should clear the database', async () => {
+        await dbService.init();
+        await dbService.clear();
+        expect(mockDb.execAsync).toHaveBeenCalledWith('DELETE FROM releases');
     });
 });
