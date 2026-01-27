@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface NowPlaying {
+export interface NowPlaying {
     title: string;
     artist: string;
     releaseId: string;

@@ -1,9 +1,9 @@
 import { CONFIG } from '@/config';
-import { useSessionStore } from '@/store/useSessionStore';
+import { useSessionStore, NowPlaying } from '@/store/useSessionStore';
 
 type WebSocketMessage =
     | { type: 'WELCOME'; payload: { sessionId?: string } }
-    | { type: 'NOW_PLAYING'; payload: any }
+    | { type: 'NOW_PLAYING'; payload: NowPlaying }
     | { type: 'SESSION_ENDED'; payload?: any };
 
 class WebSocketService {
@@ -39,6 +39,12 @@ class WebSocketService {
 
     public disconnect() {
         this.shouldReconnect = false;
+
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+
         if (this.socket) {
             this.socket.close();
             this.socket = null;
