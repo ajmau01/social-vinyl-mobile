@@ -8,7 +8,9 @@ interface BackendAlbum {
     artist: string;
     coverImage: string;
     year?: string;
-    // ... other fields provided by backend
+    label?: string;
+    format?: string;
+    genres?: string[]; // We will inject this during flattening
 }
 
 interface ScanResponse {
@@ -80,13 +82,22 @@ class CollectionSyncService {
             // We need to flatten this into a single list AND deduplicate
             // Albums with multiple genres appear in multiple categories
             if (rawData && rawData.albums && !Array.isArray(rawData.albums)) {
-                const allAlbums = Object.values(rawData.albums).flat() as BackendAlbum[];
-
-                // Deduplicate by releaseId
+                // Determine Genres
                 const uniqueAlbumsMap = new Map<number, BackendAlbum>();
-                for (const album of allAlbums) {
-                    if (!uniqueAlbumsMap.has(album.releaseId)) {
-                        uniqueAlbumsMap.set(album.releaseId, album);
+
+                for (const [category, albums] of Object.entries(rawData.albums)) {
+                    const albumList = albums as BackendAlbum[];
+                    for (const album of albumList) {
+                        if (!uniqueAlbumsMap.has(album.releaseId)) {
+                            // Initialize with current category
+                            uniqueAlbumsMap.set(album.releaseId, { ...album, genres: [category] });
+                        } else {
+                            // Append category to existing entry
+                            const existing = uniqueAlbumsMap.get(album.releaseId)!;
+                            if (existing.genres && !existing.genres.includes(category)) {
+                                existing.genres.push(category);
+                            }
+                        }
                     }
                 }
 
@@ -101,8 +112,8 @@ class CollectionSyncService {
 
             return rawData;
         } catch (error) {
+            // ... (error handling unchanged)
             console.error(`[Sync] Failed to fetch collection`, error);
-            // Re-throw if it's our specific "Not Scanned" error so the UI can show it
             if (error instanceof Error && error.message.includes('not scanned')) {
                 throw error;
             }
@@ -116,9 +127,11 @@ class CollectionSyncService {
             title: item.title,
             artist: item.artist,
             thumb_url: item.coverImage || null,
-            // Preserve relative order by offsetting timestamp
-            // Newer items (index 0) get higher timestamp
-            added_at: Date.now() - index
+            added_at: Date.now() - index, // Preserve relative order
+            year: item.year,
+            genres: item.genres ? item.genres.join(', ') : undefined,
+            labels: item.label,
+            format: item.format
         }));
 
         await dbService.saveReleasesBatch(releases);

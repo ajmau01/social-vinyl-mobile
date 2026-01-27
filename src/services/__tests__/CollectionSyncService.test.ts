@@ -29,11 +29,11 @@ describe('CollectionSyncService', () => {
             json: async () => ({
                 albums: {
                     "Rock": [
-                        { releaseId: 101, title: 'Album A', artist: 'Band A', coverImage: 'url1' },
-                        { releaseId: 102, title: 'Album B', artist: 'Band B', coverImage: 'url2' }
+                        { releaseId: 101, title: 'Album A', artist: 'Band A', coverImage: 'url1', year: '1990', label: 'Label A', format: 'LP' },
+                        { releaseId: 102, title: 'Album B', artist: 'Band B', coverImage: 'url2', year: '1991' }
                     ],
                     "Jazz": [
-                        { releaseId: 103, title: 'Album C', artist: 'Band C', coverImage: 'url3' }
+                        { releaseId: 103, title: 'Album C', artist: 'Band C', coverImage: 'url3', year: '1959' }
                     ]
                 },
                 totalCount: 3,
@@ -48,11 +48,28 @@ describe('CollectionSyncService', () => {
             `${CONFIG.API_URL}/collection?format=json&username=${mockUserId}`
         );
 
-        // Should flatten and save all 3 items
+        // Should flatten and save all 3 items with metadata
         expect(dbService.saveReleasesBatch).toHaveBeenCalledWith(expect.arrayContaining([
-            expect.objectContaining({ id: 101, title: 'Album A' }),
-            expect.objectContaining({ id: 102, title: 'Album B' }),
-            expect.objectContaining({ id: 103, title: 'Album C' })
+            expect.objectContaining({
+                id: 101,
+                title: 'Album A',
+                year: '1990',
+                genres: 'Rock',
+                labels: 'Label A',
+                format: 'LP'
+            }),
+            expect.objectContaining({
+                id: 102,
+                title: 'Album B',
+                year: '1991',
+                genres: 'Rock'
+            }),
+            expect.objectContaining({
+                id: 103,
+                title: 'Album C',
+                year: '1959',
+                genres: 'Jazz'
+            })
         ]));
 
         // Verify store updates
@@ -62,26 +79,30 @@ describe('CollectionSyncService', () => {
         expect(state.lastSyncTime).not.toBeNull();
     });
 
-    it('should deduplicate albums appearing in multiple genres', async () => {
+    it('should deduplicate albums and merge genres', async () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,
             headers: { get: () => 'application/json' },
             json: async () => ({
                 albums: {
-                    "Rock": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url' }],
-                    "Pop": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url' }]
+                    "Rock": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }],
+                    "Pop": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }]
                 },
-                totalCount: 1, // Logic should derive real count from deduped list
+                totalCount: 1,
                 username: mockUserId
             }),
         });
 
         await syncService.syncCollection(mockUserId);
 
-        // Should save only 1 item
+        // Should save only 1 item but with merged genres "Rock, Pop"
         const saveCall = (dbService.saveReleasesBatch as jest.Mock).mock.calls[0][0];
         expect(saveCall).toHaveLength(1);
         expect(saveCall[0].id).toBe(500);
+        // Order of iteration over object keys is not guaranteed, but usually insertion order for string keys
+        // We'll check if it contains both
+        expect(saveCall[0].genres).toMatch(/Rock/);
+        expect(saveCall[0].genres).toMatch(/Pop/);
     });
 
     it('should detect "Scan Required" HTML response', async () => {
