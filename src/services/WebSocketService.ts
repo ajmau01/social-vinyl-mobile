@@ -116,15 +116,18 @@ class WebSocketService {
     private handleClose = (event: CloseEvent) => {
         console.log('[WS] Disconnected', event.code, event.reason);
         useSessionStore.getState().setConnected(false);
-        useSessionStore.getState().setConnecting(false);
 
         if (this.shouldReconnect) {
+            // Keep "Connecting" state true so UI doesn't flash while waiting for timer
+            useSessionStore.getState().setConnecting(true);
             this.attemptReconnect();
+        } else {
+            useSessionStore.getState().setConnecting(false);
         }
     };
 
     private handleError = (event: Event) => {
-        console.error('[WS] Error', event);
+        console.log('[WS] Error (suppressed)', event);
         // Error will trigger onClose, so we handle logic there
     };
 

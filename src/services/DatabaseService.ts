@@ -10,6 +10,7 @@ export interface Release {
     genres?: string;
     label?: string;
     format?: string;
+    tracks?: string; // JSON String
 }
 
 class DatabaseService {
@@ -47,7 +48,8 @@ class DatabaseService {
                     year TEXT,
                     genres TEXT,
                     label TEXT,
-                    format TEXT
+                    format TEXT,
+                    tracks TEXT
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
@@ -68,7 +70,7 @@ class DatabaseService {
 
         try {
             await this.db!.runAsync(
-                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
                 release.title,
                 release.artist,
@@ -77,7 +79,8 @@ class DatabaseService {
                 release.year || null,
                 release.genres || null,
                 release.label || null,
-                release.format || null
+                release.format || null,
+                release.tracks || null
             );
         } catch (error) {
             console.error('[DB] Failed to save release', error);
@@ -92,7 +95,7 @@ class DatabaseService {
             await this.db!.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await this.db!.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
                         release.title,
                         release.artist,
@@ -101,7 +104,8 @@ class DatabaseService {
                         release.year || null,
                         release.genres || null,
                         release.label || null,
-                        release.format || null
+                        release.format || null,
+                        release.tracks || null
                     );
                 }
             });
@@ -133,6 +137,15 @@ class DatabaseService {
             console.error('[DB] Failed to get releases', error);
             throw error;
         }
+    }
+
+    public async updateReleaseTracks(id: number, tracksJson: string) {
+        if (!this.db) await this.init();
+        await this.db!.runAsync(
+            'UPDATE releases SET tracks = ? WHERE id = ?',
+            tracksJson,
+            id
+        );
     }
 
     public async clear() {

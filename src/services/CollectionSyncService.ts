@@ -10,6 +10,7 @@ interface BackendAlbum {
     year?: string;
     label?: string;
     format?: string;
+    tracks?: any[]; // Raw track objects
     genres?: string[]; // We will inject this during flattening
 }
 
@@ -130,10 +131,30 @@ class CollectionSyncService {
             year: item.year,
             genres: item.genres ? item.genres.join(', ') : undefined,
             label: item.label,
-            format: item.format
+            format: item.format,
+            tracks: item.tracks ? JSON.stringify(item.tracks) : undefined
         }));
 
         await dbService.saveReleasesBatch(releases);
+    }
+    public async fetchTracks(releaseId: number): Promise<any[] | null> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=tracklist&releaseId=${releaseId}`;
+            console.log('[Sync] Fetching tracks:', url);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const data = await response.json();
+
+            if (data && data.tracks) {
+                // Save to local DB for caching
+                await dbService.updateReleaseTracks(releaseId, JSON.stringify(data.tracks));
+                return data.tracks;
+            }
+            return null;
+        } catch (error) {
+            console.error('[Sync] Failed to fetch tracks:', error);
+            return null;
+        }
     }
 }
 

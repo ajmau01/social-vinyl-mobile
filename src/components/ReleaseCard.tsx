@@ -1,17 +1,19 @@
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/services/DatabaseService';
 
 interface ReleaseCardProps {
     release: Release;
     onPress?: () => void;
+    style?: StyleProp<ViewStyle>;
 }
 
-export const ReleaseCard = ({ release, onPress }: ReleaseCardProps) => {
+export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
     return (
         <Pressable
             style={({ pressed }) => [
                 styles.container,
+                style, // valid override
                 pressed && styles.pressed
             ]}
             onPress={onPress}
@@ -34,6 +36,7 @@ export const ReleaseCard = ({ release, onPress }: ReleaseCardProps) => {
             <View style={styles.info}>
                 <Text style={styles.title} numberOfLines={1}>{release.title}</Text>
                 <Text style={styles.artist} numberOfLines={1}>{release.artist}</Text>
+                {release.year ? <Text style={styles.year}>{release.year}</Text> : null}
             </View>
         </Pressable>
     );
@@ -72,16 +75,22 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     info: {
-        padding: THEME.spacing.sm,
+        padding: 6, // Reduced from THEME.spacing.sm
     },
     title: {
         color: THEME.colors.white,
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 2,
+        fontSize: 11, // Reduced from 12
+        fontWeight: 'bold',
+        marginBottom: 1,
     },
     artist: {
         color: THEME.colors.textDim,
-        fontSize: 12,
+        fontSize: 10, // Reduced from 11
+        marginBottom: 1,
+    },
+    year: {
+        color: THEME.colors.primary,
+        fontSize: 10,
+        fontWeight: '600',
     },
 });

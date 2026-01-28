@@ -46,7 +46,8 @@ describe('DatabaseService', () => {
 
         expect(mockDb.runAsync).toHaveBeenCalledWith(
             expect.stringContaining('INSERT OR REPLACE INTO releases'),
-            123, 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000
+            123, 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000,
+            null, null, null, null, null
         );
     });
 
@@ -73,7 +74,7 @@ describe('DatabaseService', () => {
 
         expect(mockDb.getAllAsync).toHaveBeenCalledWith(
             expect.stringContaining('SELECT * FROM releases'),
-            10, 5
+            [10, 5]
         );
     });
 
