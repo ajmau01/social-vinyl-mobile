@@ -127,7 +127,7 @@ class WebSocketService {
     };
 
     private handleError = (event: Event) => {
-        console.log('[WS] Error (suppressed)', event);
+        console.log('[WS] Connection failed (retrying...)');
         // Error will trigger onClose, so we handle logic there
     };
 

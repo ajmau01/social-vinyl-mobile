@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Image, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
 import { Release, dbService } from '@/services/DatabaseService';
 import { syncService } from '@/services/CollectionSyncService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { Ionicons } from '@expo/vector-icons';
+
+interface Track {
+    position?: string;
+    title: string;
+    duration?: string;
+}
 
 interface ReleaseDetailsModalProps {
     visible: boolean;
@@ -14,7 +21,7 @@ interface ReleaseDetailsModalProps {
 }
 
 export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetailsModalProps) => {
-    const [tracks, setTracks] = useState<any[] | null>(null);
+    const [tracks, setTracks] = useState<Track[] | null>(null);
     const [loading, setLoading] = useState(false);
 
     const { addItem, isInBin } = useListeningBinStore();
@@ -50,7 +57,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     const handleAddToBin = () => {
         if (release) {
             addItem(release);
-            // Optional: Provide feedback like Haptics or a Toast
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
     };
 
@@ -110,7 +117,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
                                     <Text style={[styles.metaText, { marginTop: 8 }]}>Fetching tracks...</Text>
                                 </View>
                             ) : tracks && tracks.length > 0 ? (
-                                tracks.map((track: any, index: number) => (
+                                tracks.map((track, index: number) => (
                                     <View key={index} style={styles.trackRow}>
                                         <Text style={styles.trackNum}>{track.position || index + 1}</Text>
                                         <Text style={styles.trackTitle}>{track.title}</Text>
@@ -156,7 +163,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)', // Standardized overlay
     },
     blur: {
         ...StyleSheet.absoluteFillObject,
@@ -230,7 +237,7 @@ const styles = StyleSheet.create({
         marginTop: THEME.spacing.xs,
         paddingTop: THEME.spacing.xs,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.1)',
+        borderTopColor: THEME.colors.glassBorder,
         width: '100%',
         alignItems: 'center',
     },
@@ -247,7 +254,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingVertical: 8,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: THEME.colors.glass,
         alignItems: 'center',
     },
     trackNum: {
@@ -269,24 +276,13 @@ const styles = StyleSheet.create({
         width: '100%',
         gap: THEME.spacing.md,
     },
-    primaryButton: {
-        backgroundColor: THEME.colors.primary,
-        paddingVertical: 12,
-        borderRadius: THEME.radius.full,
-        alignItems: 'center',
-    },
-    primaryButtonText: {
-        color: '#FFF',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
     secondaryButton: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: THEME.colors.glass,
         paddingVertical: 12,
         borderRadius: THEME.radius.full,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: THEME.colors.glassBorder,
     },
     secondaryButtonText: {
         color: THEME.colors.white,
@@ -295,7 +291,7 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.5,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: THEME.colors.glass,
     },
     pressed: {
         opacity: 0.8,
@@ -310,11 +306,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: THEME.spacing.md,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: THEME.colors.glass,
         borderRadius: THEME.radius.md,
         gap: THEME.spacing.xs,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: THEME.colors.glassBorder,
         marginTop: THEME.spacing.sm,
     },
     fetchButtonText: {

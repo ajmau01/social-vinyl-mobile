@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, FlatList, Image, Pressable, SafeAreaView, Alert
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore, BinItem } from '@/store/useListeningBinStore';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 
 export default function BinScreen() {
     const { items, removeItem, clearBin } = useListeningBinStore();

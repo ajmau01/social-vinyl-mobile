@@ -8,27 +8,21 @@ interface BrowseSectionProps {
     title: string;
     releases: Release[];
     onPressRelease?: (release: Release) => void;
-    onPressHeader?: () => void;
 }
 
 export const BrowseSection: React.FC<BrowseSectionProps> = ({
     title,
     releases,
     onPressRelease,
-    onPressHeader
 }) => {
     if (releases.length === 0) return null;
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity
-                activeOpacity={onPressHeader ? 0.7 : 1}
-                onPress={onPressHeader}
-                style={styles.header}
-            >
+            <View style={styles.header}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.count}>{releases.length}</Text>
-            </TouchableOpacity>
+            </View>
 
             <FlatList
                 data={releases}

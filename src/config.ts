@@ -9,6 +9,6 @@ export const CONFIG = {
 
     // Defaults & Debug
     DEFAULT_USERNAME: 'ajmau',
-    DEFAULT_WATCHED_USERNAME: 'ajmau',
+    DEFAULT_WATCHED_USERNAME: 'MobileGuest',
     DEBUG_WS: false,
 };

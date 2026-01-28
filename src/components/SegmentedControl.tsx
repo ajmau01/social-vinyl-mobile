@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
         borderRadius: THEME.radius.md,
     },
     selectedOption: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)', // Subtle glass instead of neon
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        backgroundColor: THEME.colors.glass, // Using theme glass
+        borderColor: THEME.colors.glassBorder,
         borderWidth: 1,
     },
     text: {

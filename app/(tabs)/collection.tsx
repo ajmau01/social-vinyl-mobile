@@ -21,7 +21,7 @@ import { BrowseSection } from '@/components/BrowseSection';
 import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
 import { CONFIG } from '@/config';
 
-const PAGE_SIZE = 10000; // Load all for client-side sorting
+const PAGE_SIZE = 5000; // Load all for client-side sorting (tuned for performance)
 
 export default function CollectionScreen() {
     const [releases, setReleases] = useState<Release[]>([]);
@@ -56,7 +56,6 @@ export default function CollectionScreen() {
             // Limit is PAGE_SIZE (10000) so we load all
             const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, searchQuery);
 
-            console.log(`[DEBUG] Loaded ${newReleases.length} releases from DB. Search: "${searchQuery}"`);
 
             if (reset) {
                 setReleases(newReleases);
@@ -90,7 +89,6 @@ export default function CollectionScreen() {
     // Grouping Helper
     const getGroupedReleases = () => {
         if (viewMode === 'grid') return []; // Flat grid for simple view
-
 
         const groups: { title: string; data: Release[] }[] = [];
         const groupMap = new Map<string, Release[]>();
@@ -173,7 +171,7 @@ export default function CollectionScreen() {
                 )}
             </View>
 
-            <View style={{ paddingHorizontal: THEME.spacing.md }}>
+            <View style={styles.segmentedControlContainer}>
                 <SegmentedControl
                     options={['Genre', 'A-Z', 'Decade']}
                     selected={viewMode === 'grid' ? 'Grid' : (viewMode === 'alpha' ? 'A-Z' : viewMode.charAt(0).toUpperCase() + viewMode.slice(1))}
@@ -291,6 +289,9 @@ const styles = StyleSheet.create({
     countText: {
         color: THEME.colors.textDim,
         fontSize: 14,
+    },
+    segmentedControlContainer: {
+        paddingHorizontal: THEME.spacing.md,
     },
     searchContainer: {
         paddingHorizontal: THEME.spacing.md,
