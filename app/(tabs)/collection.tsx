@@ -21,7 +21,7 @@ import { BrowseSection } from '@/components/BrowseSection';
 import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
 import { CONFIG } from '@/config';
 
-const PAGE_SIZE = 5000; // Load all for client-side sorting (tuned for performance)
+const PAGE_SIZE = 5000; // Load all for client-side sorting. Note: Collections > 5k items may see performance degradation on low-end devices.
 
 export default function CollectionScreen() {
     const [releases, setReleases] = useState<Release[]>([]);
@@ -55,7 +55,6 @@ export default function CollectionScreen() {
 
             // Limit is PAGE_SIZE (10000) so we load all
             const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, searchQuery);
-
 
             if (reset) {
                 setReleases(newReleases);
@@ -228,7 +227,7 @@ export default function CollectionScreen() {
                     />
                 ) : (
                     <SectionList
-                        sections={getGroupedReleases().map(g => ({ title: g.title, data: [g.data] }))} // Hack
+                        sections={getGroupedReleases().map(g => ({ title: g.title, data: [g.data] }))} // Shaping for Horizontal list in Vertical list
                         keyExtractor={(item, index) => item[0].id.toString() + index}
                         renderItem={({ item, section }) => (
                             <BrowseSection
