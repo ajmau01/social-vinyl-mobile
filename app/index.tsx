@@ -55,16 +55,11 @@ export default function HubScreen() {
         ).start();
     }, []);
 
-    // Auto-redirect if we have a username, a mode/token, and we're not syncing
-    useEffect(() => {
-        // We only redirect if we have a clear intent (lastMode) AND credentials (username/authToken for host)
-        const isHostReady = lastMode === 'host' && username && authToken;
-        const isSoloReady = lastMode === 'solo' && username;
-
-        if ((isHostReady || isSoloReady) && syncStatus !== 'syncing') {
-            router.replace('/(tabs)/collection');
-        }
-    }, [username, authToken, lastMode, syncStatus]);
+    /* 
+       AUTO-REDIRECT DISABLED: 
+       Per user request, the Hub should be the mandatory landing page on launch.
+       Redirection is now handled only via explicit persona actions.
+    */
 
     const rotation = rotateAnim.interpolate({
         inputRange: [0, 1],
@@ -116,7 +111,7 @@ export default function HubScreen() {
         setError(null);
         try {
             await wsService.login(inputValue.trim(), password);
-            // Redirect is handled by the useEffect above once authToken is set
+            router.replace('/(tabs)/collection');
         } catch (e: any) {
             setError(e.message || 'Login failed');
         } finally {
