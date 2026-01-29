@@ -45,15 +45,22 @@ export default function HubScreen() {
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.loop(
+        const startRotation = () => {
+            rotateAnim.setValue(0);
             Animated.timing(rotateAnim, {
                 toValue: 1,
                 duration: 5000,
                 easing: Easing.linear,
                 useNativeDriver: true,
-            })
-        ).start();
-    }, []);
+            }).start((result) => {
+                if (result.finished) {
+                    startRotation();
+                }
+            });
+        };
+
+        startRotation();
+    }, [rotateAnim]);
 
     /* 
        AUTO-REDIRECT DISABLED: 
