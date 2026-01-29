@@ -16,6 +16,7 @@ export interface Release {
 class DatabaseService {
     private static instance: DatabaseService;
     private db: SQLite.SQLiteDatabase | null = null;
+    private initPromise: Promise<void> | null = null;
 
     private constructor() { }
 
@@ -28,41 +29,45 @@ class DatabaseService {
 
     public async init() {
         if (this.db) return;
+        if (this.initPromise) return this.initPromise;
 
-        try {
-            console.log('[DB] Initializing SQLite...');
-            this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
+        this.initPromise = (async () => {
+            try {
+                console.log('[DB] Initializing SQLite...');
+                this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
 
-            // WARN: Destructive schema update for Phase 2.5
-            // Dropping table to ensure clean schema with new columns.
-            await this.db.execAsync('DROP TABLE IF EXISTS releases');
-            console.warn('[DB] Schema upgrade: Dropped releases table (Data Loss Expected for Dev)');
+                // Schema is now stable, removing destructive drop
+                // await this.db.execAsync('DROP TABLE IF EXISTS releases');
 
-            await this.db.execAsync(`
-                CREATE TABLE IF NOT EXISTS releases (
-                    id INTEGER PRIMARY KEY NOT NULL,
-                    title TEXT NOT NULL,
-                    artist TEXT NOT NULL,
-                    thumb_url TEXT,
-                    added_at INTEGER NOT NULL,
-                    year TEXT,
-                    genres TEXT,
-                    label TEXT,
-                    format TEXT,
-                    tracks TEXT
-                );
+                await this.db.execAsync(`
+                    CREATE TABLE IF NOT EXISTS releases (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        title TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        thumb_url TEXT,
+                        added_at INTEGER NOT NULL,
+                        year TEXT,
+                        genres TEXT,
+                        label TEXT,
+                        format TEXT,
+                        tracks TEXT
+                    );
 
-                CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
-                CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
-                CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
-                CREATE INDEX IF NOT EXISTS idx_releases_year ON releases(year);
-                CREATE INDEX IF NOT EXISTS idx_releases_genres ON releases(genres);
-            `);
-            console.log('[DB] Initialized successfully');
-        } catch (error) {
-            console.error('[DB] Failed to initialize', error);
-            throw error;
-        }
+                    CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
+                    CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
+                    CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
+                    CREATE INDEX IF NOT EXISTS idx_releases_year ON releases(year);
+                    CREATE INDEX IF NOT EXISTS idx_releases_genres ON releases(genres);
+                `);
+                console.log('[DB] Initialized successfully');
+            } catch (error) {
+                console.error('[DB] Failed to initialize', error);
+                this.initPromise = null;
+                throw error;
+            }
+        })();
+
+        return this.initPromise;
     }
 
     public async saveRelease(release: Release) {

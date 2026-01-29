@@ -1,17 +1,17 @@
 export const COLORS = {
-  background: '#0a0a12',
+  background: '#0f1016', // Deep Night
   surface: '#12121e',
   surfaceLight: '#1e1e2d',
-  primary: '#b026ff',
-  secondary: '#00f2ff',
+  primary: '#7c3aed', // Purple Accent
+  secondary: '#db2777', // Pink Accent from Hub
   text: '#ffffff',
-  textDim: '#a0a0b0',
-  textMuted: '#666677',
+  textDim: '#9ca3af', // Muted text from Hub
+  textMuted: '#6b7280',
   white: '#ffffff',
   black: '#000000',
   transparent: 'transparent',
-  glass: 'rgba(255, 255, 255, 0.1)',
-  glassBorder: 'rgba(255, 255, 255, 0.2)',
+  glass: 'rgba(255, 255, 255, 0.03)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
   status: {
     success: '#00ff44',
     warning: '#ffaa00',
