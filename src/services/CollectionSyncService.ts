@@ -18,6 +18,7 @@ interface ScanResponse {
     albums: BackendAlbum[];
     count: number;
     username: string;
+    avatarUrl?: string;
 }
 
 class CollectionSyncService {
@@ -44,6 +45,10 @@ class CollectionSyncService {
             useSessionStore.getState().setSyncProgress(50); // Downloaded
 
             await this.saveReleases(data.albums);
+
+            if (data.avatarUrl) {
+                useSessionStore.getState().setAvatarUrl(data.avatarUrl);
+            }
 
             console.log('[Sync] Complete. Items:', data.albums.length);
             useSessionStore.getState().setSyncStatus('success');
@@ -107,7 +112,8 @@ class CollectionSyncService {
                 return {
                     albums: flatAlbums,
                     count: flatAlbums.length, // Update count to match unique items
-                    username: rawData.username || userId
+                    username: rawData.username || userId,
+                    avatarUrl: rawData.avatarUrl
                 };
             }
 

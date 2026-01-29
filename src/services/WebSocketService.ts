@@ -26,13 +26,23 @@ class WebSocketService {
     public connect() {
         if (this.socket?.readyState === WebSocket.OPEN) return;
 
-        useSessionStore.getState().setConnecting(true);
+        const { username, authToken } = useSessionStore.getState();
+        const watchedUsername = username; // For now, we watch our own bin
 
-        // TODO: Get actual username/watchedUsername from user profile or settings
+        if (!username) {
+            if (CONFIG.DEBUG_WS) console.log('[WS] Skip connect: No username');
+            useSessionStore.getState().setConnecting(false);
+            return;
+        }
+
         const params = new URLSearchParams({
-            username: CONFIG.DEFAULT_USERNAME,
-            watchedUsername: CONFIG.DEFAULT_WATCHED_USERNAME
+            username,
+            watchedUsername: watchedUsername || username
         });
+
+        if (authToken) {
+            params.append('authToken', authToken);
+        }
 
         const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
         if (CONFIG.DEBUG_WS) console.log('[WS] Connecting to:', wsUrlWithParams);
@@ -60,6 +70,64 @@ class WebSocketService {
         useSessionStore.getState().setConnected(false);
     }
 
+    public async login(username: string, password: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const loginTimeout = setTimeout(() => {
+                this.socket?.close();
+                reject(new Error('Login timed out. Check connection.'));
+            }, 10000);
+
+            if (this.socket?.readyState === WebSocket.OPEN) {
+                this.socket.close();
+            }
+
+            const wsUrl = `${CONFIG.WS_URL}?username=default`;
+            if (CONFIG.DEBUG_WS) console.log('[WS] Login connecting to:', wsUrl);
+
+            this.socket = new WebSocket(wsUrl);
+
+            this.socket.onopen = () => {
+                this.socket?.send(JSON.stringify({
+                    action: 'admin-login',
+                    username,
+                    password
+                }));
+            };
+
+            this.socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    const type = data.type || data.messageType;
+
+                    if (CONFIG.DEBUG_WS) console.log('[WS] Login received:', type, data);
+
+                    // Support both admin-login-success and Atomic Login (session-joined with authToken)
+                    if (type === 'admin-login-success' || (type === 'session-joined' && data.authToken)) {
+                        clearTimeout(loginTimeout);
+                        useSessionStore.getState().setAuthToken(data.authToken);
+                        useSessionStore.getState().setUsername(data.username || username);
+                        useSessionStore.getState().setLastMode('host');
+                        resolve();
+                    } else if (type === 'error') {
+                        clearTimeout(loginTimeout);
+                        reject(new Error(data.message || 'Login failed'));
+                    }
+                } catch (e) {
+                    // Ignore parse errors for non-JSON heartbeat if they exist
+                }
+            };
+
+            this.socket.onerror = (e) => {
+                clearTimeout(loginTimeout);
+                reject(new Error('Connection failed'));
+            };
+
+            this.socket.onclose = () => {
+                useSessionStore.getState().setConnected(false);
+            };
+        });
+    }
+
     private handleOpen = () => {
         console.log('[WS] Connected');
         this.reconnectAttempts = 0;
@@ -80,6 +148,10 @@ class WebSocketService {
                 case 'welcome':
                 case 'ACCESS_LEVEL':
                 case 'access-level':
+                case 'admin-login-success':
+                    if (rawData.authToken) {
+                        useSessionStore.getState().setAuthToken(rawData.authToken);
+                    }
                     // If session ID is present, store it.
                     // Note: Current backend might send 'access-level' instead of 'welcome'
                     if (rawData.sessionId) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     View,
     StyleSheet,
@@ -7,7 +7,8 @@ import {
     ActivityIndicator,
     Text,
     RefreshControl,
-    SectionList
+    SectionList,
+    TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -18,22 +19,49 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { ReleaseCard } from '@/components/ReleaseCard';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { BrowseSection } from '@/components/BrowseSection';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
 import { CONFIG } from '@/config';
+import { Ionicons } from '@expo/vector-icons';
+import { SessionDrawer } from '@/components/SessionDrawer';
 
 const PAGE_SIZE = 5000; // Load all for client-side sorting. Note: Collections > 5k items may see performance degradation on low-end devices.
 
+// Helper to remove accents/diacritics
+const normalizeString = (str: string) => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+// Helper to get sortable name (ignore leading "The", normalize accents)
+const getSortableName = (name: string) => {
+    if (!name) return '';
+    let n = normalizeString(name).toLowerCase().trim();
+    if (n.startsWith('the ')) {
+        return n.substring(4);
+    }
+    return n;
+};
+
 export default function CollectionScreen() {
+    const router = useRouter();
+    const { initialView } = useLocalSearchParams<{ initialView: string }>();
+
     const [releases, setReleases] = useState<Release[]>([]);
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
     const [loading, setLoading] = useState(false);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
 
     // Sync State
-    const syncStatus = useSessionStore(state => state.syncStatus);
-    const syncProgress = useSessionStore(state => state.syncProgress);
+    const {
+        username,
+        syncStatus,
+        syncProgress,
+        setLastMode,
+        setAuthToken
+    } = useSessionStore();
 
     // Initial Load
     useEffect(() => {
@@ -46,6 +74,16 @@ export default function CollectionScreen() {
         });
     }, []);
 
+    const filteredReleases = useMemo(() => {
+        if (!searchQuery) return releases;
+        const normalizedQuery = normalizeString(searchQuery.toLowerCase().trim());
+        return releases.filter((release: Release) => {
+            const normalizedTitle = normalizeString(release.title.toLowerCase());
+            const normalizedArtist = normalizeString(release.artist.toLowerCase());
+            return normalizedTitle.includes(normalizedQuery) || normalizedArtist.includes(normalizedQuery);
+        });
+    }, [releases, searchQuery]);
+
     const loadReleases = async (reset = false) => {
         if (loading && !reset) return;
 
@@ -53,8 +91,8 @@ export default function CollectionScreen() {
         try {
             const currentOffset = reset ? 0 : offset;
 
-            // Limit is PAGE_SIZE (10000) so we load all
-            const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, searchQuery);
+            // We skip searchQuery in DB fetch because we handle it client-side for diacritic parity
+            const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, '');
 
             if (reset) {
                 setReleases(newReleases);
@@ -74,16 +112,24 @@ export default function CollectionScreen() {
         }
     };
 
-    // Debounce/Reload when search changes
+    // Reload when sync completes (search handled client-side now)
     useEffect(() => {
-        const timer = setTimeout(() => {
+        if (syncStatus === 'idle' && releases.length === 0) {
             loadReleases(true);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
+        }
+    }, [syncStatus]);
 
     // View Mode State
-    const [viewMode, setViewMode] = useState<'grid' | 'genre' | 'decade' | 'alpha'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'genre' | 'decade' | 'alpha'>('genre');
+
+    // Handle initial view from landing page
+    useEffect(() => {
+        if (initialView) {
+            if (initialView === 'alpha') setViewMode('alpha');
+            else if (initialView === 'decade') setViewMode('decade');
+            else setViewMode('genre');
+        }
+    }, [initialView]);
 
     // Grouping Helper
     const getGroupedReleases = () => {
@@ -92,12 +138,12 @@ export default function CollectionScreen() {
         const groups: { title: string; data: Release[] }[] = [];
         const groupMap = new Map<string, Release[]>();
 
-        releases.forEach(release => {
+        filteredReleases.forEach((release: Release) => {
             if (viewMode === 'genre') {
                 // Support Multi-Genre: Iterate all genres
                 if (release.genres) {
-                    const genres = release.genres.split(',').map(g => g.trim()).filter(g => g.length > 0);
-                    genres.forEach(genre => {
+                    const genres = release.genres.split(',').map((g: string) => g.trim()).filter((g: string) => g.length > 0);
+                    genres.forEach((genre: string) => {
                         if (!groupMap.has(genre)) {
                             groupMap.set(genre, []);
                         }
@@ -123,10 +169,11 @@ export default function CollectionScreen() {
                 }
                 groupMap.get(key)!.push(release);
             } else if (viewMode === 'alpha') {
-                // Group by First Letter
+                // Group by First Letter of Artist (sortable)
                 let key = '#';
-                if (release.title && release.title.length > 0) {
-                    const firstChar = release.title.charAt(0).toUpperCase();
+                const sortableArtist = getSortableName(release.artist);
+                if (sortableArtist.length > 0) {
+                    const firstChar = sortableArtist.charAt(0).toUpperCase();
                     if (/[A-Z]/.test(firstChar)) {
                         key = firstChar;
                     }
@@ -140,8 +187,24 @@ export default function CollectionScreen() {
 
         // Convert Map to Array and Sort Keys
         Array.from(groupMap.entries())
-            .sort((a, b) => a[0].localeCompare(b[0])) // Alpha sort categories
+            .sort((a, b) => {
+                if (a[0] === '#') return 1; // # at end
+                if (b[0] === '#') return -1;
+                return a[0].localeCompare(b[0]);
+            })
             .forEach(([title, data]) => {
+                // Sort albums within group: Artist -> Title -> Year
+                data.sort((a, b) => {
+                    const sortA = getSortableName(a.artist);
+                    const sortB = getSortableName(b.artist);
+                    if (sortA !== sortB) return sortA.localeCompare(sortB);
+
+                    const titleA = normalizeString(a.title).toLowerCase();
+                    const titleB = normalizeString(b.title).toLowerCase();
+                    if (titleA !== titleB) return titleA.localeCompare(titleB);
+
+                    return (parseInt(a.year || '0') - parseInt(b.year || '0'));
+                });
                 groups.push({ title, data });
             });
 
@@ -149,9 +212,8 @@ export default function CollectionScreen() {
     };
 
     const handleSync = async () => {
-        // Trigger sync for default user
-        // TODO: Get actual user ID from auth context later
-        await syncService.syncCollection(CONFIG.DEFAULT_WATCHED_USERNAME);
+        if (!username) return;
+        await syncService.syncCollection(username);
         // Reload list after sync completes
         loadReleases(true);
     };
@@ -159,15 +221,37 @@ export default function CollectionScreen() {
     const renderHeader = () => (
         <View>
             <View style={styles.header}>
-                <Text style={styles.title}>Collection</Text>
-                {syncStatus === 'syncing' ? (
-                    <View style={styles.syncStatus}>
-                        <ActivityIndicator size="small" color={THEME.colors.primary} />
-                        <Text style={styles.syncText}>{syncProgress}%</Text>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity
+                        style={styles.iconBtn}
+                        onPress={() => {
+                            setLastMode(null);
+                            setAuthToken(null);
+                            router.replace('/');
+                        }}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.title}>
+                            {username ? `${username}'s Crate` : 'The Crate'}
+                        </Text>
+                        {syncStatus === 'syncing' ? (
+                            <View style={styles.syncStatus}>
+                                <ActivityIndicator size="small" color={THEME.colors.primary} />
+                                <Text style={styles.syncText}>{syncProgress}%</Text>
+                            </View>
+                        ) : (
+                            <Text style={styles.countText}>{releases.length} Items</Text>
+                        )}
                     </View>
-                ) : (
-                    <Text style={styles.countText}>{releases.length} Items</Text>
-                )}
+                </View>
+                <TouchableOpacity
+                    style={styles.iconBtnGlass}
+                    onPress={() => setIsMenuVisible(true)}
+                >
+                    <Ionicons name="menu" size={24} color="#fff" />
+                </TouchableOpacity>
             </View>
 
             <View style={styles.segmentedControlContainer}>
@@ -204,7 +288,7 @@ export default function CollectionScreen() {
 
                 {viewMode === 'grid' ? (
                     <FlatList
-                        data={releases}
+                        data={filteredReleases}
                         renderItem={({ item }) => (
                             <ReleaseCard
                                 release={item}
@@ -247,6 +331,11 @@ export default function CollectionScreen() {
                     release={selectedRelease}
                     onClose={() => setSelectedRelease(null)}
                 />
+
+                <SessionDrawer
+                    isVisible={isMenuVisible}
+                    onClose={() => setIsMenuVisible(false)}
+                />
             </SafeAreaView>
         </View>
     );
@@ -271,23 +360,48 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: 22,
+        fontWeight: '700',
         color: THEME.colors.white,
+    },
+    iconBtn: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 20,
+    },
+    iconBtnGlass: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     syncStatus: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 6,
+        marginTop: 2,
     },
     syncText: {
         color: THEME.colors.primary,
+        fontSize: 12,
         fontWeight: '600',
     },
     countText: {
         color: THEME.colors.textDim,
-        fontSize: 14,
+        fontSize: 12,
+        marginTop: 2,
     },
     segmentedControlContainer: {
         paddingHorizontal: THEME.spacing.md,
