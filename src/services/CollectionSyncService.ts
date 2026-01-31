@@ -52,7 +52,7 @@ class CollectionSyncService {
             }
 
             console.log('[Sync] Complete. Items:', data.albums.length);
-            useSessionStore.getState().setSyncStatus('success');
+            useSessionStore.getState().setSyncStatus('complete');
             useSessionStore.getState().setSyncProgress(100);
             useSessionStore.getState().setLastSyncTime(Date.now());
 

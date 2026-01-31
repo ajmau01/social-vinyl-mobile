@@ -161,12 +161,12 @@ class WebSocketService {
                     if (rawData.album) {
                         const { album } = rawData;
                         useSessionStore.getState().setNowPlaying({
-                            title: album.title,
+                            track: album.title,
                             artist: album.artist,
+                            album: album.title,
+                            albumArt: album.coverImage,
                             releaseId: String(album.releaseId),
-                            coverInfo: {
-                                pixelUri: album.coverImage
-                            }
+                            timestamp: Date.now()
                         });
                     }
                     break;

@@ -2,6 +2,15 @@
  * Domain types for Social Vinyl Mobile
  */
 
+/**
+ * Result Pattern (Critical for Phase 1)
+ */
+export type Result<T, E = Error> =
+    | { success: true; data: T }
+    | { success: false; error: E };
+
+export type AsyncResult<T, E = Error> = Promise<Result<T, E>>;
+
 export interface Release {
     id: number;
     title: string;
@@ -15,20 +24,72 @@ export interface Release {
     tracks?: string; // JSON String
 }
 
+/**
+ * NowPlaying Interface
+ * Aligned with specification in Issue #23.
+ */
 export interface NowPlaying {
-    title: string;
+    track: string;
     artist: string;
-    releaseId: string;
-    coverInfo?: {
-        pixelUri?: string;
-    };
+    album: string;
+    albumArt?: string;
+    timestamp?: number;
+    releaseId?: string; // Added for internal linking
 }
 
 export interface BinItem extends Release {
     addedTimestamp: number;
 }
 
-export type SyncStatus = 'idle' | 'syncing' | 'error' | 'success';
+export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error';
+
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+export interface Track {
+    position: string;
+    title: string;
+    duration: string;
+}
+
+export interface BackendAlbum {
+    id: number;
+    title: string;
+    artist: string;
+    year?: number;
+    thumb?: string;
+    genre?: string;
+    styles?: string[];
+    format?: string;
+    country?: string;
+    label?: string;
+    catno?: string;
+    tracks?: Track[];
+}
+
+export interface LoginResult {
+    sessionId: string;
+    token: string;
+    userId?: string;
+}
+
+export interface SyncResult {
+    itemCount: number;
+    syncTime: number;
+    avatarUrl?: string;
+}
+
+export interface ScanResponse {
+    success: boolean;
+    albums?: BackendAlbum[];
+    error?: string;
+}
+
+export interface SyncState {
+    status: SyncStatus;
+    progress: number;
+    lastSyncTime: number | null;
+    error?: string;
+}
 
 /**
  * WebSocket Protocol Types
@@ -46,7 +107,7 @@ export type WebSocketMessageType =
 export interface WebSocketMessage {
     type?: WebSocketMessageType;
     messageType?: WebSocketMessageType;
-    payload?: any;
+    payload?: LoginResult | SyncResult | NowPlaying | { message: string } | any;
     sessionId?: string;
     authToken?: string;
     username?: string;
@@ -61,6 +122,7 @@ export interface WebSocketMessage {
 
 /**
  * Service Interfaces (Contracts)
+ * Note: These are evolving and will be fully defined in Phase 4 (Dependency Injection).
  */
 
 export interface IWebSocketService {
@@ -79,7 +141,7 @@ export interface IDatabaseService {
 }
 
 export interface ICollectionSyncService {
-    syncCollection(): Promise<void>;
+    syncCollection(userId: string): Promise<void>;
     isSyncing(): boolean;
 }
 
