@@ -1,17 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-export interface Release {
-    id: number;
-    title: string;
-    artist: string;
-    thumb_url: string | null;
-    added_at: number;
-    year?: string;
-    genres?: string;
-    label?: string;
-    format?: string;
-    tracks?: string; // JSON String
-}
+import { Release } from '@/types';
 
 class DatabaseService {
     private static instance: DatabaseService;

@@ -2,14 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface NowPlaying {
-    title: string;
-    artist: string;
-    releaseId: string;
-    coverInfo?: {
-        pixelUri?: string; // Placeholder or low-res
-    };
-}
+import { NowPlaying, SyncStatus } from '@/types';
 
 interface SessionState {
     isConnected: boolean;
@@ -32,10 +25,10 @@ interface SessionState {
     setLastMode: (mode: 'host' | 'guest' | 'solo' | null) => void;
 
     // Sync State
-    syncStatus: 'idle' | 'syncing' | 'error' | 'success';
+    syncStatus: SyncStatus;
     syncProgress: number | null;
     lastSyncTime: number | null;
-    setSyncStatus: (status: 'idle' | 'syncing' | 'error' | 'success') => void;
+    setSyncStatus: (status: SyncStatus) => void;
     setSyncProgress: (progress: number | null) => void;
     setLastSyncTime: (time: number) => void;
 }

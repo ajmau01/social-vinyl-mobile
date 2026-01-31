@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { THEME } from '@/constants/theme';
-import { Release } from '@/services/DatabaseService';
+import { Release } from '@/types';
 import { ReleaseCard } from './ReleaseCard';
 
 interface BrowseSectionProps {

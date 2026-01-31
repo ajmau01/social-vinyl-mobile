@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { THEME } from '@/constants/theme';
-import { Release } from '@/services/DatabaseService';
+import { Release } from '@/types';
 
 interface ReleaseCardProps {
     release: Release;

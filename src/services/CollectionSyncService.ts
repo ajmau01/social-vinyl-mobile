@@ -1,5 +1,6 @@
 import { useSessionStore } from '../store/useSessionStore';
-import { dbService, Release } from './DatabaseService';
+import { dbService } from './DatabaseService';
+import { Release } from '@/types';
 import { CONFIG } from '../config';
 
 interface BackendAlbum {

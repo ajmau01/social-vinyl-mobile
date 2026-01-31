@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
-import { dbService, Release } from '@/services/DatabaseService';
+import { dbService } from '@/services/DatabaseService';
+import { Release } from '@/types';
 import { syncService } from '@/services/CollectionSyncService';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ReleaseCard } from '@/components/ReleaseCard';

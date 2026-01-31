@@ -1,11 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Release } from '../services/DatabaseService';
-
-export interface BinItem extends Release {
-    addedTimestamp: number;
-}
+import { Release, BinItem } from '@/types';
 
 interface ListeningBinState {
     items: BinItem[];
