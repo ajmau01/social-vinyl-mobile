@@ -1,6 +1,11 @@
 import { CONFIG } from '@/config';
-import { useSessionStore } from '@/store/useSessionStore';
-import { NowPlaying, WebSocketMessage } from '@/types';
+import {
+    NowPlaying,
+    WebSocketMessage,
+    WebSocketCallbacks,
+    AsyncResult,
+    LoginResult
+} from '@/types';
 
 class WebSocketService {
     private static instance: WebSocketService;
@@ -9,6 +14,8 @@ class WebSocketService {
     private maxReconnectAttempts = 5;
     private reconnectTimeout: NodeJS.Timeout | null = null;
     private shouldReconnect = true;
+    private callbacks: WebSocketCallbacks | null = null;
+    private currentConfig: { username: string; authToken?: string } | null = null;
 
     private constructor() { }
 
@@ -19,21 +26,25 @@ class WebSocketService {
         return WebSocketService.instance;
     }
 
-    public connect() {
+    public setCallbacks(callbacks: WebSocketCallbacks) {
+        this.callbacks = callbacks;
+    }
+
+    public connect(username: string, authToken?: string) {
         if (this.socket?.readyState === WebSocket.OPEN) return;
 
-        const { username, authToken } = useSessionStore.getState();
-        const watchedUsername = username; // For now, we watch our own bin
+        this.currentConfig = { username, authToken };
+        this.shouldReconnect = true;
 
         if (!username) {
             if (CONFIG.DEBUG_WS) console.log('[WS] Skip connect: No username');
-            useSessionStore.getState().setConnecting(false);
+            this.callbacks?.onConnectionStateChange('disconnected');
             return;
         }
 
         const params = new URLSearchParams({
             username,
-            watchedUsername: watchedUsername || username
+            watchedUsername: username // For now, we watch our own bin
         });
 
         if (authToken) {
@@ -49,6 +60,8 @@ class WebSocketService {
         this.socket.onmessage = this.handleMessage;
         this.socket.onclose = this.handleClose;
         this.socket.onerror = this.handleError;
+
+        this.callbacks?.onConnectionStateChange('connecting');
     }
 
     public disconnect() {
@@ -63,34 +76,31 @@ class WebSocketService {
             this.socket.close();
             this.socket = null;
         }
-        useSessionStore.getState().setConnected(false);
+        this.callbacks?.onConnectionStateChange('disconnected');
     }
 
-    public async login(username: string, password: string): Promise<void> {
-        return new Promise((resolve, reject) => {
+    public async login(username: string, password: string): AsyncResult<LoginResult> {
+        return new Promise((resolve) => {
+            let tempSocket: WebSocket | null = null;
             const loginTimeout = setTimeout(() => {
-                this.socket?.close();
-                reject(new Error('Login timed out. Check connection.'));
+                tempSocket?.close();
+                resolve({ success: false, error: new Error('Login timed out. Check connection.') });
             }, 10000);
-
-            if (this.socket?.readyState === WebSocket.OPEN) {
-                this.socket.close();
-            }
 
             const wsUrl = `${CONFIG.WS_URL}?username=default`;
             if (CONFIG.DEBUG_WS) console.log('[WS] Login connecting to:', wsUrl);
 
-            this.socket = new WebSocket(wsUrl);
+            tempSocket = new WebSocket(wsUrl);
 
-            this.socket.onopen = () => {
-                this.socket?.send(JSON.stringify({
+            tempSocket.onopen = () => {
+                tempSocket?.send(JSON.stringify({
                     action: 'admin-login',
                     username,
                     password
                 }));
             };
 
-            this.socket.onmessage = (event) => {
+            tempSocket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     const type = data.type || data.messageType;
@@ -100,26 +110,34 @@ class WebSocketService {
                     // Support both admin-login-success and Atomic Login (session-joined with authToken)
                     if (type === 'admin-login-success' || (type === 'session-joined' && data.authToken)) {
                         clearTimeout(loginTimeout);
-                        useSessionStore.getState().setAuthToken(data.authToken);
-                        useSessionStore.getState().setUsername(data.username || username);
-                        useSessionStore.getState().setLastMode('host');
-                        resolve();
+                        tempSocket?.close(); // Close immediately on success
+                        resolve({
+                            success: true,
+                            data: {
+                                sessionId: data.sessionId || '',
+                                token: data.authToken,
+                                userId: data.username || username
+                            }
+                        });
                     } else if (type === 'error') {
                         clearTimeout(loginTimeout);
-                        reject(new Error(data.message || 'Login failed'));
+                        tempSocket?.close();
+                        resolve({ success: false, error: new Error(data.message || 'Login failed') });
                     }
                 } catch (e) {
-                    // Ignore parse errors for non-JSON heartbeat if they exist
+                    // Ignore parse errors for non-JSON heartbeat
                 }
             };
 
-            this.socket.onerror = (e) => {
+            tempSocket.onerror = (e) => {
                 clearTimeout(loginTimeout);
-                reject(new Error('Connection failed'));
+                tempSocket?.close();
+                resolve({ success: false, error: new Error('Connection failed') });
             };
 
-            this.socket.onclose = () => {
-                useSessionStore.getState().setConnected(false);
+            tempSocket.onclose = () => {
+                // If this happens unexpectedly before resolve
+                if (CONFIG.DEBUG_WS) console.log('[WS] Login socket closed');
             };
         });
     }
@@ -127,8 +145,7 @@ class WebSocketService {
     private handleOpen = () => {
         console.log('[WS] Connected');
         this.reconnectAttempts = 0;
-        useSessionStore.getState().setConnected(true);
-        useSessionStore.getState().setConnecting(false);
+        this.callbacks?.onConnectionStateChange('connected');
     };
 
     private handleMessage = (event: MessageEvent) => {
@@ -136,46 +153,11 @@ class WebSocketService {
             const rawData = JSON.parse(event.data);
             if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', rawData);
 
-            // Handle both UPPER_CASE and kebab-case types
-            const type = rawData.type || rawData.messageType;
+            // Emit raw message through callback
+            this.callbacks?.onMessage(rawData);
 
-            switch (type) {
-                case 'WELCOME':
-                case 'welcome':
-                case 'ACCESS_LEVEL':
-                case 'access-level':
-                case 'admin-login-success':
-                    if (rawData.authToken) {
-                        useSessionStore.getState().setAuthToken(rawData.authToken);
-                    }
-                    // If session ID is present, store it.
-                    // Note: Current backend might send 'access-level' instead of 'welcome'
-                    if (rawData.sessionId) {
-                        useSessionStore.getState().setSessionId(rawData.sessionId);
-                    }
-                    if (CONFIG.DEBUG_WS) console.log('[WS] Welcome/Access:', rawData);
-                    break;
-                case 'NOW_PLAYING':
-                case 'now-playing':
-                    // Protocol: 'now-playing' has nested 'album' object
-                    if (rawData.album) {
-                        const { album } = rawData;
-                        useSessionStore.getState().setNowPlaying({
-                            track: album.title,
-                            artist: album.artist,
-                            album: album.title,
-                            albumArt: album.coverImage,
-                            releaseId: String(album.releaseId),
-                            timestamp: Date.now()
-                        });
-                    }
-                    break;
-                case 'SESSION_ENDED':
-                case 'session-ended':
-                    useSessionStore.getState().setSessionId(null);
-                    useSessionStore.getState().setNowPlaying(null);
-                    break;
-            }
+            // Handle common internal state transitions if necessary, 
+            // but primarily UI should respond to onMessage
         } catch (e) {
             console.error('[WS] Failed to parse message', e);
         }
@@ -183,20 +165,17 @@ class WebSocketService {
 
     private handleClose = (event: CloseEvent) => {
         console.log('[WS] Disconnected', event.code, event.reason);
-        useSessionStore.getState().setConnected(false);
+        this.callbacks?.onConnectionStateChange('disconnected');
 
         if (this.shouldReconnect) {
-            // Keep "Connecting" state true so UI doesn't flash while waiting for timer
-            useSessionStore.getState().setConnecting(true);
+            this.callbacks?.onConnectionStateChange('reconnecting');
             this.attemptReconnect();
-        } else {
-            useSessionStore.getState().setConnecting(false);
         }
     };
 
     private handleError = (event: Event) => {
         console.log('[WS] Connection failed (retrying...)');
-        // Error will trigger onClose, so we handle logic there
+        this.callbacks?.onError(new Error('WebSocket connection error'));
     };
 
     private attemptReconnect() {
@@ -210,7 +189,9 @@ class WebSocketService {
 
         this.reconnectAttempts++;
         this.reconnectTimeout = setTimeout(() => {
-            this.connect();
+            if (this.currentConfig) {
+                this.connect(this.currentConfig.username, this.currentConfig.authToken);
+            }
         }, delay);
     }
 }

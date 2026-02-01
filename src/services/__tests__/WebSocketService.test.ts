@@ -2,6 +2,14 @@ import { wsService } from '../WebSocketService';
 import { useSessionStore } from '../../store/useSessionStore';
 import { CONFIG } from '@/config';
 
+// Mock AsyncStorage for Zustand persist
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    setItem: jest.fn(),
+    getItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+}));
+
 // Mock WebSocket
 class MockWebSocket {
     static instances: MockWebSocket[] = [];
@@ -27,35 +35,60 @@ class MockWebSocket {
 global.WebSocket = MockWebSocket;
 
 describe('WebSocketService', () => {
+    let callbacks: any;
+
     beforeEach(() => {
         jest.clearAllMocks();
         MockWebSocket.instances = [];
-        useSessionStore.setState({ isConnected: false, isConnecting: false });
-        // @ts-ignore
-        wsService.disconnect(); // Reset state
-        // @ts-ignore
-        wsService.shouldReconnect = true; // Reset reconnect flag
+        useSessionStore.setState({ isConnected: false, isConnecting: false, nowPlaying: null });
+
+        callbacks = {
+            onConnectionStateChange: jest.fn((state) => {
+                const store = useSessionStore.getState();
+                store.setConnected(state === 'connected');
+                store.setConnecting(state === 'connecting' || state === 'reconnecting');
+            }),
+            onMessage: jest.fn((rawData) => {
+                const store = useSessionStore.getState();
+                if (rawData.type === 'NOW_PLAYING' && rawData.album) {
+                    store.setNowPlaying({
+                        track: rawData.album.title,
+                        artist: rawData.album.artist,
+                        album: rawData.album.title,
+                        albumArt: rawData.album.coverImage,
+                        releaseId: String(rawData.album.releaseId),
+                        timestamp: Date.now()
+                    });
+                }
+            }),
+            onError: jest.fn()
+        };
+
+        wsService.setCallbacks(callbacks);
+        wsService.disconnect();
     });
 
     it('should connect to the configured URL', () => {
-        wsService.connect();
+        wsService.connect('testuser');
         expect(MockWebSocket.instances.length).toBe(1);
+        expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connecting');
         expect(useSessionStore.getState().isConnecting).toBe(true);
     });
 
     it('should update store on successful connection', () => {
-        wsService.connect();
+        wsService.connect('testuser');
         const mockSocket = MockWebSocket.instances[0];
 
         // Simulate Open Event
         mockSocket.onopen?.();
 
+        expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
         expect(useSessionStore.getState().isConnected).toBe(true);
         expect(useSessionStore.getState().isConnecting).toBe(false);
     });
 
     it('should handle incoming JSON messages', () => {
-        wsService.connect();
+        wsService.connect('testuser');
         const mockSocket = MockWebSocket.instances[0];
 
         const rawPayload = {
@@ -72,6 +105,7 @@ describe('WebSocketService', () => {
         // Simulate Message
         mockSocket.onmessage?.(event);
 
+        expect(callbacks.onMessage).toHaveBeenCalledWith(rawPayload);
         expect(useSessionStore.getState().nowPlaying).toEqual(expect.objectContaining({
             track: 'Test Track',
             artist: 'Test Artist',

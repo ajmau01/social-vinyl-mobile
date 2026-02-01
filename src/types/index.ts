@@ -11,6 +11,17 @@ export type Result<T, E = Error> =
 
 export type AsyncResult<T, E = Error> = Promise<Result<T, E>>;
 
+export interface WebSocketCallbacks {
+    onConnectionStateChange(state: ConnectionState): void;
+    onMessage(message: WebSocketMessage): void;
+    onError(error: Error): void;
+}
+
+export interface SyncCallbacks {
+    onProgress(progress: number): void;
+    onStatusChange(status: SyncStatus): void;
+}
+
 export interface Release {
     id: number;
     userId: string; // SCOPING: User ID for isolation
@@ -129,7 +140,8 @@ export interface WebSocketMessage {
 export interface IWebSocketService {
     connect(): void;
     disconnect(): void;
-    login(username: string, password: string): Promise<void>;
+    login(username: string, password: string): AsyncResult<LoginResult>;
+    setCallbacks(callbacks: WebSocketCallbacks): void;
 }
 
 export interface IDatabaseService {
@@ -140,10 +152,11 @@ export interface IDatabaseService {
     updateReleaseTracks(userId: string, releaseId: number, tracksJson: string): Promise<void>;
     clearUserCollection(userId: string): Promise<void>;
     clearAll(): Promise<void>;
+    _resetForTesting(): void; // Added for completeness from previous work
 }
 
 export interface ICollectionSyncService {
-    syncCollection(userId: string): Promise<void>;
+    syncCollection(userId: string, callbacks?: SyncCallbacks): AsyncResult<SyncResult>;
     isSyncing(): boolean;
 }
 

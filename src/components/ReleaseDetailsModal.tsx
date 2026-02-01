@@ -48,9 +48,9 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     }, [visible, release]);
 
     const fetchTracks = async () => {
-        if (!release) return;
+        if (!release || !username) return;
         setLoading(true);
-        const data = await syncService.fetchTracks(release.id);
+        const data = await syncService.fetchTracks(username, release.id);
         if (data) {
             setTracks(data);
         }

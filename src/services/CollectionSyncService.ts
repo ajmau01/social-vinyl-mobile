@@ -1,6 +1,10 @@
-import { useSessionStore } from '../store/useSessionStore';
 import { dbService } from './DatabaseService';
-import { Release } from '@/types';
+import {
+    Release,
+    SyncCallbacks,
+    AsyncResult,
+    SyncResult
+} from '@/types';
 import { CONFIG } from '../config';
 
 interface BackendAlbum {
@@ -23,13 +27,16 @@ interface ScanResponse {
 }
 
 class CollectionSyncService {
-    private isSyncing = false;
+    private activeSyncs = new Set<string>();
 
-    public async syncCollection(userId: string) {
-        if (this.isSyncing) return;
-        this.isSyncing = true;
-        useSessionStore.getState().setSyncStatus('syncing');
-        useSessionStore.getState().setSyncProgress(10); // Started
+    public async syncCollection(userId: string, callbacks?: SyncCallbacks): AsyncResult<SyncResult> {
+        if (this.activeSyncs.has(userId)) {
+            return { success: false, error: new Error('Sync already in progress for this user') };
+        }
+
+        this.activeSyncs.add(userId);
+        callbacks?.onStatusChange('syncing');
+        callbacks?.onProgress(10); // Started
 
         try {
             console.log('[Sync] Starting sync for user:', userId);
@@ -37,37 +44,44 @@ class CollectionSyncService {
             // Fetch cached data (Read-Only)
             const data = await this.fetchScan(userId);
 
-            if (!data || !data.albums) {
-                // If fetchScan threw (e.g. Not Scanned), it might be caught there.
-                // If it returned null, we throw generic.
-                throw new Error('Failed to fetch collection');
+            if (!data || !data.albums || data.albums.length === 0) {
+                throw new Error('Discogs collection is empty or user not found');
             }
 
-            useSessionStore.getState().setSyncProgress(50); // Downloaded
+            callbacks?.onProgress(50); // Downloaded
 
             await this.saveReleases(data.albums, userId);
 
-            if (data.avatarUrl) {
-                useSessionStore.getState().setAvatarUrl(data.avatarUrl);
-            }
-
             console.log('[Sync] Complete. Items:', data.albums.length);
-            useSessionStore.getState().setSyncStatus('complete');
-            useSessionStore.getState().setSyncProgress(100);
-            useSessionStore.getState().setLastSyncTime(Date.now());
+            callbacks?.onStatusChange('complete');
+            callbacks?.onProgress(100);
+
+            return {
+                success: true,
+                data: {
+                    itemCount: data.albums.length,
+                    syncTime: Date.now(),
+                    avatarUrl: data.avatarUrl
+                }
+            };
 
         } catch (error) {
             console.error('[Sync] Error:', error);
-            useSessionStore.getState().setSyncStatus('error');
+            callbacks?.onStatusChange('error');
+            return { success: false, error: error instanceof Error ? error : new Error('Unknown sync error') };
         } finally {
-            this.isSyncing = false;
+            this.activeSyncs.delete(userId);
         }
+    }
+
+    public isSyncing(userId?: string): boolean {
+        if (userId) return this.activeSyncs.has(userId);
+        return this.activeSyncs.size > 0;
     }
 
     private async fetchScan(userId: string): Promise<ScanResponse | null> {
         try {
             // Use format=json to get cached collection (Read-Only)
-            // mode=scan is restricted to the host machine (403 Forbidden)
             const url = `${CONFIG.API_URL}/collection?format=json&username=${userId}`;
             console.log('[Sync] Fetching:', url);
 
@@ -87,19 +101,15 @@ class CollectionSyncService {
 
             // The backend returns albums grouped by Genre: { "Rock": [...], "Jazz": [...] }
             // We need to flatten this into a single list AND deduplicate
-            // Albums with multiple genres appear in multiple categories
             if (rawData && rawData.albums && !Array.isArray(rawData.albums)) {
-                // Determine Genres
                 const uniqueAlbumsMap = new Map<number, BackendAlbum>();
 
                 for (const [category, albums] of Object.entries(rawData.albums)) {
                     const albumList = albums as BackendAlbum[];
                     for (const album of albumList) {
                         if (!uniqueAlbumsMap.has(album.releaseId)) {
-                            // Initialize with current category
                             uniqueAlbumsMap.set(album.releaseId, { ...album, genres: [category] });
                         } else {
-                            // Append category to existing entry
                             const existing = uniqueAlbumsMap.get(album.releaseId)!;
                             if (existing.genres && !existing.genres.includes(category)) {
                                 existing.genres.push(category);
@@ -112,7 +122,7 @@ class CollectionSyncService {
 
                 return {
                     albums: flatAlbums,
-                    count: flatAlbums.length, // Update count to match unique items
+                    count: flatAlbums.length,
                     username: rawData.username || userId,
                     avatarUrl: rawData.avatarUrl
                 };
@@ -131,11 +141,11 @@ class CollectionSyncService {
     private async saveReleases(items: BackendAlbum[], userId: string) {
         const releases: Release[] = items.map((item, index) => ({
             id: item.releaseId,
-            userId: userId, // SCOPING: Associate with current user
+            userId: userId,
             title: item.title,
             artist: item.artist,
             thumb_url: item.coverImage || null,
-            added_at: Date.now() - index, // Preserve relative order
+            added_at: Date.now() - index,
             year: item.year,
             genres: item.genres ? item.genres.join(', ') : undefined,
             label: item.label,
@@ -145,7 +155,8 @@ class CollectionSyncService {
 
         await dbService.saveReleasesBatch(releases);
     }
-    public async fetchTracks(releaseId: number): Promise<any[] | null> {
+
+    public async fetchTracks(userId: string, releaseId: number): Promise<any[] | null> {
         try {
             const url = `${CONFIG.API_URL}/collection?mode=tracklist&releaseId=${releaseId}`;
             console.log('[Sync] Fetching tracks:', url);
@@ -154,8 +165,6 @@ class CollectionSyncService {
             const data = await response.json();
 
             if (data && data.tracks) {
-                // Save to local DB for caching
-                const userId = useSessionStore.getState().username;
                 if (userId) {
                     await dbService.updateReleaseTracks(userId, releaseId, JSON.stringify(data.tracks));
                 }

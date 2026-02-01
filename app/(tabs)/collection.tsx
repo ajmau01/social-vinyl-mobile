@@ -219,9 +219,18 @@ export default function CollectionScreen() {
 
     const handleSync = async () => {
         if (!username) return;
-        await syncService.syncCollection(username);
-        // Reload list after sync completes
-        loadReleases(true);
+        const result = await syncService.syncCollection(username, {
+            onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
+            onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
+        });
+
+        if (result.success) {
+            if (result.data.avatarUrl) {
+                useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
+            }
+            useSessionStore.getState().setLastSyncTime(result.data.syncTime);
+            loadReleases(true);
+        }
     };
 
     const renderHeader = () => (

@@ -88,10 +88,23 @@ export default function HubScreen() {
         setLoading(true);
         setError(null);
         try {
-            setUsername(inputValue.trim());
-            setLastMode('solo');
-            await syncService.syncCollection(inputValue.trim());
-            router.replace('/(tabs)/collection');
+            const userId = inputValue.trim();
+            const result = await syncService.syncCollection(userId, {
+                onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
+                onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
+            });
+
+            if (result.success) {
+                setUsername(userId);
+                setLastMode('solo');
+                if (result.data.avatarUrl) {
+                    useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
+                }
+                useSessionStore.getState().setLastSyncTime(result.data.syncTime);
+                router.replace('/(tabs)/collection');
+            } else {
+                setError(result.error.message || 'Failed to sync collection');
+            }
         } catch (e: any) {
             setError(e.message || 'Failed to sync collection');
         } finally {
@@ -117,8 +130,19 @@ export default function HubScreen() {
         setLoading(true);
         setError(null);
         try {
-            await wsService.login(inputValue.trim(), password);
-            router.replace('/(tabs)/collection');
+            const result = await wsService.login(inputValue.trim(), password);
+            if (result.success) {
+                const { data } = result;
+                useSessionStore.getState().setAuthToken(data.token);
+                useSessionStore.getState().setUsername(data.userId || inputValue.trim());
+                useSessionStore.getState().setLastMode('host');
+                if (data.sessionId) {
+                    useSessionStore.getState().setSessionId(data.sessionId);
+                }
+                router.replace('/(tabs)/collection');
+            } else {
+                setError(result.error.message || 'Login failed');
+            }
         } catch (e: any) {
             setError(e.message || 'Login failed');
         } finally {
@@ -233,7 +257,12 @@ export default function HubScreen() {
                                             disabled={loading || syncStatus === 'syncing'}
                                         >
                                             {loading || syncStatus === 'syncing' ? (
-                                                <ActivityIndicator color="white" />
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                                    <ActivityIndicator color="white" />
+                                                    {syncStatus === 'syncing' && (
+                                                        <Text style={styles.btnText}>{syncProgress}%</Text>
+                                                    )}
+                                                </View>
                                             ) : (
                                                 <Text style={styles.btnText}>
                                                     {mode === 'host' ? 'Unlock' : mode === 'guest' ? 'Join' : 'Browse'}

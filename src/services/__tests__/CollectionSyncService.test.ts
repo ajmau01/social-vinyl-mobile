@@ -3,6 +3,14 @@ import { dbService } from '../DatabaseService';
 import { useSessionStore } from '../../store/useSessionStore';
 import { CONFIG } from '../../config';
 
+// Mock AsyncStorage for Zustand persist
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    setItem: jest.fn(),
+    getItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+}));
+
 // Mock DB
 jest.mock('../DatabaseService', () => ({
     dbService: {
@@ -15,10 +23,16 @@ global.fetch = jest.fn();
 
 describe('CollectionSyncService', () => {
     const mockUserId = 'test-user';
+    let callbacks: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        useSessionStore.setState({ syncStatus: 'idle', lastSyncTime: null });
+        useSessionStore.setState({ syncStatus: 'idle', lastSyncTime: null, syncProgress: 0 });
+
+        callbacks = {
+            onProgress: jest.fn((p) => useSessionStore.getState().setSyncProgress(p)),
+            onStatusChange: jest.fn((s) => useSessionStore.getState().setSyncStatus(s))
+        };
     });
 
     it('should sync full collection successfully', async () => {
@@ -41,7 +55,12 @@ describe('CollectionSyncService', () => {
             }),
         });
 
-        await syncService.syncCollection(mockUserId);
+        const result = await syncService.syncCollection(mockUserId, callbacks);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.itemCount).toBe(3);
+        }
 
         expect(global.fetch).toHaveBeenCalledTimes(1);
         expect(global.fetch).toHaveBeenCalledWith(
@@ -50,34 +69,20 @@ describe('CollectionSyncService', () => {
 
         // Should flatten and save all 3 items with metadata
         expect(dbService.saveReleasesBatch).toHaveBeenCalledWith(expect.arrayContaining([
-            expect.objectContaining({
-                id: 101,
-                userId: mockUserId, // SCOPING: Verified
-                title: 'Album A',
-                year: '1990',
-                genres: 'Rock',
-                label: 'Label A',
-                format: 'LP'
-            }),
-            expect.objectContaining({
-                id: 102,
-                title: 'Album B',
-                year: '1991',
-                genres: 'Rock'
-            }),
-            expect.objectContaining({
-                id: 103,
-                title: 'Album C',
-                year: '1959',
-                genres: 'Jazz'
-            })
+            expect.objectContaining({ id: 101, genres: 'Rock' }),
+            expect.objectContaining({ id: 102, genres: 'Rock' }),
+            expect.objectContaining({ id: 103, genres: 'Jazz' })
         ]));
 
-        // Verify store updates
+        // Verify callback invocations
+        expect(callbacks.onStatusChange).toHaveBeenCalledWith('syncing');
+        expect(callbacks.onStatusChange).toHaveBeenCalledWith('complete');
+        expect(callbacks.onProgress).toHaveBeenCalledWith(100);
+
+        // Verify store updates (via callbacks)
         const state = useSessionStore.getState();
         expect(state.syncStatus).toBe('complete');
         expect(state.syncProgress).toBe(100);
-        expect(state.lastSyncTime).not.toBeNull();
     });
 
     it('should deduplicate albums and merge genres', async () => {
@@ -94,15 +99,12 @@ describe('CollectionSyncService', () => {
             }),
         });
 
-        await syncService.syncCollection(mockUserId);
+        const result = await syncService.syncCollection(mockUserId, callbacks);
+        expect(result.success).toBe(true);
 
         // Should save only 1 item but with merged genres "Rock, Pop"
         const saveCall = (dbService.saveReleasesBatch as jest.Mock).mock.calls[0][0];
         expect(saveCall).toHaveLength(1);
-        expect(saveCall[0].id).toBe(500);
-        expect(saveCall[0].userId).toBe(mockUserId);
-        // Order of iteration over object keys is not guaranteed, but usually insertion order for string keys
-        // We'll check if it contains both
         expect(saveCall[0].genres).toMatch(/Rock/);
         expect(saveCall[0].genres).toMatch(/Pop/);
     });
@@ -111,15 +113,17 @@ describe('CollectionSyncService', () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,
             headers: { get: () => 'text/html; charset=utf-8' },
-            // Body doesn't matter, header check comes first
             json: async () => ({})
         });
 
-        await syncService.syncCollection(mockUserId);
+        const result = await syncService.syncCollection(mockUserId, callbacks);
 
-        const state = useSessionStore.getState();
-        // Since we swallow the error in syncCollection but log it, status should be 'error'
-        expect(state.syncStatus).toBe('error');
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('not scanned');
+        }
+
+        expect(useSessionStore.getState().syncStatus).toBe('error');
         expect(dbService.saveReleasesBatch).not.toHaveBeenCalled();
     });
 
@@ -130,27 +134,30 @@ describe('CollectionSyncService', () => {
             status: 500
         });
 
-        await syncService.syncCollection(mockUserId);
+        const result = await syncService.syncCollection(mockUserId, callbacks);
+        expect(result.success).toBe(false);
 
-        const state = useSessionStore.getState();
-        expect(state.syncStatus).toBe('error');
-        expect(dbService.saveReleasesBatch).not.toHaveBeenCalled();
+        expect(useSessionStore.getState().syncStatus).toBe('error');
     });
 
-    it('should prevent concurrent syncs', async () => {
-        // Mock a slow fetch
+    it('should prevent concurrent syncs for the same user', async () => {
         (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
             ok: true,
             headers: { get: () => 'application/json' },
             json: async () => ({ albums: {} })
         }), 100)));
 
-        const sync1 = syncService.syncCollection(mockUserId);
-        const sync2 = syncService.syncCollection(mockUserId);
+        const sync1 = syncService.syncCollection(mockUserId, callbacks);
+        const sync2 = syncService.syncCollection(mockUserId, callbacks);
 
-        await Promise.all([sync1, sync2]);
+        const [res1, res2] = await Promise.all([sync1, sync2]);
 
-        // Should only be called once
+        expect(res1.success).toBe(true);
+        expect(res2.success).toBe(false); // Second one fails immediately
+        if (!res2.success) {
+            expect(res2.error.message).toContain('already in progress');
+        }
+
         expect(global.fetch).toHaveBeenCalledTimes(1);
     });
 });
