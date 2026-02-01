@@ -15,6 +15,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('../DatabaseService', () => ({
     dbService: {
         saveReleasesBatch: jest.fn(),
+        updateReleaseTracks: jest.fn(),
     },
 }));
 
@@ -144,7 +145,13 @@ describe('CollectionSyncService', () => {
         (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
             ok: true,
             headers: { get: () => 'application/json' },
-            json: async () => ({ albums: {} })
+            json: async () => ({
+                albums: {
+                    "Rock": [{ releaseId: 999, title: 'Sync Test', artist: 'Tester', coverImage: 'url', year: '2024' }]
+                },
+                totalCount: 1,
+                username: mockUserId
+            })
         }), 100)));
 
         const sync1 = syncService.syncCollection(mockUserId, callbacks);
@@ -159,5 +166,36 @@ describe('CollectionSyncService', () => {
         }
 
         expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    describe('fetchTracks', () => {
+        it('should return success Result with tracks', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    tracks: [{ position: 'A1', title: 'Track 1', duration: '3:00' }]
+                }),
+            });
+
+            const result = await syncService.fetchTracks(mockUserId, 12345);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data).toHaveLength(1);
+                expect(result.data[0].title).toBe('Track 1');
+            }
+        });
+
+        it('should return error Result on API failure', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: false,
+                status: 404
+            });
+
+            const result = await syncService.fetchTracks(mockUserId, 12345);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.message).toContain('API Error: 404');
+            }
+        });
     });
 });

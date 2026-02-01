@@ -30,6 +30,10 @@ class WebSocketService {
         this.callbacks = callbacks;
     }
 
+    public clearCallbacks() {
+        this.callbacks = null;
+    }
+
     public connect(username: string, authToken?: string) {
         if (this.socket?.readyState === WebSocket.OPEN) return;
 
@@ -79,6 +83,15 @@ class WebSocketService {
         this.callbacks?.onConnectionStateChange('disconnected');
     }
 
+    /**
+     * Performs admin login using an isolated temporary WebSocket connection.
+     * 
+     * Uses a separate socket (not this.socket) to prevent interference with
+     * the main persistent connection. The login socket is closed immediately
+     * after receiving authentication response.
+     * 
+     * @returns LoginResult with sessionId, token, and userId on success
+     */
     public async login(username: string, password: string): AsyncResult<LoginResult> {
         return new Promise((resolve) => {
             let tempSocket: WebSocket | null = null;
@@ -151,13 +164,49 @@ class WebSocketService {
     private handleMessage = (event: MessageEvent) => {
         try {
             const rawData = JSON.parse(event.data);
-            if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', rawData);
+            const type = rawData.type || rawData.messageType;
+            if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', type, rawData);
 
-            // Emit raw message through callback
+            // Always emit raw message for flexible consumption
             this.callbacks?.onMessage(rawData);
 
-            // Handle common internal state transitions if necessary, 
-            // but primarily UI should respond to onMessage
+            // Semantic Event Emission (Architectural Cleanup)
+            switch (type) {
+                case 'WELCOME':
+                case 'welcome':
+                case 'SESSION_JOINED':
+                case 'session-joined':
+                case 'admin-login-success':
+                    this.callbacks?.onSessionJoined?.({
+                        sessionId: rawData.sessionId || '',
+                        authToken: rawData.authToken,
+                        username: rawData.username
+                    });
+                    break;
+                case 'NOW_PLAYING':
+                case 'now-playing':
+                    if (rawData.album) {
+                        const { album } = rawData;
+                        this.callbacks?.onNowPlaying?.({
+                            track: album.title,
+                            artist: album.artist,
+                            album: album.title,
+                            albumArt: album.coverImage,
+                            releaseId: String(album.releaseId)
+                        });
+                    }
+                    break;
+                case 'SESSION_ENDED':
+                case 'session-ended':
+                    this.callbacks?.onSessionEnded?.();
+                    break;
+                case 'ACCESS_LEVEL':
+                case 'access-level':
+                    if (rawData.message) {
+                        this.callbacks?.onAccessLevel?.(rawData.message);
+                    }
+                    break;
+            }
         } catch (e) {
             console.error('[WS] Failed to parse message', e);
         }

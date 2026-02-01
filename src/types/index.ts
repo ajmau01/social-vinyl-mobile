@@ -15,6 +15,11 @@ export interface WebSocketCallbacks {
     onConnectionStateChange(state: ConnectionState): void;
     onMessage(message: WebSocketMessage): void;
     onError(error: Error): void;
+    // Semantic Callbacks for architectural cleanup
+    onSessionJoined?(data: { sessionId: string; authToken?: string; username?: string }): void;
+    onNowPlaying?(data: NowPlaying): void;
+    onSessionEnded?(): void;
+    onAccessLevel?(level: string): void;
 }
 
 export interface SyncCallbacks {
@@ -119,7 +124,7 @@ export type WebSocketMessageType =
 export interface WebSocketMessage {
     type?: WebSocketMessageType;
     messageType?: WebSocketMessageType;
-    payload?: LoginResult | SyncResult | NowPlaying | { message: string } | any;
+    payload?: LoginResult | SyncResult | NowPlaying | { message: string } | Record<string, unknown>;
     sessionId?: string;
     authToken?: string;
     username?: string;
@@ -128,6 +133,7 @@ export interface WebSocketMessage {
         artist: string;
         releaseId: number;
         coverImage: string;
+        tracks?: Track[];
     };
     message?: string;
 }

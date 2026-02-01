@@ -3,7 +3,8 @@ import {
     Release,
     SyncCallbacks,
     AsyncResult,
-    SyncResult
+    SyncResult,
+    Track
 } from '@/types';
 import { CONFIG } from '../config';
 
@@ -15,7 +16,7 @@ interface BackendAlbum {
     year?: string;
     label?: string;
     format?: string;
-    tracks?: any[]; // Raw track objects
+    tracks?: Track[]; // FIXED: Proper type scoping
     genres?: string[]; // We will inject this during flattening
 }
 
@@ -156,10 +157,10 @@ class CollectionSyncService {
         await dbService.saveReleasesBatch(releases);
     }
 
-    public async fetchTracks(userId: string, releaseId: number): Promise<any[] | null> {
+    public async fetchTracks(userId: string, releaseId: number): AsyncResult<Track[]> {
         try {
             const url = `${CONFIG.API_URL}/collection?mode=tracklist&releaseId=${releaseId}`;
-            console.log('[Sync] Fetching tracks:', url);
+            if (CONFIG.DEBUG_WS) console.log('[Sync] Fetching tracks:', url);
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
             const data = await response.json();
@@ -168,12 +169,12 @@ class CollectionSyncService {
                 if (userId) {
                     await dbService.updateReleaseTracks(userId, releaseId, JSON.stringify(data.tracks));
                 }
-                return data.tracks;
+                return { success: true, data: data.tracks };
             }
-            return null;
+            return { success: false, error: new Error('No tracks found') };
         } catch (error) {
             console.error('[Sync] Failed to fetch tracks:', error);
-            return null;
+            return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
         }
     }
 }

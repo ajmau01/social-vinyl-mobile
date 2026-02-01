@@ -6,6 +6,7 @@ import { wsService } from '@/services/WebSocketService';
 import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
+import { CONFIG } from '@/config';
 
 export default function RootLayout() {
   const { username, authToken } = useSessionStore();
@@ -18,44 +19,37 @@ export default function RootLayout() {
         store.setConnected(state === 'connected');
         store.setConnecting(state === 'connecting' || state === 'reconnecting');
       },
-      onMessage: (rawData) => {
+      onSessionJoined: (data) => {
         const store = useSessionStore.getState();
-        const type = rawData.type || rawData.messageType;
-
-        switch (type) {
-          case 'WELCOME':
-          case 'welcome':
-          case 'ACCESS_LEVEL':
-          case 'access-level':
-          case 'admin-login-success':
-            if (rawData.authToken) store.setAuthToken(rawData.authToken);
-            if (rawData.sessionId) store.setSessionId(rawData.sessionId);
-            break;
-          case 'NOW_PLAYING':
-          case 'now-playing':
-            if (rawData.album) {
-              const { album } = rawData;
-              store.setNowPlaying({
-                track: album.title,
-                artist: album.artist,
-                album: album.title,
-                albumArt: album.coverImage,
-                releaseId: String(album.releaseId),
-                timestamp: Date.now()
-              });
-            }
-            break;
-          case 'SESSION_ENDED':
-          case 'session-ended':
-            store.setSessionId(null);
-            store.setNowPlaying(null);
-            break;
-        }
+        if (data.authToken) store.setAuthToken(data.authToken);
+        if (data.sessionId) store.setSessionId(data.sessionId);
+      },
+      onNowPlaying: (data) => {
+        const store = useSessionStore.getState();
+        store.setNowPlaying({
+          ...data,
+          releaseId: data.releaseId || undefined
+        });
+      },
+      onSessionEnded: () => {
+        const store = useSessionStore.getState();
+        store.setSessionId(null);
+        store.setNowPlaying(null);
+      },
+      onMessage: () => {
+        // Raw messages still available if needed, but semantic events preferred
+      },
+      onAccessLevel: (level) => {
+        if (CONFIG.DEBUG_WS) console.log('[WS] Access Level:', level);
       },
       onError: (error) => {
         console.error('[WS] Error:', error);
       }
     });
+
+    return () => {
+      wsService.clearCallbacks();
+    };
   }, []);
 
   useEffect(() => {

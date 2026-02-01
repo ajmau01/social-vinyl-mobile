@@ -61,7 +61,21 @@ describe('WebSocketService', () => {
                     });
                 }
             }),
-            onError: jest.fn()
+            onError: jest.fn(),
+            onSessionJoined: jest.fn((data) => {
+                const store = useSessionStore.getState();
+                if (data.authToken) store.setAuthToken(data.authToken);
+                if (data.sessionId) store.setSessionId(data.sessionId);
+            }),
+            onNowPlaying: jest.fn((data) => {
+                const store = useSessionStore.getState();
+                store.setNowPlaying(data);
+            }),
+            onSessionEnded: jest.fn(() => {
+                const store = useSessionStore.getState();
+                store.setSessionId(null);
+                store.setNowPlaying(null);
+            })
         };
 
         wsService.setCallbacks(callbacks);
@@ -106,6 +120,10 @@ describe('WebSocketService', () => {
         mockSocket.onmessage?.(event);
 
         expect(callbacks.onMessage).toHaveBeenCalledWith(rawPayload);
+        expect(callbacks.onNowPlaying).toHaveBeenCalledWith(expect.objectContaining({
+            track: 'Test Track',
+            artist: 'Test Artist'
+        }));
         expect(useSessionStore.getState().nowPlaying).toEqual(expect.objectContaining({
             track: 'Test Track',
             artist: 'Test Artist',
@@ -113,5 +131,24 @@ describe('WebSocketService', () => {
             albumArt: 'http://example.com/cover.jpg',
             releaseId: '12345'
         }));
+    });
+
+    it('should return error Result on login failure', async () => {
+        const loginPromise = wsService.login('testuser', 'wrongpass');
+        const mockSocket = MockWebSocket.instances[0];
+
+        // Simulate Error from server
+        mockSocket.onmessage?.({
+            data: JSON.stringify({
+                type: 'error',
+                message: 'Invalid credentials'
+            })
+        });
+
+        const result = await loginPromise;
+        expect(result.success).toBe(false);
+        if (!result.success) {
+            expect(result.error.message).toContain('Invalid credentials');
+        }
     });
 });
