@@ -314,6 +314,19 @@ export default function CollectionScreen() {
                             />
                         }
                         ListFooterComponent={loading ? <ActivityIndicator color={THEME.colors.primary} /> : null}
+                        ListEmptyComponent={!loading ? (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
+                                <Text style={styles.emptyText}>
+                                    {username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
+                                </Text>
+                                <Text style={styles.emptySubtext}>
+                                    {username === 'solo_user'
+                                        ? 'Sync your Discogs collection in Solo Mode to start browsing.'
+                                        : 'Try syncing your collection or adjusting your search.'}
+                                </Text>
+                            </View>
+                        ) : null}
                     />
                 ) : (
                     <SectionList
@@ -428,5 +441,25 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: THEME.spacing.xs,
         paddingBottom: 100, // Space for tab bar + playing banner
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
+        paddingTop: 100,
+    },
+    emptyText: {
+        color: THEME.colors.white,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: THEME.spacing.md,
+    },
+    emptySubtext: {
+        color: THEME.colors.textDim,
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: THEME.spacing.xs,
+        lineHeight: 20,
     },
 });

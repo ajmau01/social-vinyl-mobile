@@ -40,7 +40,6 @@ export interface NowPlaying {
 
 export interface BinItem extends Release {
     addedTimestamp: number;
-    userId: string; // SCOPING: User ID for isolation
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error';

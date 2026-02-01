@@ -40,7 +40,7 @@ export const useSessionStore = create<SessionState>()(
             isConnecting: false,
             activeSessionId: null,
             nowPlaying: null,
-            username: null,
+            username: 'solo_user', // DEFAULT: Initialized to solo_user for consistent scoping
             avatarUrl: null,
             authToken: null,
             lastMode: null,

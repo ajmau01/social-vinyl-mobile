@@ -24,6 +24,7 @@ class DatabaseService {
             try {
                 console.log('[DB] Initializing SQLite...');
                 this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
+                console.log('[DB] Database opened:', !!this.db);
 
                 // Schema is now stable, removing destructive drop
                 // await this.db.execAsync('DROP TABLE IF EXISTS releases');
@@ -159,6 +160,7 @@ class DatabaseService {
     // Only for testing
     public _resetForTesting() {
         this.db = null;
+        this.initPromise = null;
         // @ts-ignore - clearing singleton for test isolation
         DatabaseService.instance = null;
     }

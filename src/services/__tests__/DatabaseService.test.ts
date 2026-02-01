@@ -91,4 +91,36 @@ describe('DatabaseService', () => {
         await dbService.clearUserCollection('testuser');
         expect(mockDb.runAsync).toHaveBeenCalledWith('DELETE FROM releases WHERE userId = ?', 'testuser');
     });
+
+    it('should isolate data between users', async () => {
+        await dbService.init();
+
+        const user1Releases = [
+            { id: 1, userId: 'user1', title: 'Album A', artist: 'Artist A', added_at: 100 }
+        ];
+        const user2Releases = [
+            { id: 1, userId: 'user2', title: 'Album B', artist: 'Artist B', added_at: 200 }
+        ];
+
+        // Save for both users
+        await dbService.saveReleasesBatch(user1Releases as any);
+        await dbService.saveReleasesBatch(user2Releases as any);
+
+        // Verify isolation
+        mockDb.getAllAsync.mockResolvedValueOnce(user1Releases);
+        const user1Data = await dbService.getReleases('user1', 50, 0);
+        expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+            expect.stringContaining('WHERE userId = ?'),
+            ['user1', 50, 0]
+        );
+        expect(user1Data[0].title).toBe('Album A');
+
+        mockDb.getAllAsync.mockResolvedValueOnce(user2Releases);
+        const user2Data = await dbService.getReleases('user2', 50, 0);
+        expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+            expect.stringContaining('WHERE userId = ?'),
+            ['user2', 50, 0]
+        );
+        expect(user2Data[0].title).toBe('Album B');
+    });
 });
