@@ -24,10 +24,19 @@ class DatabaseService {
             try {
                 console.log('[DB] Initializing SQLite...');
                 this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
-                console.log('[DB] Database opened:', !!this.db);
+                if (!this.db) throw new Error('Failed to open database');
 
-                // Schema is now stable, removing destructive drop
-                // await this.db.execAsync('DROP TABLE IF EXISTS releases');
+                console.log('[DB] Database opened. Checking schema...');
+
+                // SCEMA MIGRATION (Phase 0.5): Detect if userId column is missing
+                // This handles users who didn't fully uninstall before the update.
+                const tableInfo = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(releases)");
+                const hasUserId = tableInfo.some(col => col.name === 'userId');
+
+                if (tableInfo.length > 0 && !hasUserId) {
+                    console.warn('[DB] Schema mismatch: missing userId column. Dropping releases table...');
+                    await this.db.execAsync('DROP TABLE IF EXISTS releases');
+                }
 
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
@@ -50,7 +59,7 @@ class DatabaseService {
                     CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
                     CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
                 `);
-                console.log('[DB] Initialized successfully');
+                console.log('[DB] Schema verified/initialized');
             } catch (error) {
                 console.error('[DB] Failed to initialize', error);
                 this.initPromise = null;
