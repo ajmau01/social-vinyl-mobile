@@ -52,6 +52,7 @@ describe('CollectionSyncService', () => {
         expect(dbService.saveReleasesBatch).toHaveBeenCalledWith(expect.arrayContaining([
             expect.objectContaining({
                 id: 101,
+                userId: mockUserId, // SCOPING: Verified
                 title: 'Album A',
                 year: '1990',
                 genres: 'Rock',
@@ -74,7 +75,7 @@ describe('CollectionSyncService', () => {
 
         // Verify store updates
         const state = useSessionStore.getState();
-        expect(state.syncStatus).toBe('success');
+        expect(state.syncStatus).toBe('complete');
         expect(state.syncProgress).toBe(100);
         expect(state.lastSyncTime).not.toBeNull();
     });
@@ -99,6 +100,7 @@ describe('CollectionSyncService', () => {
         const saveCall = (dbService.saveReleasesBatch as jest.Mock).mock.calls[0][0];
         expect(saveCall).toHaveLength(1);
         expect(saveCall[0].id).toBe(500);
+        expect(saveCall[0].userId).toBe(mockUserId);
         // Order of iteration over object keys is not guaranteed, but usually insertion order for string keys
         // We'll check if it contains both
         expect(saveCall[0].genres).toMatch(/Rock/);

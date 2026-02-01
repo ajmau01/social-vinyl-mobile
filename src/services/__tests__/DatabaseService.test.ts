@@ -6,7 +6,7 @@ jest.mock('expo-sqlite', () => ({
     openDatabaseAsync: jest.fn().mockResolvedValue({
         execAsync: jest.fn(),
         runAsync: jest.fn(),
-        getAllAsync: jest.fn(),
+        getAllAsync: jest.fn().mockResolvedValue([]),
         withTransactionAsync: jest.fn(async (cb) => await cb()),
     }),
 }));
@@ -28,7 +28,8 @@ describe('DatabaseService', () => {
 
         expect(SQLite.openDatabaseAsync).toHaveBeenCalledWith('social_vinyl.db');
         expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE IF NOT EXISTS releases'));
-        expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('CREATE INDEX IF NOT EXISTS idx_releases_added_at'));
+        expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('userId TEXT NOT NULL'));
+        expect(mockDb.execAsync).toHaveBeenCalledWith(expect.stringContaining('CREATE INDEX IF NOT EXISTS idx_releases_user'));
     });
 
     it('should save a release', async () => {
@@ -36,6 +37,7 @@ describe('DatabaseService', () => {
 
         const release = {
             id: 123,
+            userId: 'testuser',
             title: 'Test Album',
             artist: 'Test Artist',
             thumb_url: 'http://example.com/img.jpg',
@@ -46,7 +48,7 @@ describe('DatabaseService', () => {
 
         expect(mockDb.runAsync).toHaveBeenCalledWith(
             expect.stringContaining('INSERT OR REPLACE INTO releases'),
-            123, 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000,
+            123, 'testuser', 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000,
             null, null, null, null, null
         );
     });
@@ -55,8 +57,8 @@ describe('DatabaseService', () => {
         await dbService.init();
 
         const releases = [
-            { id: 1, title: 'A', artist: 'A', thumb_url: 'u1', added_at: 100 },
-            { id: 2, title: 'B', artist: 'B', thumb_url: 'u2', added_at: 200 }
+            { id: 1, userId: 'u1', title: 'A', artist: 'A', thumb_url: 'u1', added_at: 100 },
+            { id: 2, userId: 'u1', title: 'B', artist: 'B', thumb_url: 'u2', added_at: 200 }
         ];
 
         await dbService.saveReleasesBatch(releases);
@@ -67,20 +69,58 @@ describe('DatabaseService', () => {
         expect(mockDb.runAsync).toHaveBeenCalledTimes(2);
     });
 
-    it('should get releases with pagination', async () => {
+    it('should get releases scoped by userId', async () => {
         await dbService.init();
 
-        await dbService.getReleases(10, 5);
+        await dbService.getReleases('testuser', 10, 5);
 
         expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-            expect.stringContaining('SELECT * FROM releases'),
-            [10, 5]
+            expect.stringContaining('SELECT * FROM releases WHERE userId = ?'),
+            ['testuser', 10, 5]
         );
     });
 
-    it('should clear the database', async () => {
+    it('should clear the entire database', async () => {
         await dbService.init();
-        await dbService.clear();
+        await dbService.clearAll();
         expect(mockDb.execAsync).toHaveBeenCalledWith('DELETE FROM releases');
+    });
+
+    it('should clear a specific user collection', async () => {
+        await dbService.init();
+        await dbService.clearUserCollection('testuser');
+        expect(mockDb.runAsync).toHaveBeenCalledWith('DELETE FROM releases WHERE userId = ?', 'testuser');
+    });
+
+    it('should isolate data between users', async () => {
+        await dbService.init();
+
+        const user1Releases = [
+            { id: 1, userId: 'user1', title: 'Album A', artist: 'Artist A', added_at: 100 }
+        ];
+        const user2Releases = [
+            { id: 1, userId: 'user2', title: 'Album B', artist: 'Artist B', added_at: 200 }
+        ];
+
+        // Save for both users
+        await dbService.saveReleasesBatch(user1Releases as any);
+        await dbService.saveReleasesBatch(user2Releases as any);
+
+        // Verify isolation
+        mockDb.getAllAsync.mockResolvedValueOnce(user1Releases);
+        const user1Data = await dbService.getReleases('user1', 50, 0);
+        expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+            expect.stringContaining('WHERE userId = ?'),
+            ['user1', 50, 0]
+        );
+        expect(user1Data[0].title).toBe('Album A');
+
+        mockDb.getAllAsync.mockResolvedValueOnce(user2Releases);
+        const user2Data = await dbService.getReleases('user2', 50, 0);
+        expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+            expect.stringContaining('WHERE userId = ?'),
+            ['user2', 50, 0]
+        );
+        expect(user2Data[0].title).toBe('Album B');
     });
 });
