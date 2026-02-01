@@ -318,10 +318,10 @@ export default function CollectionScreen() {
                             <View style={styles.emptyContainer}>
                                 <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
                                 <Text style={styles.emptyText}>
-                                    {username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
+                                    {!username || username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
                                 </Text>
                                 <Text style={styles.emptySubtext}>
-                                    {username === 'solo_user'
+                                    {!username || username === 'solo_user'
                                         ? 'Sync your Discogs collection in Solo Mode to start browsing.'
                                         : 'Try syncing your collection or adjusting your search.'}
                                 </Text>
