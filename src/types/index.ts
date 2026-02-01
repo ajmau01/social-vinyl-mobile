@@ -1,0 +1,152 @@
+/**
+ * Domain types for Social Vinyl Mobile
+ */
+
+/**
+ * Result Pattern (Critical for Phase 1)
+ */
+export type Result<T, E = Error> =
+    | { success: true; data: T }
+    | { success: false; error: E };
+
+export type AsyncResult<T, E = Error> = Promise<Result<T, E>>;
+
+export interface Release {
+    id: number;
+    title: string;
+    artist: string;
+    thumb_url: string | null;
+    added_at: number;
+    year?: string;
+    genres?: string;
+    label?: string;
+    format?: string;
+    tracks?: string; // JSON String
+}
+
+/**
+ * NowPlaying Interface
+ * Aligned with specification in Issue #23.
+ */
+export interface NowPlaying {
+    track: string;
+    artist: string;
+    album: string;
+    albumArt?: string;
+    timestamp?: number;
+    releaseId?: string; // Added for internal linking
+}
+
+export interface BinItem extends Release {
+    addedTimestamp: number;
+}
+
+export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error';
+
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+export interface Track {
+    position: string;
+    title: string;
+    duration: string;
+}
+
+export interface BackendAlbum {
+    id: number;
+    title: string;
+    artist: string;
+    year?: number;
+    thumb?: string;
+    genre?: string;
+    styles?: string[];
+    format?: string;
+    country?: string;
+    label?: string;
+    catno?: string;
+    tracks?: Track[];
+}
+
+export interface LoginResult {
+    sessionId: string;
+    token: string;
+    userId?: string;
+}
+
+export interface SyncResult {
+    itemCount: number;
+    syncTime: number;
+    avatarUrl?: string;
+}
+
+export interface ScanResponse {
+    success: boolean;
+    albums?: BackendAlbum[];
+    error?: string;
+}
+
+export interface SyncState {
+    status: SyncStatus;
+    progress: number;
+    lastSyncTime: number | null;
+    error?: string;
+}
+
+/**
+ * WebSocket Protocol Types
+ */
+
+export type WebSocketMessageType =
+    | 'WELCOME' | 'welcome'
+    | 'ACCESS_LEVEL' | 'access-level'
+    | 'SESSION_JOINED' | 'session-joined'
+    | 'NOW_PLAYING' | 'now-playing'
+    | 'SESSION_ENDED' | 'session-ended'
+    | 'ERROR' | 'error'
+    | 'admin-login-success';
+
+export interface WebSocketMessage {
+    type?: WebSocketMessageType;
+    messageType?: WebSocketMessageType;
+    payload?: LoginResult | SyncResult | NowPlaying | { message: string } | any;
+    sessionId?: string;
+    authToken?: string;
+    username?: string;
+    album?: {
+        title: string;
+        artist: string;
+        releaseId: number;
+        coverImage: string;
+    };
+    message?: string;
+}
+
+/**
+ * Service Interfaces (Contracts)
+ * Note: These are evolving and will be fully defined in Phase 4 (Dependency Injection).
+ */
+
+export interface IWebSocketService {
+    connect(): void;
+    disconnect(): void;
+    login(username: string, password: string): Promise<void>;
+}
+
+export interface IDatabaseService {
+    init(): Promise<void>;
+    saveRelease(release: Release): Promise<void>;
+    saveReleasesBatch(releases: Release[]): Promise<void>;
+    getReleases(limit?: number, offset?: number, searchQuery?: string): Promise<Release[]>;
+    updateReleaseTracks(id: number, tracksJson: string): Promise<void>;
+    clear(): Promise<void>;
+}
+
+export interface ICollectionSyncService {
+    syncCollection(userId: string): Promise<void>;
+    isSyncing(): boolean;
+}
+
+export interface IAuthService {
+    login(username: string, password: string): Promise<void>;
+    logout(): void;
+    isAuthenticated(): boolean;
+}

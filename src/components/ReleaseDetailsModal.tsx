@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Modal, Image, Pressable, ScrollView, ActivityIn
 import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
-import { Release, dbService } from '@/services/DatabaseService';
+import { dbService } from '@/services/DatabaseService';
+import { Release } from '@/types';
 import { syncService } from '@/services/CollectionSyncService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { Ionicons } from '@expo/vector-icons';

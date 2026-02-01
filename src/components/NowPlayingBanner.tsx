@@ -22,9 +22,9 @@ export const NowPlayingBanner = () => {
                 <View style={styles.content}>
                     {/* Album Art Placeholder or Image */}
                     <View style={styles.artwork}>
-                        {nowPlaying?.coverInfo?.pixelUri ? (
+                        {nowPlaying?.albumArt ? (
                             <Image
-                                source={{ uri: nowPlaying.coverInfo.pixelUri }}
+                                source={{ uri: nowPlaying.albumArt }}
                                 style={styles.artworkImage}
                                 resizeMode="cover"
                             />
@@ -36,7 +36,7 @@ export const NowPlayingBanner = () => {
                     {/* Info */}
                     <View style={styles.info}>
                         <Text style={styles.track} numberOfLines={1}>
-                            {nowPlaying?.title || 'Waiting for Track...'}
+                            {nowPlaying?.track || 'Waiting for Track...'}
                         </Text>
                         <Text style={styles.artist} numberOfLines={1}>
                             {nowPlaying?.artist || (isConnecting ? 'Connecting...' : 'Not Playing')}

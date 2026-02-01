@@ -1,10 +1,6 @@
 import { CONFIG } from '@/config';
-import { useSessionStore, NowPlaying } from '@/store/useSessionStore';
-
-type WebSocketMessage =
-    | { type: 'WELCOME'; payload: { sessionId?: string } }
-    | { type: 'NOW_PLAYING'; payload: NowPlaying }
-    | { type: 'SESSION_ENDED'; payload?: any };
+import { useSessionStore } from '@/store/useSessionStore';
+import { NowPlaying, WebSocketMessage } from '@/types';
 
 class WebSocketService {
     private static instance: WebSocketService;
@@ -165,12 +161,12 @@ class WebSocketService {
                     if (rawData.album) {
                         const { album } = rawData;
                         useSessionStore.getState().setNowPlaying({
-                            title: album.title,
+                            track: album.title,
                             artist: album.artist,
+                            album: album.title,
+                            albumArt: album.coverImage,
                             releaseId: String(album.releaseId),
-                            coverInfo: {
-                                pixelUri: album.coverImage
-                            }
+                            timestamp: Date.now()
                         });
                     }
                     break;

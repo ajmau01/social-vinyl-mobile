@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, FlatList, Image, Pressable, SafeAreaView, Alert } from 'react-native';
 import { THEME } from '@/constants/theme';
-import { useListeningBinStore, BinItem } from '@/store/useListeningBinStore';
+import { useListeningBinStore } from '@/store/useListeningBinStore';
+import { BinItem } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function BinScreen() {

@@ -72,11 +72,12 @@ describe('WebSocketService', () => {
         // Simulate Message
         mockSocket.onmessage?.(event);
 
-        expect(useSessionStore.getState().nowPlaying).toEqual({
-            title: 'Test Track',
+        expect(useSessionStore.getState().nowPlaying).toEqual(expect.objectContaining({
+            track: 'Test Track',
             artist: 'Test Artist',
-            releaseId: '12345',
-            coverInfo: { pixelUri: 'http://example.com/cover.jpg' }
-        });
+            album: 'Test Track',
+            albumArt: 'http://example.com/cover.jpg',
+            releaseId: '12345'
+        }));
     });
 });
