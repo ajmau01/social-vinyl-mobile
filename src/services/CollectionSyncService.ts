@@ -45,7 +45,7 @@ class CollectionSyncService {
 
             useSessionStore.getState().setSyncProgress(50); // Downloaded
 
-            await this.saveReleases(data.albums);
+            await this.saveReleases(data.albums, userId);
 
             if (data.avatarUrl) {
                 useSessionStore.getState().setAvatarUrl(data.avatarUrl);
@@ -128,9 +128,10 @@ class CollectionSyncService {
         }
     }
 
-    private async saveReleases(items: BackendAlbum[]) {
+    private async saveReleases(items: BackendAlbum[], userId: string) {
         const releases: Release[] = items.map((item, index) => ({
             id: item.releaseId,
+            userId: userId, // SCOPING: Associate with current user
             title: item.title,
             artist: item.artist,
             thumb_url: item.coverImage || null,
@@ -154,7 +155,10 @@ class CollectionSyncService {
 
             if (data && data.tracks) {
                 // Save to local DB for caching
-                await dbService.updateReleaseTracks(releaseId, JSON.stringify(data.tracks));
+                const userId = useSessionStore.getState().username;
+                if (userId) {
+                    await dbService.updateReleaseTracks(userId, releaseId, JSON.stringify(data.tracks));
+                }
                 return data.tracks;
             }
             return null;

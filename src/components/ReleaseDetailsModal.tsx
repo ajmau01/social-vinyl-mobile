@@ -7,6 +7,7 @@ import { dbService } from '@/services/DatabaseService';
 import { Release } from '@/types';
 import { syncService } from '@/services/CollectionSyncService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
+import { useSessionStore } from '@/store/useSessionStore';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Track {
@@ -25,8 +26,9 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     const [tracks, setTracks] = useState<Track[] | null>(null);
     const [loading, setLoading] = useState(false);
 
+    const { username } = useSessionStore();
     const { addItem, isInBin } = useListeningBinStore();
-    const isAlreadyInBin = release ? isInBin(release.id) : false;
+    const isAlreadyInBin = (release && username) ? isInBin(release.id, username) : false;
 
     useEffect(() => {
         if (visible && release) {
@@ -56,8 +58,8 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     };
 
     const handleAddToBin = () => {
-        if (release) {
-            addItem(release);
+        if (release && username) {
+            addItem(release, username);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
     };

@@ -92,8 +92,13 @@ export default function CollectionScreen() {
         try {
             const currentOffset = reset ? 0 : offset;
 
-            // We skip searchQuery in DB fetch because we handle it client-side for diacritic parity
-            const newReleases = await dbService.getReleases(PAGE_SIZE, currentOffset, '');
+            // SCOPING: Only fetch releases for the current user
+            if (!username) {
+                setReleases([]);
+                return [];
+            }
+
+            const newReleases = await dbService.getReleases(username, PAGE_SIZE, currentOffset, '');
 
             if (reset) {
                 setReleases(newReleases);

@@ -1,30 +1,40 @@
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, Pressable, SafeAreaView, Alert } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
+import { useSessionStore } from '@/store/useSessionStore';
 import { BinItem } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function BinScreen() {
+    const { username } = useSessionStore();
     const { items, removeItem, clearBin } = useListeningBinStore();
 
+    // SCOPING: Only show items for the current user
+    const userItems = useMemo(() =>
+        items.filter(item => item.userId === username),
+        [items, username]);
+
     const handleRemove = (item: BinItem) => {
+        if (!username) return;
         Alert.alert(
             'Remove Album',
             `Are you sure you want to remove "${item.title}" from your Listening Bin?`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.id) },
+                { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.id, username) },
             ]
         );
     };
 
     const handleClear = () => {
+        if (!username) return;
         Alert.alert(
             'Clear Bin',
             'Are you sure you want to clear all albums from your Listening Bin?',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear All', style: 'destructive', onPress: clearBin },
+                { text: 'Clear All', style: 'destructive', onPress: () => clearBin(username) },
             ]
         );
     };
@@ -53,14 +63,14 @@ export default function BinScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Listening Bin</Text>
-                    {items.length > 0 && (
+                    {userItems.length > 0 && (
                         <Pressable onPress={handleClear} style={styles.clearButton}>
                             <Text style={styles.clearButtonText}>Clear All</Text>
                         </Pressable>
                     )}
                 </View>
 
-                {items.length === 0 ? (
+                {userItems.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
                         <Text style={styles.emptyText}>Your bin is empty</Text>
@@ -68,7 +78,7 @@ export default function BinScreen() {
                     </View>
                 ) : (
                     <FlatList
-                        data={items}
+                        data={userItems}
                         renderItem={renderItem}
                         keyExtractor={(item) => item.id.toString()}
                         contentContainerStyle={styles.listContent}

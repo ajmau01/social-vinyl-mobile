@@ -13,6 +13,7 @@ export type AsyncResult<T, E = Error> = Promise<Result<T, E>>;
 
 export interface Release {
     id: number;
+    userId: string; // SCOPING: User ID for isolation
     title: string;
     artist: string;
     thumb_url: string | null;
@@ -39,6 +40,7 @@ export interface NowPlaying {
 
 export interface BinItem extends Release {
     addedTimestamp: number;
+    userId: string; // SCOPING: User ID for isolation
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error';
@@ -135,9 +137,10 @@ export interface IDatabaseService {
     init(): Promise<void>;
     saveRelease(release: Release): Promise<void>;
     saveReleasesBatch(releases: Release[]): Promise<void>;
-    getReleases(limit?: number, offset?: number, searchQuery?: string): Promise<Release[]>;
-    updateReleaseTracks(id: number, tracksJson: string): Promise<void>;
-    clear(): Promise<void>;
+    getReleases(userId: string, limit?: number, offset?: number, searchQuery?: string): Promise<Release[]>;
+    updateReleaseTracks(userId: string, releaseId: number, tracksJson: string): Promise<void>;
+    clearUserCollection(userId: string): Promise<void>;
+    clearAll(): Promise<void>;
 }
 
 export interface ICollectionSyncService {

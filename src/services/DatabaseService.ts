@@ -30,7 +30,8 @@ class DatabaseService {
 
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
-                        id INTEGER PRIMARY KEY NOT NULL,
+                        id INTEGER NOT NULL,
+                        userId TEXT NOT NULL,
                         title TEXT NOT NULL,
                         artist TEXT NOT NULL,
                         thumb_url TEXT,
@@ -39,14 +40,14 @@ class DatabaseService {
                         genres TEXT,
                         label TEXT,
                         format TEXT,
-                        tracks TEXT
+                        tracks TEXT,
+                        PRIMARY KEY (id, userId)
                     );
 
+                    CREATE INDEX IF NOT EXISTS idx_releases_user ON releases(userId);
                     CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
                     CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
                     CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
-                    CREATE INDEX IF NOT EXISTS idx_releases_year ON releases(year);
-                    CREATE INDEX IF NOT EXISTS idx_releases_genres ON releases(genres);
                 `);
                 console.log('[DB] Initialized successfully');
             } catch (error) {
@@ -64,8 +65,9 @@ class DatabaseService {
 
         try {
             await this.db!.runAsync(
-                'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
+                release.userId,
                 release.title,
                 release.artist,
                 release.thumb_url,
@@ -89,8 +91,9 @@ class DatabaseService {
             await this.db!.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await this.db!.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
+                        release.userId,
                         release.title,
                         release.artist,
                         release.thumb_url,
@@ -109,15 +112,15 @@ class DatabaseService {
         }
     }
 
-    public async getReleases(limit = 50, offset = 0, searchQuery = ''): Promise<Release[]> {
+    public async getReleases(userId: string, limit = 50, offset = 0, searchQuery = ''): Promise<Release[]> {
         if (!this.db) await this.init();
 
         try {
-            let query = 'SELECT * FROM releases';
-            const params: any[] = [];
+            let query = 'SELECT * FROM releases WHERE userId = ?';
+            const params: any[] = [userId];
 
             if (searchQuery) {
-                query += ' WHERE title LIKE ? OR artist LIKE ?';
+                query += ' AND (title LIKE ? OR artist LIKE ?)';
                 const likeTerm = `%${searchQuery}%`;
                 params.push(likeTerm, likeTerm);
             }
@@ -133,16 +136,22 @@ class DatabaseService {
         }
     }
 
-    public async updateReleaseTracks(id: number, tracksJson: string) {
+    public async updateReleaseTracks(userId: string, releaseId: number, tracksJson: string) {
         if (!this.db) await this.init();
         await this.db!.runAsync(
-            'UPDATE releases SET tracks = ? WHERE id = ?',
+            'UPDATE releases SET tracks = ? WHERE id = ? AND userId = ?',
             tracksJson,
-            id
+            releaseId,
+            userId
         );
     }
 
-    public async clear() {
+    public async clearUserCollection(userId: string) {
+        if (!this.db) await this.init();
+        await this.db!.runAsync('DELETE FROM releases WHERE userId = ?', userId);
+    }
+
+    public async clearAll() {
         if (!this.db) await this.init();
         await this.db!.execAsync('DELETE FROM releases');
     }

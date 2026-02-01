@@ -7,10 +7,10 @@ interface ListeningBinState {
     items: BinItem[];
 
     // Actions
-    addItem: (release: Release) => void;
-    removeItem: (releaseId: number) => void;
-    clearBin: () => void;
-    isInBin: (releaseId: number) => boolean;
+    addItem: (release: Release, userId: string) => void;
+    removeItem: (releaseId: number, userId: string) => void;
+    clearBin: (userId?: string) => void; // If userId provided, only clear that user's bin
+    isInBin: (releaseId: number, userId: string) => boolean;
 }
 
 export const useListeningBinStore = create<ListeningBinState>()(
@@ -18,28 +18,38 @@ export const useListeningBinStore = create<ListeningBinState>()(
         (set, get) => ({
             items: [],
 
-            addItem: (release) => {
+            addItem: (release, userId) => {
                 const { items } = get();
-                if (items.some(item => item.id === release.id)) return;
+                // SCOPING: Check if item already exists FOR THIS USER
+                if (items.some(item => item.id === release.id && item.userId === userId)) return;
 
                 const newItem: BinItem = {
                     ...release,
+                    userId, // SCOPING: Associate with current user
                     addedTimestamp: Date.now(),
                 };
 
                 set({ items: [...items, newItem] });
             },
 
-            removeItem: (releaseId) => {
+            removeItem: (releaseId, userId) => {
                 set((state) => ({
-                    items: state.items.filter(item => item.id !== releaseId),
+                    items: state.items.filter(item => !(item.id === releaseId && item.userId === userId)),
                 }));
             },
 
-            clearBin: () => set({ items: [] }),
+            clearBin: (userId) => {
+                if (userId) {
+                    set((state) => ({
+                        items: state.items.filter(item => item.userId !== userId),
+                    }));
+                } else {
+                    set({ items: [] });
+                }
+            },
 
-            isInBin: (releaseId) => {
-                return get().items.some(item => item.id === releaseId);
+            isInBin: (releaseId, userId) => {
+                return get().items.some(item => item.id === releaseId && item.userId === userId);
             },
         }),
         {
