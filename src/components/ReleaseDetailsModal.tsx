@@ -48,11 +48,13 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     }, [visible, release]);
 
     const fetchTracks = async () => {
-        if (!release) return;
+        if (!release || !username) return;
         setLoading(true);
-        const data = await syncService.fetchTracks(release.id);
-        if (data) {
-            setTracks(data);
+        const result = await syncService.fetchTracks(username, release.id);
+        if (result.success) {
+            setTracks(result.data);
+        } else {
+            console.error('[Details] Failed to fetch tracks:', result.error);
         }
         setLoading(false);
     };
