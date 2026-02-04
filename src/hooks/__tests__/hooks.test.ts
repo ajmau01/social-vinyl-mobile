@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { useWebSocketStatus } from '../useWebSocketStatus';
+import { useWebSocket } from '../useWebSocket';
 import { useSyncCollection } from '../useSyncCollection';
-import { useCollection } from '../useCollection';
-import { useGroupedCollection } from '../useGroupedCollection';
+import { useCollectionData } from '../useCollectionData';
+import { useGroupedReleases } from '../useGroupedReleases';
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
 import { dbService } from '@/services/DatabaseService';
