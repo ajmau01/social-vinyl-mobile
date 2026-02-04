@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useSessionStore } from '@/store/useSessionStore';
 import { THEME } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWebSocket } from '@/hooks';
 
 export const NowPlayingBanner = () => {
-    const { nowPlaying, isConnected, isConnecting } = useSessionStore();
+    const { nowPlaying, isConnected, isConnecting } = useWebSocket();
     const insets = useSafeAreaInsets();
 
     // Design Decision: We show "Connecting..." even if track is null to give feedback.
