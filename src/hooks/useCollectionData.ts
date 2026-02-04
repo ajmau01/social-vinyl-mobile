@@ -6,14 +6,14 @@ import { Release } from '@/types';
 const PAGE_SIZE = 50;
 
 /**
- * useCollection Hook
+ * useCollectionData Hook
  * 
  * High-performance hook for querying the local SQLite database.
  * Supports infinite scroll, search, and pull-to-refresh.
  */
-export const useCollection = (searchQuery: string = '') => {
+export const useCollectionData = (searchQuery: string = '') => {
     const { username } = useSessionStore();
-    const [items, setItems] = useState<Release[]>([]);
+    const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -37,15 +37,15 @@ export const useCollection = (searchQuery: string = '') => {
             );
 
             if (isRefresh) {
-                setItems(newItems);
+                setReleases(newItems);
             } else {
-                setItems(prev => [...prev, ...newItems]);
+                setReleases(prev => [...prev, ...newItems]);
             }
 
             setHasMore(newItems.length === PAGE_SIZE);
             offsetRef.current += newItems.length;
         } catch (error) {
-            console.error('[useCollection] Load failed', error);
+            console.error('[useCollectionData] Load failed', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -68,7 +68,7 @@ export const useCollection = (searchQuery: string = '') => {
     }, [loadData]);
 
     return {
-        items,
+        releases,
         loading,
         refreshing,
         hasMore,
