@@ -133,12 +133,21 @@ export default function HubScreen() {
             const result = await wsService.login(inputValue.trim(), password);
             if (result.success) {
                 const { data } = result;
+                const userId = data.userId || inputValue.trim();
+
                 useSessionStore.getState().setAuthToken(data.token);
-                useSessionStore.getState().setUsername(data.userId || inputValue.trim());
+                useSessionStore.getState().setUsername(userId);
                 useSessionStore.getState().setLastMode('host');
                 if (data.sessionId) {
                     useSessionStore.getState().setSessionId(data.sessionId);
                 }
+
+                // AUTO-SYNC: Fetch collection after successful login
+                await syncService.syncCollection(userId, {
+                    onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
+                    onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
+                });
+
                 router.replace('/(tabs)/collection');
             } else {
                 setError(result.error.message || 'Login failed');

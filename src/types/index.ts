@@ -29,6 +29,7 @@ export interface SyncCallbacks {
 
 export interface Release {
     id: number;
+    instanceId: number; // UNIQUE identifier from Discogs
     userId: string; // SCOPING: User ID for isolation
     title: string;
     artist: string;
@@ -132,6 +133,7 @@ export interface WebSocketMessage {
         title: string;
         artist: string;
         releaseId: number;
+        instanceId?: number;
         coverImage: string;
         tracks?: Track[];
     };

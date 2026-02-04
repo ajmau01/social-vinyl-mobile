@@ -143,24 +143,24 @@ describe('Phase 2 Hooks', () => {
     describe('useCollectionData', () => {
         it('should load initial data into releases property', async () => {
             const getReleasesMock = (dbService.getReleases as jest.Mock).mockResolvedValue([
-                { id: 1, title: 'Album 1', artist: 'Artist 1' }
+                { id: 1, instanceId: 101, title: 'Album 1', artist: 'Artist 1' }
             ]);
 
             const { result } = renderHook(() => useCollectionData());
 
             await act(async () => { }); // Wait for useEffect
 
-            expect(getReleasesMock).toHaveBeenCalledWith('test-user', 50, 0, '');
+            expect(getReleasesMock).toHaveBeenCalledWith('test-user', Number.MAX_SAFE_INTEGER, 0, '');
             expect(result.current.releases).toHaveLength(1);
         });
     });
 
     describe('useGroupedReleases', () => {
         const releases: Release[] = [
-            { id: 1, artist: 'The Beatles', title: 'Help!', added_at: 100, year: '1965', genres: 'Rock' } as Release,
-            { id: 2, artist: 'Abba', title: 'Arrival', added_at: 200, year: '1976', genres: 'Pop' } as Release,
-            { id: 3, artist: 'Sigur Rós', title: 'Takk', added_at: 300, year: '2005', genres: 'Post-Rock' } as Release,
-            { id: 4, artist: '123', title: 'Numbers', added_at: 50, year: undefined, genres: undefined } as Release
+            { id: 1, instanceId: 101, artist: 'The Beatles', title: 'Help!', added_at: 100, year: '1965', genres: 'Rock' } as Release,
+            { id: 2, instanceId: 102, artist: 'Abba', title: 'Arrival', added_at: 200, year: '1976', genres: 'Pop' } as Release,
+            { id: 3, instanceId: 103, artist: 'Sigur Rós', title: 'Takk', added_at: 300, year: '2005', genres: 'Post-Rock' } as Release,
+            { id: 4, instanceId: 104, artist: '123', title: 'Numbers', added_at: 50, year: undefined, genres: undefined } as Release
         ];
 
         it('should group by artist and strip "The "', () => {

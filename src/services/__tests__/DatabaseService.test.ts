@@ -37,6 +37,7 @@ describe('DatabaseService', () => {
 
         const release = {
             id: 123,
+            instanceId: 456,
             userId: 'testuser',
             title: 'Test Album',
             artist: 'Test Artist',
@@ -48,7 +49,7 @@ describe('DatabaseService', () => {
 
         expect(mockDb.runAsync).toHaveBeenCalledWith(
             expect.stringContaining('INSERT OR REPLACE INTO releases'),
-            123, 'testuser', 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000,
+            123, 456, 'testuser', 'Test Album', 'Test Artist', 'http://example.com/img.jpg', 1000,
             null, null, null, null, null
         );
     });
@@ -57,8 +58,8 @@ describe('DatabaseService', () => {
         await dbService.init();
 
         const releases = [
-            { id: 1, userId: 'u1', title: 'A', artist: 'A', thumb_url: 'u1', added_at: 100 },
-            { id: 2, userId: 'u1', title: 'B', artist: 'B', thumb_url: 'u2', added_at: 200 }
+            { id: 1, instanceId: 101, userId: 'u1', title: 'A', artist: 'A', thumb_url: 'u1', added_at: 100 },
+            { id: 2, instanceId: 102, userId: 'u1', title: 'B', artist: 'B', thumb_url: 'u2', added_at: 200 }
         ];
 
         await dbService.saveReleasesBatch(releases);
@@ -96,10 +97,10 @@ describe('DatabaseService', () => {
         await dbService.init();
 
         const user1Releases = [
-            { id: 1, userId: 'user1', title: 'Album A', artist: 'Artist A', added_at: 100 }
+            { id: 1, instanceId: 101, userId: 'user1', title: 'Album A', artist: 'Artist A', added_at: 100 }
         ];
         const user2Releases = [
-            { id: 1, userId: 'user2', title: 'Album B', artist: 'Artist B', added_at: 200 }
+            { id: 1, instanceId: 102, userId: 'user2', title: 'Album B', artist: 'Artist B', added_at: 200 }
         ];
 
         // Save for both users

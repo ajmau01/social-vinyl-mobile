@@ -16,6 +16,7 @@ jest.mock('../DatabaseService', () => ({
     dbService: {
         saveReleasesBatch: jest.fn(),
         updateReleaseTracks: jest.fn(),
+        clearUserCollection: jest.fn().mockResolvedValue(undefined),
     },
 }));
 
@@ -44,11 +45,11 @@ describe('CollectionSyncService', () => {
             json: async () => ({
                 albums: {
                     "Rock": [
-                        { releaseId: 101, title: 'Album A', artist: 'Band A', coverImage: 'url1', year: '1990', label: 'Label A', format: 'LP' },
-                        { releaseId: 102, title: 'Album B', artist: 'Band B', coverImage: 'url2', year: '1991' }
+                        { releaseId: 101, instance_id: 1, title: 'Album A', artist: 'Band A', coverImage: 'url1', year: '1990', label: 'Label A', format: 'LP' },
+                        { releaseId: 102, instance_id: 2, title: 'Album B', artist: 'Band B', coverImage: 'url2', year: '1991' }
                     ],
                     "Jazz": [
-                        { releaseId: 103, title: 'Album C', artist: 'Band C', coverImage: 'url3', year: '1959' }
+                        { releaseId: 103, instance_id: 3, title: 'Album C', artist: 'Band C', coverImage: 'url3', year: '1959' }
                     ]
                 },
                 totalCount: 3,
@@ -92,8 +93,8 @@ describe('CollectionSyncService', () => {
             headers: { get: () => 'application/json' },
             json: async () => ({
                 albums: {
-                    "Rock": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }],
-                    "Pop": [{ releaseId: 500, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }]
+                    "Rock": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }],
+                    "Pop": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }]
                 },
                 totalCount: 1,
                 username: mockUserId
@@ -147,7 +148,7 @@ describe('CollectionSyncService', () => {
             headers: { get: () => 'application/json' },
             json: async () => ({
                 albums: {
-                    "Rock": [{ releaseId: 999, title: 'Sync Test', artist: 'Tester', coverImage: 'url', year: '2024' }]
+                    "Rock": [{ releaseId: 999, instance_id: 9, title: 'Sync Test', artist: 'Tester', coverImage: 'url', year: '2024' }]
                 },
                 totalCount: 1,
                 username: mockUserId
