@@ -2,64 +2,23 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
-import { wsService } from '@/services/WebSocketService';
 import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
-import { CONFIG } from '@/config';
+import { useWebSocket } from '@/hooks';
 
 export default function RootLayout() {
   const { username, authToken } = useSessionStore();
+  const { connect, disconnect } = useWebSocket();
 
   useEffect(() => {
-    // Register Global Callbacks to bridge decoupled service to store
-    wsService.setCallbacks({
-      onConnectionStateChange: (state) => {
-        const store = useSessionStore.getState();
-        store.setConnected(state === 'connected');
-        store.setConnecting(state === 'connecting' || state === 'reconnecting');
-      },
-      onSessionJoined: (data) => {
-        const store = useSessionStore.getState();
-        if (data.authToken) store.setAuthToken(data.authToken);
-        if (data.sessionId) store.setSessionId(data.sessionId);
-      },
-      onNowPlaying: (data) => {
-        const store = useSessionStore.getState();
-        store.setNowPlaying({
-          ...data,
-          releaseId: data.releaseId || undefined
-        });
-      },
-      onSessionEnded: () => {
-        const store = useSessionStore.getState();
-        store.setSessionId(null);
-        store.setNowPlaying(null);
-      },
-      onMessage: () => {
-        // Raw messages still available if needed, but semantic events preferred
-      },
-      onAccessLevel: (level) => {
-        if (CONFIG.DEBUG_WS) console.log('[WS] Access Level:', level);
-      },
-      onError: (error) => {
-        console.error('[WS] Error:', error);
-      }
-    });
-
-    return () => {
-      wsService.clearCallbacks();
-    };
-  }, []);
-
-  useEffect(() => {
-    // Manage Connection Lifecycle
+    // Manage Connection Lifecycle using the hook's actions
     if (username) {
-      wsService.connect(username, authToken || undefined);
+      connect();
     } else {
-      wsService.disconnect();
+      disconnect();
     }
-  }, [username, authToken]);
+  }, [username, authToken, connect, disconnect]);
 
   return (
     <View style={styles.container}>

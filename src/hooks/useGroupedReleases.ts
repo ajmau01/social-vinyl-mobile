@@ -58,13 +58,13 @@ export const useGroupedReleases = ({
                 case 'title':
                     return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
                 case 'year': {
-                    const yearA = a.year || 0;
-                    const yearB = b.year || 0;
+                    const yearA = a.year ? parseInt(a.year) : 0;
+                    const yearB = b.year ? parseInt(b.year) : 0;
                     return yearB - yearA; // Latest first
                 }
                 case 'dateAdded': {
-                    const dateA = new Date(a.dateAdded).getTime();
-                    const dateB = new Date(b.dateAdded).getTime();
+                    const dateA = a.added_at;
+                    const dateB = b.added_at;
                     return dateB - dateA; // Newest first
                 }
                 default:
@@ -94,13 +94,18 @@ export const useGroupedReleases = ({
             } else if (groupBy === 'genre') {
                 if (release.genres && release.genres.length > 0) {
                     // Use the first genre as per clarification
-                    const genres = release.genres[0].split(',').map(g => g.trim());
+                    const genres = release.genres.split(',').map(g => g.trim());
                     key = genres[0] || 'Unknown';
                 }
             } else if (groupBy === 'decade') {
                 if (release.year) {
-                    const decade = Math.floor(release.year / 10) * 10;
-                    key = `${decade}s`;
+                    const yearNum = parseInt(release.year);
+                    if (!isNaN(yearNum)) {
+                        const decade = Math.floor(yearNum / 10) * 10;
+                        key = `${decade}s`;
+                    } else {
+                        key = 'Unknown';
+                    }
                 } else {
                     key = 'Unknown';
                 }
