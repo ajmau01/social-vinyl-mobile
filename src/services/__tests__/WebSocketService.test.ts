@@ -1,6 +1,7 @@
 import { wsService } from '../WebSocketService';
 import { useSessionStore } from '../../store/useSessionStore';
 import { CONFIG } from '@/config';
+import { ConnectionState } from '@/types';
 
 // Mock AsyncStorage for Zustand persist
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -40,13 +41,17 @@ describe('WebSocketService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         MockWebSocket.instances = [];
-        useSessionStore.setState({ isConnected: false, isConnecting: false, nowPlaying: null });
+        useSessionStore.setState({
+            connectionState: 'disconnected',
+            nowPlaying: null,
+            authToken: null,
+            sessionId: null
+        });
 
         callbacks = {
-            onConnectionStateChange: jest.fn((state) => {
+            onConnectionStateChange: jest.fn((state: ConnectionState) => {
                 const store = useSessionStore.getState();
-                store.setConnected(state === 'connected');
-                store.setConnecting(state === 'connecting' || state === 'reconnecting');
+                store.setConnectionState(state);
             }),
             onMessage: jest.fn((rawData) => {
                 const store = useSessionStore.getState();
@@ -86,7 +91,7 @@ describe('WebSocketService', () => {
         wsService.connect('testuser');
         expect(MockWebSocket.instances.length).toBe(1);
         expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connecting');
-        expect(useSessionStore.getState().isConnecting).toBe(true);
+        expect(useSessionStore.getState().connectionState).toBe('connecting');
     });
 
     it('should update store on successful connection', () => {
@@ -97,8 +102,7 @@ describe('WebSocketService', () => {
         mockSocket.onopen?.();
 
         expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
-        expect(useSessionStore.getState().isConnected).toBe(true);
-        expect(useSessionStore.getState().isConnecting).toBe(false);
+        expect(useSessionStore.getState().connectionState).toBe('connected');
     });
 
     it('should handle incoming JSON messages', () => {

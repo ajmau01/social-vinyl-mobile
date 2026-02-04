@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { wsService } from '@/services/WebSocketService';
 import { useSessionStore } from '@/store/useSessionStore';
-import { ConnectionState, NowPlaying } from '@/types';
+import { ConnectionState, NowPlaying, Result, LoginResult } from '@/types';
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -12,7 +12,7 @@ export interface UseWebSocketResult {
     error: string | null;
     connect: () => void;
     disconnect: () => void;
-    login: (username: string, token: string) => Promise<void>;
+    login: (username: string, password: string) => Promise<Result<LoginResult>>;
 }
 
 /**
@@ -27,6 +27,8 @@ export const useWebSocket = (): UseWebSocketResult => {
         sessionId,
         nowPlaying,
         error,
+        username,
+        authToken,
         setConnectionState,
         setSessionId,
         setNowPlaying,
@@ -52,7 +54,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                 }
             },
             onError: (err: Error) => {
-                setError(err);
+                setError(err.message);
                 setConnectionState('disconnected');
             }
         };
@@ -66,23 +68,21 @@ export const useWebSocket = (): UseWebSocketResult => {
     }, [setConnectionState, setSessionId, setNowPlaying, setError]);
 
     const connect = useCallback(() => {
-        wsService.connect();
-    }, []);
+        if (username) {
+            wsService.connect(username, authToken || undefined);
+        }
+    }, [username, authToken]);
 
     const disconnect = useCallback(() => {
         wsService.disconnect();
     }, []);
 
-    const login = useCallback(async (username: string, token: string) => {
-        try {
-            const result = await wsService.login(username, token);
-            if (!result.success) {
-                throw result.error;
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : String(err));
-            throw err;
+    const login = useCallback(async (username: string, password: string): Promise<Result<LoginResult>> => {
+        const result = await wsService.login(username, password);
+        if (!result.success) {
+            setError(result.error.message);
         }
+        return result;
     }, [setError]);
 
     return {
