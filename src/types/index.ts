@@ -148,6 +148,7 @@ export interface IWebSocketService {
     disconnect(): void;
     login(username: string, password: string): AsyncResult<LoginResult>;
     setCallbacks(callbacks: WebSocketCallbacks): void;
+    clearCallbacks(): void;
 }
 
 export interface IDatabaseService {

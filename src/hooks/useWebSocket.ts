@@ -9,7 +9,7 @@ export interface UseWebSocketResult {
     isConnecting: boolean;
     sessionId: string | null;
     nowPlaying: NowPlaying | null;
-    error: Error | null;
+    error: string | null;
     connect: () => void;
     disconnect: () => void;
     login: (username: string, token: string) => Promise<void>;
@@ -42,10 +42,13 @@ export const useWebSocket = (): UseWebSocketResult => {
                 }
             },
             onMessage: (message: any) => {
-                if (message.type === 'session-joined') {
-                    setSessionId(message.payload.sessionId);
-                } else if (message.type === 'now-playing') {
-                    setNowPlaying(message.payload);
+                const type = message.type || message.messageType;
+                const payload = message.payload || message;
+
+                if (type === 'SESSION_JOINED' || type === 'session-joined') {
+                    setSessionId(payload.sessionId || message.sessionId);
+                } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
+                    setNowPlaying(payload as NowPlaying);
                 }
             },
             onError: (err: Error) => {
@@ -72,7 +75,10 @@ export const useWebSocket = (): UseWebSocketResult => {
 
     const login = useCallback(async (username: string, token: string) => {
         try {
-            await wsService.login(username, token);
+            const result = await wsService.login(username, token);
+            if (!result.success) {
+                throw result.error;
+            }
         } catch (err) {
             setError(err instanceof Error ? err : new Error(String(err)));
             throw err;

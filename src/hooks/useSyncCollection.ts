@@ -1,7 +1,17 @@
 import { useCallback } from 'react';
 import { syncService } from '@/services/CollectionSyncService';
 import { useSessionStore } from '@/store/useSessionStore';
-import { SyncStatus } from '@/types';
+import { SyncStatus, SyncResult, Result } from '@/types';
+
+export interface UseSyncCollectionResult {
+    sync: (userId: string) => Promise<Result<SyncResult>>;
+    syncStatus: SyncStatus;
+    syncProgress: number | null;
+    lastSyncTime: number | null;
+    isSyncing: boolean;
+    syncError: string | null;
+    resetError: () => void;
+}
 
 /**
  * useSyncCollection Hook
@@ -9,21 +19,24 @@ import { SyncStatus } from '@/types';
  * Manages the background synchronization of the collection.
  * Integrates with useSessionStore for global state persistence.
  */
-export const useSyncCollection = () => {
+export const useSyncCollection = (): UseSyncCollectionResult => {
     const {
         syncStatus,
         syncProgress,
         lastSyncTime,
+        syncError,
         setSyncStatus,
         setSyncProgress,
         setLastSyncTime,
-        username
+        setSyncError
     } = useSessionStore();
 
-    const sync = useCallback(async () => {
-        if (!username) return;
+    const sync = useCallback(async (userId: string) => {
+        setSyncError(null);
+        setSyncStatus('syncing');
+        setSyncProgress(0);
 
-        const result = await syncService.syncCollection(username, {
+        const result = await syncService.syncCollection(userId, {
             onProgress: (progress: number) => {
                 setSyncProgress(progress);
             },
@@ -35,17 +48,27 @@ export const useSyncCollection = () => {
         if (result.success) {
             setLastSyncTime(result.data.syncTime);
             setSyncProgress(null);
+        } else {
+            setSyncError(result.error.message);
         }
 
         return result;
-    }, [username, setSyncProgress, setSyncStatus, setLastSyncTime]);
+    }, [setSyncProgress, setSyncStatus, setLastSyncTime, setSyncError]);
+
+    const resetError = useCallback(() => {
+        setSyncError(null);
+        if (syncStatus === 'error') {
+            setSyncStatus('idle');
+        }
+    }, [setSyncError, syncStatus, setSyncStatus]);
 
     return {
         sync,
-        status: syncStatus,
-        progress: syncProgress,
+        syncStatus,
+        syncProgress,
         lastSyncTime,
         isSyncing: syncStatus === 'syncing',
-        error: syncStatus === 'error'
+        syncError,
+        resetError
     };
 };
