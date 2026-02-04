@@ -1,51 +1,93 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { wsService } from '@/services/WebSocketService';
-import { ConnectionState } from '@/types';
+import { useSessionStore } from '@/store/useSessionStore';
+import { ConnectionState, NowPlaying } from '@/types';
+
+export interface UseWebSocketResult {
+    connectionState: ConnectionState;
+    isConnected: boolean;
+    isConnecting: boolean;
+    sessionId: string | null;
+    nowPlaying: NowPlaying | null;
+    error: Error | null;
+    connect: () => void;
+    disconnect: () => void;
+    login: (username: string, token: string) => Promise<void>;
+}
 
 /**
- * useWebSocketStatus Hook
+ * useWebSocket Hook
  * 
- * Provides reactive access to the WebSocket connection state.
+ * Provides reactive access to the WebSocket service, including connection state,
+ * session information, and actions for managing the connection.
  */
-export const useWebSocketStatus = () => {
-    const [status, setStatus] = useState<ConnectionState>('disconnected');
-    const [error, setError] = useState<Error | null>(null);
+export const useWebSocket = (): UseWebSocketResult => {
+    const {
+        connectionState,
+        sessionId,
+        nowPlaying,
+        error,
+        setConnectionState,
+        setSessionId,
+        setNowPlaying,
+        setError
+    } = useSessionStore();
 
     useEffect(() => {
         const callbacks = {
-            onConnectionStateChange: (newState: ConnectionState) => {
-                setStatus(newState);
-                if (newState === 'connected') {
+            onConnectionStateChange: (state: ConnectionState) => {
+                setConnectionState(state);
+                if (state === 'connected') {
                     setError(null);
                 }
             },
-            onMessage: () => { }, // Handled by other listeners if needed
+            onMessage: (message: any) => {
+                if (message.type === 'session-joined') {
+                    setSessionId(message.payload.sessionId);
+                } else if (message.type === 'now-playing') {
+                    setNowPlaying(message.payload);
+                }
+            },
             onError: (err: Error) => {
                 setError(err);
-                setStatus('disconnected');
+                setConnectionState('disconnected');
             }
         };
 
         wsService.setCallbacks(callbacks);
 
         return () => {
-            // We don't want to clear callbacks here if multiple hooks use it,
-            // but for now, this is the primary way to track state.
-            // In a more complex app, this might be handled by a Context or Store.
+            // Fix memory leak by clearing callbacks on unmount
+            wsService.clearCallbacks();
         };
+    }, [setConnectionState, setSessionId, setNowPlaying, setError]);
+
+    const connect = useCallback(() => {
+        wsService.connect();
     }, []);
 
-    const reconnect = useCallback(() => {
-        // Implementation depends on how we want to expose reconnection logic.
-        // For now, we just reset error and let the service handle it if it's in reconnecting mode.
-        setError(null);
+    const disconnect = useCallback(() => {
+        wsService.disconnect();
     }, []);
+
+    const login = useCallback(async (username: string, token: string) => {
+        try {
+            await wsService.login(username, token);
+        } catch (err) {
+            setError(err instanceof Error ? err : new Error(String(err)));
+            throw err;
+        }
+    }, [setError]);
 
     return {
-        status,
+        connectionState,
+        isConnected: connectionState === 'connected',
+        isConnecting: connectionState === 'connecting' || connectionState === 'reconnecting',
+        sessionId,
+        nowPlaying,
         error,
-        reconnect,
-        isConnected: status === 'connected',
-        isConnecting: status === 'connecting' || status === 'reconnecting'
+        connect,
+        disconnect,
+        login
     };
 };
