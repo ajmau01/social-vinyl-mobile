@@ -80,7 +80,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                 throw result.error;
             }
         } catch (err) {
-            setError(err instanceof Error ? err : new Error(String(err)));
+            setError(err instanceof Error ? err.message : String(err));
             throw err;
         }
     }, [setError]);
