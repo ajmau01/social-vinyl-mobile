@@ -1,24 +1,110 @@
 import { useMemo } from 'react';
 import { Release } from '@/types';
+import { removeDiacritics, getArtistSortKey } from '@/utils/strings';
+
+export type GroupBy = 'none' | 'artist' | 'genre' | 'decade';
+export type SortBy = 'artist' | 'title' | 'year' | 'dateAdded';
 
 export interface CollectionSection {
     title: string;
     data: Release[];
 }
 
+export interface UseGroupedReleasesOptions {
+    releases: Release[];
+    groupBy: GroupBy;
+    sortBy: SortBy;
+    searchQuery: string;
+}
+
+export interface UseGroupedReleasesResult {
+    filteredReleases: Release[];
+    groupedReleases: CollectionSection[];
+    isEmpty: boolean;
+}
+
 /**
- * useGroupedCollection Hook
+ * useGroupedReleases Hook
  * 
- * Transforms a flat list of releases into a grouped list for SectionList.
- * Groups by the first letter of the artist's name.
+ * Transforms a flat list of releases into a grouped and filtered list for SectionList.
+ * Supports multiple grouping and sorting modes, and diacritic-insensitive search.
  */
-export const useGroupedCollection = (releases: Release[]): CollectionSection[] => {
+export const useGroupedReleases = ({
+    releases,
+    groupBy,
+    sortBy,
+    searchQuery
+}: UseGroupedReleasesOptions): UseGroupedReleasesResult => {
     return useMemo(() => {
+        // 1. Filter releases by searchQuery
+        const normalizedQuery = removeDiacritics(searchQuery.toLowerCase().trim());
+        const filtered = releases.filter(release => {
+            if (!normalizedQuery) return true;
+
+            const normalizedArtist = removeDiacritics(release.artist.toLowerCase());
+            const normalizedTitle = removeDiacritics(release.title.toLowerCase());
+
+            return normalizedArtist.includes(normalizedQuery) || normalizedTitle.includes(normalizedQuery);
+        });
+
+        // 2. Sort filtered releases
+        const sorted = [...filtered].sort((a, b) => {
+            switch (sortBy) {
+                case 'artist': {
+                    const keyA = getArtistSortKey(a.artist).toLowerCase();
+                    const keyB = getArtistSortKey(b.artist).toLowerCase();
+                    return keyA.localeCompare(keyB);
+                }
+                case 'title':
+                    return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+                case 'year': {
+                    const yearA = a.year || 0;
+                    const yearB = b.year || 0;
+                    return yearB - yearA; // Latest first
+                }
+                case 'dateAdded': {
+                    const dateA = new Date(a.dateAdded).getTime();
+                    const dateB = new Date(b.dateAdded).getTime();
+                    return dateB - dateA; // Newest first
+                }
+                default:
+                    return 0;
+            }
+        });
+
+        // 3. Group releases
         const groups: { [key: string]: Release[] } = {};
 
-        releases.forEach(release => {
-            const firstLetter = release.artist.charAt(0).toUpperCase();
-            const key = /^[A-Z]/.test(firstLetter) ? firstLetter : '#';
+        if (groupBy === 'none') {
+            const groupedReleases = sorted.length > 0 ? [{ title: 'All Releases', data: sorted }] : [];
+            return {
+                filteredReleases: sorted,
+                groupedReleases,
+                isEmpty: sorted.length === 0
+            };
+        }
+
+        sorted.forEach(release => {
+            let key = 'Unknown';
+
+            if (groupBy === 'artist') {
+                const sortKey = getArtistSortKey(release.artist);
+                const firstChar = sortKey.charAt(0).toUpperCase();
+                key = /^[A-Z]/.test(firstChar) ? firstChar : '#';
+            } else if (groupBy === 'genre') {
+                if (release.genres && release.genres.length > 0) {
+                    // Use the first genre as per clarification
+                    const genres = release.genres[0].split(',').map(g => g.trim());
+                    key = genres[0] || 'Unknown';
+                }
+            } else if (groupBy === 'decade') {
+                if (release.year) {
+                    const decade = Math.floor(release.year / 10) * 10;
+                    key = `${decade}s`;
+                } else {
+                    key = 'Unknown';
+                }
+            }
 
             if (!groups[key]) {
                 groups[key] = [];
@@ -26,16 +112,29 @@ export const useGroupedCollection = (releases: Release[]): CollectionSection[] =
             groups[key].push(release);
         });
 
-        // Sort keys and transform to SectionList format
-        return Object.keys(groups)
+        // 4. Sort keys and transform to SectionList format
+        const groupedReleases = Object.keys(groups)
             .sort((a, b) => {
-                if (a === '#') return 1;
-                if (b === '#') return -1;
+                if (groupBy === 'decade') {
+                    if (a === 'Unknown') return 1;
+                    if (b === 'Unknown') return -1;
+                    // Sort decades descending
+                    return parseInt(b) - parseInt(a);
+                }
+
+                if (a === '#' || a === 'Unknown') return 1;
+                if (b === '#' || b === 'Unknown') return -1;
                 return a.localeCompare(b);
             })
             .map(key => ({
                 title: key,
-                data: groups[key].sort((a, b) => a.artist.localeCompare(b.artist))
+                data: groups[key]
             }));
-    }, [releases]);
+
+        return {
+            filteredReleases: sorted,
+            groupedReleases,
+            isEmpty: sorted.length === 0
+        };
+    }, [releases, groupBy, sortBy, searchQuery]);
 };
