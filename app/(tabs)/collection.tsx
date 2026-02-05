@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: THEME.spacing.xs,
-        paddingBottom: 100,
+        paddingBottom: 180, // Increased to account for banner + tab bar
     },
     emptyContainer: {
         flex: 1,
