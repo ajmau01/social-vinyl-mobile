@@ -37,14 +37,26 @@ export const useGroupedReleases = ({
 }: UseGroupedReleasesOptions): UseGroupedReleasesResult => {
     return useMemo(() => {
         // 1. Filter releases by searchQuery
-        const normalizedQuery = removeDiacritics(searchQuery.toLowerCase().trim());
+        const trimmedQuery = searchQuery.toLowerCase().trim();
+        const normalizedQuery = removeDiacritics(trimmedQuery);
+
         const filtered = releases.filter(release => {
-            if (!normalizedQuery) return true;
+            if (!trimmedQuery) return true;
 
-            const normalizedArtist = removeDiacritics(release.artist.toLowerCase());
-            const normalizedTitle = removeDiacritics(release.title.toLowerCase());
+            const artist = release.artist.toLowerCase();
+            const title = release.title.toLowerCase();
+            const normalizedArtist = removeDiacritics(artist);
+            const normalizedTitle = removeDiacritics(title);
 
-            return normalizedArtist.includes(normalizedQuery) || normalizedTitle.includes(normalizedQuery);
+            // Match either:
+            // 1. Original query against original data (exact diacritic match)
+            // 2. Normalized query against normalized data (diacritic-insensitive)
+            return (
+                artist.includes(trimmedQuery) ||
+                title.includes(trimmedQuery) ||
+                normalizedArtist.includes(normalizedQuery) ||
+                normalizedTitle.includes(normalizedQuery)
+            );
         });
 
         // 2. Sort filtered releases
