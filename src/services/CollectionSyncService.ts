@@ -10,6 +10,8 @@ import { CONFIG } from '../config';
 
 interface BackendAlbum {
     releaseId: number;
+    instanceId?: number; // camelCase from some sources
+    instance_id?: number; // snake_case from backend
     title: string;
     artist: string;
     coverImage: string;
@@ -17,7 +19,7 @@ interface BackendAlbum {
     label?: string;
     format?: string;
     tracks?: Track[]; // FIXED: Proper type scoping
-    genres?: string[]; // We will inject this during flattening
+    genres?: string[]; // We will inject during flattening
 }
 
 interface ScanResponse {
@@ -40,7 +42,7 @@ class CollectionSyncService {
         callbacks?.onProgress(10); // Started
 
         try {
-            console.log('[Sync] Starting sync for user:', userId);
+            if (CONFIG.DEBUG_WS) console.log('[Sync] Starting sync for user:', userId);
 
             // Fetch cached data (Read-Only)
             const data = await this.fetchScan(userId);
@@ -51,9 +53,14 @@ class CollectionSyncService {
 
             callbacks?.onProgress(50); // Downloaded
 
+            // DESTRUCTIVE SYNC: Clear old data for this user to prevent accumulation
+            // and ensure a "mirror" of the Discogs collection.
+            if (CONFIG.DEBUG_WS) console.log('[Sync] Clearing old data for user:', userId);
+            await dbService.clearUserCollection(userId);
+
             await this.saveReleases(data.albums, userId);
 
-            console.log('[Sync] Complete. Items:', data.albums.length);
+            if (CONFIG.DEBUG_WS) console.log('[Sync] Complete. Items:', data.albums.length);
             callbacks?.onStatusChange('complete');
             callbacks?.onProgress(100);
 
@@ -101,25 +108,44 @@ class CollectionSyncService {
             const rawData = await response.json();
 
             // The backend returns albums grouped by Genre: { "Rock": [...], "Jazz": [...] }
-            // We need to flatten this into a single list AND deduplicate
+            // We flatten this into a single list AND deduplicate by instanceId (not releaseId)
+            // as one user can have multiple copies of the same album.
             if (rawData && rawData.albums && !Array.isArray(rawData.albums)) {
                 const uniqueAlbumsMap = new Map<number, BackendAlbum>();
+                const categories = Object.keys(rawData.albums);
+                console.log('[Sync] Categories found:', categories.join(', '));
 
                 for (const [category, albums] of Object.entries(rawData.albums)) {
                     const albumList = albums as BackendAlbum[];
                     for (const album of albumList) {
-                        if (!uniqueAlbumsMap.has(album.releaseId)) {
-                            uniqueAlbumsMap.set(album.releaseId, { ...album, genres: [category] });
+                        // FIX: Explicitly cast to number and ensure we look at Discogs instance_id
+                        const rawInstanceId = album.instance_id || album.instanceId;
+                        const instanceId = rawInstanceId ? Number(rawInstanceId) : null;
+                        const id = instanceId || album.releaseId;
+
+                        if (!uniqueAlbumsMap.has(id)) {
+                            // Ensure instanceId is set for the Release object later
+                            uniqueAlbumsMap.set(id, { ...album, instanceId: id || undefined, genres: [category] });
                         } else {
-                            const existing = uniqueAlbumsMap.get(album.releaseId)!;
+                            const existing = uniqueAlbumsMap.get(id)!;
                             if (existing.genres && !existing.genres.includes(category)) {
-                                existing.genres.push(category);
+                                // Prioritize specific genres over generic ones like "All" or "Uncategorized"
+                                const genericFolders = ['all', 'uncategorized', 'vinyl', 'albums', 'unsorted', 'collection'];
+                                const isNewCategoryGeneric = genericFolders.includes(category.toLowerCase());
+
+                                if (isNewCategoryGeneric) {
+                                    existing.genres.push(category);
+                                } else {
+                                    // Put specific genres at the front (index 0)
+                                    existing.genres.unshift(category);
+                                }
                             }
                         }
                     }
                 }
 
                 const flatAlbums = Array.from(uniqueAlbumsMap.values());
+                console.log(`[Sync] Flattening complete. Total unique instances: ${flatAlbums.length}`);
 
                 return {
                     albums: flatAlbums,
@@ -140,19 +166,41 @@ class CollectionSyncService {
     }
 
     private async saveReleases(items: BackendAlbum[], userId: string) {
-        const releases: Release[] = items.map((item, index) => ({
-            id: item.releaseId,
-            userId: userId,
-            title: item.title,
-            artist: item.artist,
-            thumb_url: item.coverImage || null,
-            added_at: Date.now() - index,
-            year: item.year,
-            genres: item.genres ? item.genres.join(', ') : undefined,
-            label: item.label,
-            format: item.format,
-            tracks: item.tracks ? JSON.stringify(item.tracks) : undefined
-        }));
+        if (CONFIG.DEBUG_WS && items.length > 0) {
+            console.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}`);
+        }
+
+        // Filter and map - skip albums missing instanceId (fail fast approach)
+        const releases: Release[] = [];
+        let skippedCount = 0;
+
+        for (const item of items) {
+            const rawInstanceId = item.instance_id || item.instanceId;
+            if (!rawInstanceId) {
+                console.error('[Sync] Album missing instanceId, skipping:', item.title, item.releaseId);
+                skippedCount++;
+                continue;
+            }
+
+            releases.push({
+                id: item.releaseId,
+                instanceId: Number(rawInstanceId),
+                userId: userId,
+                title: item.title,
+                artist: item.artist,
+                thumb_url: item.coverImage || null,
+                added_at: Date.now(),
+                year: item.year,
+                genres: item.genres ? item.genres.join(', ') : undefined,
+                label: item.label,
+                format: item.format,
+                tracks: item.tracks ? JSON.stringify(item.tracks) : undefined
+            });
+        }
+
+        if (skippedCount > 0) {
+            console.warn(`[Sync] Skipped ${skippedCount} albums missing instanceId`);
+        }
 
         await dbService.saveReleasesBatch(releases);
     }

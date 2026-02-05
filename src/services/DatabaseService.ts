@@ -28,19 +28,22 @@ class DatabaseService {
 
                 console.log('[DB] Database opened. Checking schema...');
 
-                // SCEMA MIGRATION (Phase 0.5): Detect if userId column is missing
-                // This handles users who didn't fully uninstall before the update.
-                const tableInfo = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(releases)");
-                const hasUserId = tableInfo.some(col => col.name === 'userId');
+                // AGGRESSIVE SCHEMA MIGRATION: 
+                // We must ensure 'instanceId' is the SOLE primary key.
+                const tableInfo = await this.db.getAllAsync<{ name: string; pk: number }>("PRAGMA table_info(releases)");
+                const pkCols = tableInfo.filter(col => col.pk > 0);
+                const isCorrectPk = pkCols.length === 1 && pkCols[0].name === 'instanceId';
 
-                if (tableInfo.length > 0 && !hasUserId) {
-                    console.warn('[DB] Schema mismatch: missing userId column. Dropping releases table...');
+                // If the table exists but the PK is wrong (or missing instanceId), drop it.
+                if (tableInfo.length > 0 && !isCorrectPk) {
+                    console.warn('[DB] Schema mismatch: Primary Key is not instanceId. Dropping releases table...');
                     await this.db.execAsync('DROP TABLE IF EXISTS releases');
                 }
 
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
                         id INTEGER NOT NULL,
+                        instanceId INTEGER NOT NULL,
                         userId TEXT NOT NULL,
                         title TEXT NOT NULL,
                         artist TEXT NOT NULL,
@@ -51,7 +54,7 @@ class DatabaseService {
                         label TEXT,
                         format TEXT,
                         tracks TEXT,
-                        PRIMARY KEY (id, userId)
+                        PRIMARY KEY (instanceId)
                     );
 
                     CREATE INDEX IF NOT EXISTS idx_releases_user ON releases(userId);
@@ -75,8 +78,9 @@ class DatabaseService {
 
         try {
             await this.db!.runAsync(
-                'INSERT OR REPLACE INTO releases (id, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
+                release.instanceId,
                 release.userId,
                 release.title,
                 release.artist,
@@ -101,8 +105,9 @@ class DatabaseService {
             await this.db!.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await this.db!.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
+                        release.instanceId,
                         release.userId,
                         release.title,
                         release.artist,
@@ -122,7 +127,7 @@ class DatabaseService {
         }
     }
 
-    public async getReleases(userId: string, limit = 50, offset = 0, searchQuery = ''): Promise<Release[]> {
+    public async getReleases(userId: string, limit?: number, offset?: number, searchQuery = ''): Promise<Release[]> {
         if (!this.db) await this.init();
 
         try {
@@ -135,8 +140,13 @@ class DatabaseService {
                 params.push(likeTerm, likeTerm);
             }
 
-            query += ' ORDER BY added_at DESC LIMIT ? OFFSET ?';
-            params.push(limit, offset);
+            query += ' ORDER BY added_at DESC, instanceId DESC';
+
+            // Only add pagination if both limit and offset are provided
+            if (limit !== undefined && offset !== undefined) {
+                query += ' LIMIT ? OFFSET ?';
+                params.push(limit, offset);
+            }
 
             const rows = await this.db!.getAllAsync<Release>(query, params);
             return rows;

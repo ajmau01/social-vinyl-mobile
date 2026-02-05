@@ -35,7 +35,7 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
                         />
                     </View>
                 )}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.instanceId.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}

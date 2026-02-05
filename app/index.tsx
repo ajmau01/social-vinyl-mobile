@@ -133,13 +133,30 @@ export default function HubScreen() {
             const result = await wsService.login(inputValue.trim(), password);
             if (result.success) {
                 const { data } = result;
+                const userId = data.userId || inputValue.trim();
+
                 useSessionStore.getState().setAuthToken(data.token);
-                useSessionStore.getState().setUsername(data.userId || inputValue.trim());
+                useSessionStore.getState().setUsername(userId);
                 useSessionStore.getState().setLastMode('host');
                 if (data.sessionId) {
                     useSessionStore.getState().setSessionId(data.sessionId);
                 }
+
+                // Set syncing status BEFORE navigation for immediate UX feedback
+                useSessionStore.getState().setSyncStatus('syncing');
+
+                // Navigate immediately - don't block on sync
                 router.replace('/(tabs)/collection');
+
+                // Fire sync in background (no await)
+                syncService.syncCollection(userId, {
+                    onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
+                    onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
+                }).then(syncResult => {
+                    if (!syncResult.success) {
+                        console.error('[Login] Auto-sync failed:', syncResult.error);
+                    }
+                });
             } else {
                 setError(result.error.message || 'Login failed');
             }
