@@ -127,7 +127,7 @@ class DatabaseService {
         }
     }
 
-    public async getReleases(userId: string, limit = 50, offset = 0, searchQuery = ''): Promise<Release[]> {
+    public async getReleases(userId: string, limit?: number, offset?: number, searchQuery = ''): Promise<Release[]> {
         if (!this.db) await this.init();
 
         try {
@@ -140,8 +140,13 @@ class DatabaseService {
                 params.push(likeTerm, likeTerm);
             }
 
-            query += ' ORDER BY added_at DESC, instanceId DESC LIMIT ? OFFSET ?';
-            params.push(limit, offset);
+            query += ' ORDER BY added_at DESC, instanceId DESC';
+
+            // Only add pagination if both limit and offset are provided
+            if (limit !== undefined && offset !== undefined) {
+                query += ' LIMIT ? OFFSET ?';
+                params.push(limit, offset);
+            }
 
             const rows = await this.db!.getAllAsync<Release>(query, params);
             return rows;

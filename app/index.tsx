@@ -142,13 +142,21 @@ export default function HubScreen() {
                     useSessionStore.getState().setSessionId(data.sessionId);
                 }
 
-                // AUTO-SYNC: Fetch collection after successful login
-                await syncService.syncCollection(userId, {
+                // Set syncing status BEFORE navigation for immediate UX feedback
+                useSessionStore.getState().setSyncStatus('syncing');
+
+                // Navigate immediately - don't block on sync
+                router.replace('/(tabs)/collection');
+
+                // Fire sync in background (no await)
+                syncService.syncCollection(userId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
                     onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
+                }).then(syncResult => {
+                    if (!syncResult.success) {
+                        console.error('[Login] Auto-sync failed:', syncResult.error);
+                    }
                 });
-
-                router.replace('/(tabs)/collection');
             } else {
                 setError(result.error.message || 'Login failed');
             }

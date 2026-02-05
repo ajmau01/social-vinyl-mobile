@@ -150,7 +150,7 @@ describe('Phase 2 Hooks', () => {
 
             await act(async () => { }); // Wait for useEffect
 
-            expect(getReleasesMock).toHaveBeenCalledWith('test-user', Number.MAX_SAFE_INTEGER, 0, '');
+            expect(getReleasesMock).toHaveBeenCalledWith('test-user', undefined, undefined, '');
             expect(result.current.releases).toHaveLength(1);
         });
     });

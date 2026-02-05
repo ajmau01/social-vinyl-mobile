@@ -1,58 +1,39 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { dbService } from '@/services/DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release } from '@/types';
-
-// No pagination - load everything
-const PAGE_SIZE = Number.MAX_SAFE_INTEGER;
+import { CONFIG } from '@/config';
 
 /**
  * useCollectionData Hook
  * 
- * High-performance hook for querying the local SQLite database.
- * Supports infinite scroll, search, and pull-to-refresh.
+ * Fetches entire collection from local SQLite database.
+ * Supports search and auto-refresh on sync completion.
  */
 export const useCollectionData = (searchQuery: string = '') => {
     const { username } = useSessionStore();
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const offsetRef = useRef(0);
 
     const loadData = useCallback(async (isRefresh: boolean = false) => {
-        // GUARD: Don't load more while syncing to avoid database inconsistency (clearing)
+        // GUARD: Don't load while syncing to avoid database inconsistency
         const isSyncing = useSessionStore.getState().syncStatus === 'syncing';
         if (!username || loading || (!isRefresh && isSyncing)) return;
 
         setLoading(true);
         if (isRefresh) {
             setRefreshing(true);
-            offsetRef.current = 0;
         }
 
         try {
-            const newItems = await dbService.getReleases(
-                username,
-                PAGE_SIZE,
-                offsetRef.current,
-                searchQuery
-            );
+            // Fetch all releases at once (no pagination)
+            const items = await dbService.getReleases(username, undefined, undefined, searchQuery);
+            setReleases(items);
 
-            setReleases(prev => {
-                const combined = isRefresh ? newItems : [...prev, ...newItems];
-                const seen = new Set<number>();
-                return combined.filter(item => {
-                    const key = Number(item.instanceId);
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-            });
-
-            setHasMore(newItems.length === PAGE_SIZE);
-            offsetRef.current = isRefresh ? newItems.length : offsetRef.current + newItems.length;
-            console.log(`[useCollectionData] Loaded ${newItems.length} items. Offset: ${offsetRef.current}, hasMore: ${newItems.length === PAGE_SIZE}`);
+            if (CONFIG.DEBUG_WS) {
+                console.log(`[useCollectionData] Loaded ${items.length} items.`);
+            }
         } catch (error) {
             console.error('[useCollectionData] Load failed', error);
         } finally {
@@ -66,20 +47,17 @@ export const useCollectionData = (searchQuery: string = '') => {
         loadData(true);
     }, [searchQuery]);
 
-    // AUTO-REFRESH: Reload when sync completes
+    // AUTO-REFRESH: Reload when sync completes (with small delay for DB writes)
     const syncStatus = useSessionStore((s) => s.syncStatus);
     useEffect(() => {
         if (syncStatus === 'complete') {
-            console.log('[useCollectionData] Sync complete, reloading...');
-            loadData(true);
+            if (CONFIG.DEBUG_WS) {
+                console.log('[useCollectionData] Sync complete, reloading...');
+            }
+            // Small delay to ensure all DB writes are committed
+            setTimeout(() => loadData(true), 100);
         }
     }, [syncStatus]);
-
-    const loadMore = useCallback(() => {
-        if (hasMore && !loading) {
-            loadData(false);
-        }
-    }, [hasMore, loading, loadData]);
 
     const refresh = useCallback(() => {
         loadData(true);
@@ -89,8 +67,6 @@ export const useCollectionData = (searchQuery: string = '') => {
         releases,
         loading,
         refreshing,
-        hasMore,
-        loadMore,
         refresh
     };
 };
