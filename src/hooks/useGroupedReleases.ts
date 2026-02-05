@@ -133,7 +133,14 @@ export const useGroupedReleases = ({
             })
             .map(key => ({
                 title: key,
-                data: groups[key]
+                data: groupBy === 'decade' && key !== 'Unknown'
+                    ? groups[key].sort((a, b) => {
+                        // Sort by year within decade (earliest first)
+                        const yearA = a.year ? parseInt(a.year) : 9999;
+                        const yearB = b.year ? parseInt(b.year) : 9999;
+                        return yearA - yearB;
+                    })
+                    : groups[key]
             }));
 
         return {

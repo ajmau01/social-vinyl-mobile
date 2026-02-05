@@ -40,7 +40,7 @@ export default function CollectionScreen() {
     } = useSessionStore();
 
     // Hooks for data and sync
-    const { releases, loading, hasMore, loadMore, refresh } = useCollectionData(searchQuery);
+    const { releases, loading, refresh } = useCollectionData(searchQuery);
     const { groupedReleases, isEmpty } = useGroupedReleases({
         releases,
         groupBy: viewMode,
@@ -83,12 +83,25 @@ export default function CollectionScreen() {
                         )}
                     </View>
                 </View>
-                <TouchableOpacity
-                    style={styles.iconBtnGlass}
-                    onPress={() => setIsMenuVisible(true)}
-                >
-                    <Ionicons name="menu" size={24} color="#fff" />
-                </TouchableOpacity>
+                <View style={styles.headerRight}>
+                    <TouchableOpacity
+                        style={styles.iconBtn}
+                        onPress={handleSync}
+                        disabled={syncStatus === 'syncing'}
+                    >
+                        <Ionicons
+                            name={syncStatus === 'syncing' ? "sync" : "sync-outline"}
+                            size={24}
+                            color={syncStatus === 'syncing' ? THEME.colors.primary : "#fff"}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.iconBtnGlass}
+                        onPress={() => setIsMenuVisible(true)}
+                    >
+                        <Ionicons name="menu" size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.segmentedControlContainer}>
@@ -136,8 +149,6 @@ export default function CollectionScreen() {
                     renderSectionHeader={() => null}
                     contentContainerStyle={styles.listContent}
                     stickySectionHeadersEnabled={false}
-                    onEndReached={loadMore}
-                    onEndReachedThreshold={0.5}
                     refreshControl={
                         <RefreshControl
                             refreshing={syncStatus === 'syncing'}
@@ -196,6 +207,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
