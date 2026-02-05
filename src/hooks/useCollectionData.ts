@@ -28,7 +28,8 @@ export const useCollectionData = (searchQuery: string = '') => {
 
         try {
             // Fetch all releases at once (no pagination)
-            const items = await dbService.getReleases(username, undefined, undefined, searchQuery);
+            // Search filtering is done client-side by useGroupedReleases hook with diacritic support
+            const items = await dbService.getReleases(username);
             setReleases(items);
 
             if (CONFIG.DEBUG_WS) {
