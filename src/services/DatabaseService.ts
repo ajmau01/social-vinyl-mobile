@@ -127,18 +127,12 @@ class DatabaseService {
         }
     }
 
-    public async getReleases(userId: string, limit?: number, offset?: number, searchQuery = ''): Promise<Release[]> {
+    public async getReleases(userId: string, limit?: number, offset?: number): Promise<Release[]> {
         if (!this.db) await this.init();
 
         try {
             let query = 'SELECT * FROM releases WHERE userId = ?';
             const params: any[] = [userId];
-
-            if (searchQuery) {
-                query += ' AND (title LIKE ? OR artist LIKE ?)';
-                const likeTerm = `%${searchQuery}%`;
-                params.push(likeTerm, likeTerm);
-            }
 
             query += ' ORDER BY added_at DESC, instanceId DESC';
 
