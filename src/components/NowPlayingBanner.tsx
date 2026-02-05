@@ -1,24 +1,17 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWebSocket } from '@/hooks';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
-    const insets = useSafeAreaInsets();
 
     // Design Decision: We show "Connecting..." even if track is null to give feedback.
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
-    // Dynamic bottom position to sit above the tab bar (which includes safe area)
-    const bottomPadding = Math.max(insets.bottom, 10);
-    const tabBarHeight = THEME.layout.tabBarHeight + bottomPadding;
-
     return (
-        <View style={[styles.wrapper, { bottom: tabBarHeight }]}>
-            <BlurView intensity={80} tint="dark" style={[styles.container, { paddingBottom: THEME.spacing.sm }]}>
+        <View style={styles.wrapper}>
+            <View style={styles.container}>
                 <View style={styles.content}>
                     {/* Album Art Placeholder or Image */}
                     <View style={styles.artwork}>
@@ -50,17 +43,14 @@ export const NowPlayingBanner = () => {
                         isConnecting && styles.statusConnecting
                     ]} />
                 </View>
-            </BlurView>
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     wrapper: {
-        position: 'absolute',
-        // bottom set dynamically
-        left: 0,
-        right: 0,
+        width: '100%',
         overflow: 'hidden',
         borderTopLeftRadius: THEME.radius.lg,
         borderTopRightRadius: THEME.radius.lg,
@@ -69,6 +59,8 @@ const styles = StyleSheet.create({
     },
     container: {
         paddingTop: THEME.spacing.md,
+        paddingBottom: THEME.spacing.sm,
+        backgroundColor: THEME.colors.surface, // Solid background for readability
     },
     content: {
         flexDirection: 'row',
