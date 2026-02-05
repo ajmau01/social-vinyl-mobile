@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
-import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket } from '@/hooks';
@@ -26,9 +25,6 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
       </Stack>
-
-      {/* Persistent Banner Overlay */}
-      <NowPlayingBanner />
     </View>
   );
 }
