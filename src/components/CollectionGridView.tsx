@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback } from 'react';
+import { FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 import { ReleaseCard } from '@/components/ReleaseCard';
+import { EmptyCollectionState } from '@/components/EmptyCollectionState';
 
 export interface CollectionGridViewProps {
     releases: Release[];
@@ -16,7 +16,9 @@ export interface CollectionGridViewProps {
     username: string | null;
 }
 
-export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
+const COLLECTION_BOTTOM_PADDING = 180; // Tab bar (80px) + Now Playing banner (100px)
+
+export const CollectionGridView: React.FC<CollectionGridViewProps> = React.memo(({
     releases,
     numColumns,
     onReleasePress,
@@ -26,80 +28,58 @@ export const CollectionGridView: React.FC<CollectionGridViewProps> = ({
     isEmpty,
     username
 }) => {
-    const renderEmptyState = () => {
-        if (!isEmpty || loading) return null;
+    const keyExtractor = useCallback((item: Release) => `${item.id}-${item.instanceId}`, []);
 
-        return (
-            <View style={styles.emptyContainer}>
-                <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
-                <Text style={styles.emptyText}>
-                    {!username || username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
-                </Text>
-                <Text style={styles.emptySubtext}>
-                    {!username || username === 'solo_user'
-                        ? 'Sync your Discogs collection in Solo Mode to start browsing.'
-                        : 'Try syncing your collection or adjusting your search.'}
-                </Text>
-            </View>
-        );
-    };
+    const renderItem = useCallback(({ item }: { item: Release }) => (
+        <ReleaseCard
+            release={item}
+            onPress={() => onReleasePress(item)}
+        />
+    ), [onReleasePress]);
 
-    const renderFooter = () => {
+    const renderFooter = useCallback(() => {
         if (!loading || isEmpty) return null;
         return <ActivityIndicator color={THEME.colors.primary} style={styles.footer} />;
-    };
+    }, [loading, isEmpty]);
+
+    const renderEmpty = useCallback(() => {
+        if (!isEmpty || loading) return null;
+        return <EmptyCollectionState username={username} />;
+    }, [isEmpty, loading, username]);
 
     return (
         <FlatList
+            testID="collection-grid-list"
             data={releases}
             numColumns={numColumns}
-            keyExtractor={(item) => `${item.id}-${item.instanceId}`}
-            renderItem={({ item }) => (
-                <ReleaseCard
-                    release={item}
-                    onPress={() => onReleasePress(item)}
-                />
-            )}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             refreshControl={
-                <View style={{ paddingTop: 20 }}>
-                    {refreshing && <ActivityIndicator color={THEME.colors.primary} />}
-                </View>
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor={THEME.colors.primary}
+                    colors={[THEME.colors.primary]}
+                />
             }
-            onRefresh={onRefresh}
-            refreshing={refreshing}
             ListFooterComponent={renderFooter()}
-            ListEmptyComponent={renderEmptyState()}
+            ListEmptyComponent={renderEmpty()}
+            accessibilityRole="list"
+            accessibilityLabel="Collection grid"
         />
     );
-};
+});
+
+CollectionGridView.displayName = 'CollectionGridView';
 
 const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: THEME.spacing.xs,
-        paddingBottom: 180, // Account for banner + tab bar
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingTop: 100,
-    },
-    emptyText: {
-        color: THEME.colors.white,
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: THEME.spacing.md,
-    },
-    emptySubtext: {
-        color: THEME.colors.textDim,
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: THEME.spacing.xs,
-        lineHeight: 20,
+        paddingBottom: COLLECTION_BOTTOM_PADDING,
     },
     footer: {
         marginVertical: THEME.spacing.md,
     },
 });
+

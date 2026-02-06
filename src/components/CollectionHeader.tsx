@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
@@ -17,7 +17,19 @@ export interface CollectionHeaderProps {
     onViewModeChange: (mode: 'artist' | 'genre' | 'decade') => void;
 }
 
-export const CollectionHeader: React.FC<CollectionHeaderProps> = ({
+const VIEW_MODE_MAP: Record<string, 'artist' | 'genre' | 'decade'> = {
+    'A-Z': 'artist',
+    'Genre': 'genre',
+    'Decade': 'decade'
+};
+
+const REVERSE_VIEW_MODE_MAP: Record<'artist' | 'genre' | 'decade', string> = {
+    'artist': 'A-Z',
+    'genre': 'Genre',
+    'decade': 'Decade'
+};
+
+export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     title,
     syncStatus,
     syncProgress,
@@ -28,32 +40,38 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({
     onMenuPress,
     onViewModeChange
 }) => {
-    const getSegmentedValue = () => {
-        if (viewMode === 'artist') return 'A-Z';
-        return viewMode.charAt(0).toUpperCase() + viewMode.slice(1);
-    };
+    const getSegmentedValue = useCallback(() => {
+        return REVERSE_VIEW_MODE_MAP[viewMode];
+    }, [viewMode]);
 
-    const handleSegmentedChange = (val: string) => {
-        if (val === 'A-Z') {
-            onViewModeChange('artist');
+    const handleSegmentedChange = useCallback((val: string) => {
+        const mode = VIEW_MODE_MAP[val];
+        if (mode) {
+            onViewModeChange(mode);
         } else {
-            onViewModeChange(val.toLowerCase() as 'genre' | 'decade');
+            console.error(`[CollectionHeader] Unknown view mode: ${val}`);
         }
-    };
+    }, [onViewModeChange]);
+
+    const isSyncing = syncStatus === 'syncing';
 
     return (
         <View>
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <TouchableOpacity
+                        testID="collection-header-back-button"
                         style={styles.iconBtn}
                         onPress={onBackPress}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back to login"
+                        accessibilityHint="Returns to the login screen"
                     >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                        <Ionicons name="arrow-back" size={24} color={THEME.colors.white} />
                     </TouchableOpacity>
                     <View>
                         <Text style={styles.title}>{title}</Text>
-                        {syncStatus === 'syncing' ? (
+                        {isSyncing ? (
                             <View style={styles.syncStatus}>
                                 <ActivityIndicator size="small" color={THEME.colors.primary} />
                                 <Text style={styles.syncText}>{syncProgress ?? 0}%</Text>
@@ -65,21 +83,30 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({
                 </View>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
+                        testID="collection-header-sync-button"
                         style={styles.iconBtn}
                         onPress={onSyncPress}
-                        disabled={syncStatus === 'syncing'}
+                        disabled={isSyncing}
+                        accessibilityRole="button"
+                        accessibilityLabel="Sync collection"
+                        accessibilityHint="Refreshes your collection from Discogs"
+                        accessibilityState={{ disabled: isSyncing }}
                     >
                         <Ionicons
-                            name={syncStatus === 'syncing' ? "sync" : "sync-outline"}
+                            name={isSyncing ? "sync" : "sync-outline"}
                             size={24}
-                            color={syncStatus === 'syncing' ? THEME.colors.primary : "#fff"}
+                            color={isSyncing ? THEME.colors.primary : THEME.colors.white}
                         />
                     </TouchableOpacity>
                     <TouchableOpacity
+                        testID="collection-header-menu-button"
                         style={styles.iconBtnGlass}
                         onPress={onMenuPress}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open menu"
+                        accessibilityHint="Opens the session drawer menu"
                     >
-                        <Ionicons name="menu" size={24} color="#fff" />
+                        <Ionicons name="menu" size={24} color={THEME.colors.white} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -93,7 +120,9 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({
             </View>
         </View>
     );
-};
+});
+
+CollectionHeader.displayName = 'CollectionHeader';
 
 const styles = StyleSheet.create({
     header: {
@@ -106,12 +135,12 @@ const styles = StyleSheet.create({
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: THEME.spacing.sm,
     },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: THEME.spacing.sm,
     },
     title: {
         fontSize: 22,
@@ -138,7 +167,7 @@ const styles = StyleSheet.create({
     syncStatus: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: THEME.spacing.xs,
         marginTop: 2,
     },
     syncText: {
@@ -155,3 +184,4 @@ const styles = StyleSheet.create({
         paddingHorizontal: THEME.spacing.md,
     },
 });
+

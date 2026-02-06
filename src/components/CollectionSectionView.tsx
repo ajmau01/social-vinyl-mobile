@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, SectionList, ActivityIndicator, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useMemo } from 'react';
+import { SectionList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 import { BrowseSection } from '@/components/BrowseSection';
+import { EmptyCollectionState } from '@/components/EmptyCollectionState';
 import { CollectionSection } from '@/hooks/useGroupedReleases';
 
 export interface CollectionSectionViewProps {
@@ -16,7 +16,9 @@ export interface CollectionSectionViewProps {
     username: string | null;
 }
 
-export const CollectionSectionView: React.FC<CollectionSectionViewProps> = ({
+const COLLECTION_BOTTOM_PADDING = 180; // Tab bar (80px) + Now Playing banner (100px)
+
+export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React.memo(({
     sections,
     onReleasePress,
     onRefresh,
@@ -25,79 +27,72 @@ export const CollectionSectionView: React.FC<CollectionSectionViewProps> = ({
     isEmpty,
     username
 }) => {
-    const renderEmptyState = () => {
-        if (!isEmpty || loading) return null;
+    // Fix Issue #3: Memoize section transformation to prevent recreation on every render
+    const transformedSections = useMemo(
+        () => sections.map(g => ({ ...g, data: [g.data] })),
+        [sections]
+    );
 
-        return (
-            <View style={styles.emptyContainer}>
-                <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
-                <Text style={styles.emptyText}>
-                    {!username || username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
-                </Text>
-                <Text style={styles.emptySubtext}>
-                    {!username || username === 'solo_user'
-                        ? 'Sync your Discogs collection in Solo Mode to start browsing.'
-                        : 'Try syncing your collection or adjusting your search.'}
-                </Text>
-            </View>
-        );
-    };
+    // Fix Issue #4: Use stable keys based on section content instead of index
+    const keyExtractor = useCallback((item: Release[], index: number) => {
+        const section = sections[index];
+        return `section-${section.title}-${section.data.length}`;
+    }, [sections]);
 
-    const renderFooter = () => {
+    const renderItem = useCallback(({ item, section }: any) => (
+        <BrowseSection
+            title={section.title}
+            releases={item}
+            onPressRelease={onReleasePress}
+        />
+    ), [onReleasePress]);
+
+    const renderSectionHeader = useCallback(() => null, []);
+
+    const renderFooter = useCallback(() => {
         if (!loading || isEmpty) return null;
-        return <ActivityIndicator color={THEME.colors.primary} />;
-    };
+        return <ActivityIndicator color={THEME.colors.primary} style={styles.footer} />;
+    }, [loading, isEmpty]);
+
+    const renderEmpty = useCallback(() => {
+        if (!isEmpty || loading) return null;
+        return <EmptyCollectionState username={username} />;
+    }, [isEmpty, loading, username]);
 
     return (
         <SectionList
-            sections={sections.map(g => ({ ...g, data: [g.data] }))}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item, section }) => (
-                <BrowseSection
-                    title={section.title}
-                    releases={item}
-                    onPressRelease={onReleasePress}
-                />
-            )}
-            renderSectionHeader={() => null}
+            testID="collection-section-list"
+            sections={transformedSections}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            renderSectionHeader={renderSectionHeader}
             contentContainerStyle={styles.listContent}
             stickySectionHeadersEnabled={false}
             refreshControl={
-                <View style={{ paddingTop: 20 }}>
-                    {refreshing && <ActivityIndicator color={THEME.colors.primary} />}
-                </View>
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor={THEME.colors.primary}
+                    colors={[THEME.colors.primary]}
+                />
             }
-            onRefresh={onRefresh}
-            refreshing={refreshing}
             ListFooterComponent={renderFooter()}
-            ListEmptyComponent={renderEmptyState()}
+            ListEmptyComponent={renderEmpty()}
+            accessibilityRole="list"
+            accessibilityLabel="Collection list"
         />
     );
-};
+});
+
+CollectionSectionView.displayName = 'CollectionSectionView';
 
 const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: THEME.spacing.xs,
-        paddingBottom: 180, // Increased to account for banner + tab bar
+        paddingBottom: COLLECTION_BOTTOM_PADDING,
     },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingTop: 100,
-    },
-    emptyText: {
-        color: THEME.colors.white,
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: THEME.spacing.md,
-    },
-    emptySubtext: {
-        color: THEME.colors.textDim,
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: THEME.spacing.xs,
-        lineHeight: 20,
+    footer: {
+        marginVertical: THEME.spacing.md,
     },
 });
+
