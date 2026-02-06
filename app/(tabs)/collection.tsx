@@ -1,28 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import {
-    View,
-    StyleSheet,
-    ActivityIndicator,
-    Text,
-    RefreshControl,
-    SectionList,
-    TouchableOpacity,
-    TextInput
-} from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 import { useSessionStore } from '@/store/useSessionStore';
-import { ReleaseCard } from '@/components/ReleaseCard';
-import { SegmentedControl } from '@/components/SegmentedControl';
-import { BrowseSection } from '@/components/BrowseSection';
 import { useRouter } from 'expo-router';
 import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
-import { Ionicons } from '@expo/vector-icons';
 import { SessionDrawer } from '@/components/SessionDrawer';
+import { CollectionHeader } from '@/components/CollectionHeader';
+import { SearchBar } from '@/components/SearchBar';
+import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection } from '@/hooks';
-// Removed incorrect TextInput import from react-native-gesture-handler
 
 export default function CollectionScreen() {
     const router = useRouter();
@@ -55,121 +43,43 @@ export default function CollectionScreen() {
         refresh();
     }, [username, sync, refresh]);
 
-    const renderHeader = () => (
-        <View>
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity
-                        style={styles.iconBtn}
-                        onPress={() => {
-                            setLastMode(null);
-                            setAuthToken(null);
-                            router.replace('/');
-                        }}
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={styles.title}>
-                            {username ? `${username}'s Crate` : 'The Crate'}
-                        </Text>
-                        {syncStatus === 'syncing' ? (
-                            <View style={styles.syncStatus}>
-                                <ActivityIndicator size="small" color={THEME.colors.primary} />
-                                <Text style={styles.syncText}>{syncProgress}%</Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.countText}>{releases.length} Items</Text>
-                        )}
-                    </View>
-                </View>
-                <View style={styles.headerRight}>
-                    <TouchableOpacity
-                        style={styles.iconBtn}
-                        onPress={handleSync}
-                        disabled={syncStatus === 'syncing'}
-                    >
-                        <Ionicons
-                            name={syncStatus === 'syncing' ? "sync" : "sync-outline"}
-                            size={24}
-                            color={syncStatus === 'syncing' ? THEME.colors.primary : "#fff"}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.iconBtnGlass}
-                        onPress={() => setIsMenuVisible(true)}
-                    >
-                        <Ionicons name="menu" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            <View style={styles.segmentedControlContainer}>
-                <SegmentedControl
-                    options={['Genre', 'A-Z', 'Decade']}
-                    selected={viewMode === 'artist' ? 'A-Z' : viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
-                    onChange={(val) => {
-                        if (val === 'A-Z') setViewMode('artist');
-                        else setViewMode(val.toLowerCase() as any);
-                    }}
-                />
-            </View>
-        </View>
-    );
+    const handleBackPress = useCallback(() => {
+        setLastMode(null);
+        setAuthToken(null);
+        router.replace('/');
+    }, [setLastMode, setAuthToken, router]);
 
     return (
         <View style={styles.container}>
             <View style={styles.background} />
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                {renderHeader()}
+                <CollectionHeader
+                    title={username ? `${username}'s Crate` : 'The Crate'}
+                    syncStatus={syncStatus}
+                    syncProgress={syncProgress}
+                    itemCount={releases.length}
+                    viewMode={viewMode}
+                    onBackPress={handleBackPress}
+                    onSyncPress={handleSync}
+                    onMenuPress={() => setIsMenuVisible(true)}
+                    onViewModeChange={setViewMode}
+                />
 
-                <View style={styles.searchContainer}>
-                    <BlurView intensity={20} tint="light" style={styles.searchBlur}>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search Artists or Albums..."
-                            placeholderTextColor={THEME.colors.textDim}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                    </BlurView>
-                </View>
+                <SearchBar
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search Artists or Albums..."
+                />
 
-                <SectionList
-                    sections={groupedReleases.map(g => ({ ...g, data: [g.data] }))}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item, section }) => (
-                        <BrowseSection
-                            title={section.title}
-                            releases={item}
-                            onPressRelease={setSelectedRelease}
-                        />
-                    )}
-                    renderSectionHeader={() => null}
-                    contentContainerStyle={styles.listContent}
-                    stickySectionHeadersEnabled={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={syncStatus === 'syncing'}
-                            onRefresh={handleSync}
-                            tintColor={THEME.colors.primary}
-                        />
-                    }
-                    ListFooterComponent={loading && !isEmpty ? <ActivityIndicator color={THEME.colors.primary} /> : null}
-                    ListEmptyComponent={isEmpty && !loading ? (
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
-                            <Text style={styles.emptyText}>
-                                {!username || username === 'solo_user' ? 'No collection synced' : 'Your collection is empty'}
-                            </Text>
-                            <Text style={styles.emptySubtext}>
-                                {!username || username === 'solo_user'
-                                    ? 'Sync your Discogs collection in Solo Mode to start browsing.'
-                                    : 'Try syncing your collection or adjusting your search.'}
-                            </Text>
-                        </View>
-                    ) : null}
+                <CollectionSectionView
+                    sections={groupedReleases}
+                    onReleasePress={setSelectedRelease}
+                    onRefresh={handleSync}
+                    refreshing={syncStatus === 'syncing'}
+                    loading={loading}
+                    isEmpty={isEmpty}
+                    username={username}
                 />
 
                 <ReleaseDetailsModal
@@ -198,100 +108,5 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-    },
-    header: {
-        paddingHorizontal: THEME.spacing.md,
-        paddingVertical: THEME.spacing.sm,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    headerRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: THEME.colors.white,
-    },
-    iconBtn: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 20,
-    },
-    iconBtnGlass: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    syncStatus: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 2,
-    },
-    syncText: {
-        color: THEME.colors.primary,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    countText: {
-        color: THEME.colors.textDim,
-        fontSize: 12,
-        marginTop: 2,
-    },
-    segmentedControlContainer: {
-        paddingHorizontal: THEME.spacing.md,
-    },
-    searchContainer: {
-        paddingHorizontal: THEME.spacing.md,
-        marginBottom: THEME.spacing.md,
-    },
-    searchBlur: {
-        borderRadius: THEME.radius.lg,
-        overflow: 'hidden',
-    },
-    searchInput: {
-        padding: THEME.spacing.md,
-        color: THEME.colors.white,
-        fontSize: 16,
-    },
-    listContent: {
-        paddingHorizontal: THEME.spacing.xs,
-        paddingBottom: 180, // Increased to account for banner + tab bar
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingTop: 100,
-    },
-    emptyText: {
-        color: THEME.colors.white,
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: THEME.spacing.md,
-    },
-    emptySubtext: {
-        color: THEME.colors.textDim,
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: THEME.spacing.xs,
-        lineHeight: 20,
     },
 });
