@@ -7,6 +7,7 @@ import {
     Track
 } from '@/types';
 import { CONFIG } from '../config';
+import { ISyncService } from './interfaces';
 
 interface BackendAlbum {
     releaseId: number;
@@ -29,7 +30,7 @@ interface ScanResponse {
     avatarUrl?: string;
 }
 
-class CollectionSyncService {
+class CollectionSyncService implements ISyncService {
     private activeSyncs = new Set<string>();
 
     public async syncCollection(userId: string, callbacks?: SyncCallbacks): AsyncResult<SyncResult> {

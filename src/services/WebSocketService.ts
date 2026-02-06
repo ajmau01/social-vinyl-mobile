@@ -6,8 +6,9 @@ import {
     AsyncResult,
     LoginResult
 } from '@/types';
+import { IWebSocketService } from './interfaces';
 
-class WebSocketService {
+class WebSocketService implements IWebSocketService {
     private static instance: WebSocketService;
     private socket: WebSocket | null = null;
     private reconnectAttempts = 0;

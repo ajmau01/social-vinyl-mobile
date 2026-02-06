@@ -1,8 +1,9 @@
 import * as SQLite from 'expo-sqlite';
 
 import { Release } from '@/types';
+import { IDatabaseService } from './interfaces';
 
-class DatabaseService {
+class DatabaseService implements IDatabaseService {
     private static instance: DatabaseService;
     private db: SQLite.SQLiteDatabase | null = null;
     private initPromise: Promise<void> | null = null;
