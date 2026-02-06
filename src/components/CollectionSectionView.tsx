@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { SectionList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';
+import { COLLECTION_BOTTOM_PADDING } from '@/constants/layout';
 import { Release } from '@/types';
 import { BrowseSection } from '@/components/BrowseSection';
 import { EmptyCollectionState } from '@/components/EmptyCollectionState';
@@ -15,8 +16,6 @@ export interface CollectionSectionViewProps {
     isEmpty: boolean;
     username: string | null;
 }
-
-const COLLECTION_BOTTOM_PADDING = 180; // Tab bar (80px) + Now Playing banner (100px)
 
 export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React.memo(({
     sections,

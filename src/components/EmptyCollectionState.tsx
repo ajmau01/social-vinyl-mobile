@@ -7,8 +7,9 @@ export interface EmptyCollectionStateProps {
     username: string | null;
 }
 
+const SOLO_MODE_USERNAME = 'solo_user' as const;
+
 export const EmptyCollectionState: React.FC<EmptyCollectionStateProps> = React.memo(({ username }) => {
-    const SOLO_MODE_USERNAME = 'solo_user';
     const isSoloMode = !username || username === SOLO_MODE_USERNAME;
 
     return (
