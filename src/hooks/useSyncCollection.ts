@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { syncService } from '@/services/CollectionSyncService';
+import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { SyncStatus, SyncResult, Result } from '@/types';
 
@@ -20,6 +20,7 @@ export interface UseSyncCollectionResult {
  * Integrates with useSessionStore for global state persistence.
  */
 export const useSyncCollection = (): UseSyncCollectionResult => {
+    const { syncService } = useServices();
     const {
         syncStatus,
         syncProgress,
@@ -53,7 +54,7 @@ export const useSyncCollection = (): UseSyncCollectionResult => {
         }
 
         return result;
-    }, [setSyncProgress, setSyncStatus, setLastSyncTime, setSyncError]);
+    }, [syncService, setSyncProgress, setSyncStatus, setLastSyncTime, setSyncError]);
 
     const resetError = useCallback(() => {
         setSyncError(null);

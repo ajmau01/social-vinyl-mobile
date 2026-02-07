@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { wsService } from '@/services/WebSocketService';
+import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
-import { ConnectionState, NowPlaying, Result, LoginResult } from '@/types';
+import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -22,6 +22,7 @@ export interface UseWebSocketResult {
  * session information, and actions for managing the connection.
  */
 export const useWebSocket = (): UseWebSocketResult => {
+    const { webSocketService } = useServices();
     const {
         connectionState,
         sessionId,
@@ -43,12 +44,14 @@ export const useWebSocket = (): UseWebSocketResult => {
                     setError(null);
                 }
             },
-            onMessage: (message: any) => {
+            onMessage: (message: WebSocketMessage) => {
                 const type = message.type || message.messageType;
                 const payload = message.payload || message;
 
                 if (type === 'SESSION_JOINED' || type === 'session-joined') {
-                    setSessionId(payload.sessionId || message.sessionId);
+                    // Type guard: payload could have sessionId
+                    const sessionId = (payload as any).sessionId || (message as any).sessionId;
+                    if (sessionId) setSessionId(sessionId);
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     setNowPlaying(payload as NowPlaying);
                 }
@@ -59,31 +62,31 @@ export const useWebSocket = (): UseWebSocketResult => {
             }
         };
 
-        wsService.setCallbacks(callbacks);
+        webSocketService.setCallbacks(callbacks);
 
         return () => {
             // Fix memory leak by clearing callbacks on unmount
-            wsService.clearCallbacks();
+            webSocketService.clearCallbacks();
         };
-    }, [setConnectionState, setSessionId, setNowPlaying, setError]);
+    }, [webSocketService, setConnectionState, setSessionId, setNowPlaying, setError]);
 
     const connect = useCallback(() => {
         if (username) {
-            wsService.connect(username, authToken || undefined);
+            webSocketService.connect(username, authToken || undefined);
         }
-    }, [username, authToken]);
+    }, [webSocketService, username, authToken]);
 
     const disconnect = useCallback(() => {
-        wsService.disconnect();
-    }, []);
+        webSocketService.disconnect();
+    }, [webSocketService]);
 
     const login = useCallback(async (username: string, password: string): Promise<Result<LoginResult>> => {
-        const result = await wsService.login(username, password);
+        const result = await webSocketService.login(username, password);
         if (!result.success) {
             setError(result.error.message);
         }
         return result;
-    }, [setError]);
+    }, [webSocketService, setError]);
 
     return {
         connectionState,

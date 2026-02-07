@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { dbService } from '@/services/DatabaseService';
+import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release } from '@/types';
 import { CONFIG } from '@/config';
@@ -11,6 +11,7 @@ import { CONFIG } from '@/config';
  * Supports search and auto-refresh on sync completion.
  */
 export const useCollectionData = (searchQuery: string = '') => {
+    const { databaseService } = useServices();
     const { username } = useSessionStore();
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ export const useCollectionData = (searchQuery: string = '') => {
         try {
             // Fetch all releases at once (no pagination)
             // Search filtering is done client-side by useGroupedReleases hook with diacritic support
-            const items = await dbService.getReleases(username);
+            const items = await databaseService.getReleases(username);
             setReleases(items);
 
             if (CONFIG.DEBUG_WS) {
@@ -41,7 +42,7 @@ export const useCollectionData = (searchQuery: string = '') => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [username, searchQuery, loading]);
+    }, [databaseService, username, searchQuery, loading]);
 
     // Initial load and search trigger
     useEffect(() => {

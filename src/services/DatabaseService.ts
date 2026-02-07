@@ -132,8 +132,11 @@ class DatabaseService implements IDatabaseService {
         if (!this.db) await this.init();
 
         try {
+            // Type for SQLite parameters
+            type SQLiteParam = string | number | null | Uint8Array;
+
             let query = 'SELECT * FROM releases WHERE userId = ?';
-            const params: any[] = [userId];
+            const params: SQLiteParam[] = [userId];
 
             query += ' ORDER BY added_at DESC, instanceId DESC';
 

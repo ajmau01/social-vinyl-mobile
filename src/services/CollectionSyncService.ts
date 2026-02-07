@@ -128,8 +128,8 @@ class CollectionSyncService implements ISyncService {
                             // Ensure instanceId is set for the Release object later
                             uniqueAlbumsMap.set(id, { ...album, instanceId: id || undefined, genres: [category] });
                         } else {
-                            const existing = uniqueAlbumsMap.get(id)!;
-                            if (existing.genres && !existing.genres.includes(category)) {
+                            const existing = uniqueAlbumsMap.get(id);
+                            if (existing && existing.genres && !existing.genres.includes(category)) {
                                 // Prioritize specific genres over generic ones like "All" or "Uncategorized"
                                 const genericFolders = ['all', 'uncategorized', 'vinyl', 'albums', 'unsorted', 'collection'];
                                 const isNewCategoryGeneric = genericFolders.includes(category.toLowerCase());

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { SectionList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { SectionList, ActivityIndicator, RefreshControl, StyleSheet, SectionListRenderItemInfo } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { COLLECTION_BOTTOM_PADDING } from '@/constants/layout';
 import { Release } from '@/types';
@@ -15,6 +15,12 @@ export interface CollectionSectionViewProps {
     loading: boolean;
     isEmpty: boolean;
     username: string | null;
+}
+
+// Type for transformed sections
+interface TransformedSection {
+    title: string;
+    data: Release[][];
 }
 
 export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React.memo(({
@@ -38,7 +44,7 @@ export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React
         return `section-${section.title}-${section.data.length}`;
     }, [sections]);
 
-    const renderItem = useCallback(({ item, section }: any) => (
+    const renderItem = useCallback(({ item, section }: SectionListRenderItemInfo<Release[], TransformedSection>) => (
         <BrowseSection
             title={section.title}
             releases={item}
