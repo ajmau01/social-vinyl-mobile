@@ -49,8 +49,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                 const payload = message.payload || message;
 
                 if (type === 'SESSION_JOINED' || type === 'session-joined') {
-                    // Type guard: payload could have sessionId
-                    const sessionId = (payload as any).sessionId || (message as any).sessionId;
+                    // Check for sessionId in message first, then in payload
+                    const sessionId = message.sessionId ||
+                        (payload && typeof payload === 'object' && 'sessionId' in payload
+                            ? (payload as { sessionId?: string }).sessionId
+                            : undefined);
                     if (sessionId) setSessionId(sessionId);
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     setNowPlaying(payload as NowPlaying);

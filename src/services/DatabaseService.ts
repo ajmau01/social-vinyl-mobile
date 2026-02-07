@@ -17,6 +17,15 @@ class DatabaseService implements IDatabaseService {
         return DatabaseService.instance;
     }
 
+    /**
+     * Ensure database is initialized and return it
+     */
+    private async ensureDb(): Promise<SQLite.SQLiteDatabase> {
+        if (!this.db) await this.init();
+        if (!this.db) throw new Error('[DatabaseService] Database initialization failed');
+        return this.db;
+    }
+
     public async init() {
         if (this.db) return;
         if (this.initPromise) return this.initPromise;
@@ -75,10 +84,10 @@ class DatabaseService implements IDatabaseService {
     }
 
     public async saveRelease(release: Release) {
-        if (!this.db) await this.init();
+        const db = await this.ensureDb();
 
         try {
-            await this.db!.runAsync(
+            await db.runAsync(
                 'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 release.id,
                 release.instanceId,
@@ -100,12 +109,12 @@ class DatabaseService implements IDatabaseService {
     }
 
     public async saveReleasesBatch(releases: Release[]) {
-        if (!this.db) await this.init();
+        const db = await this.ensureDb();
 
         try {
-            await this.db!.withTransactionAsync(async () => {
+            await db.withTransactionAsync(async () => {
                 for (const release of releases) {
-                    await this.db!.runAsync(
+                    await db.runAsync(
                         'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                         release.id,
                         release.instanceId,
@@ -129,7 +138,7 @@ class DatabaseService implements IDatabaseService {
     }
 
     public async getReleases(userId: string, limit?: number, offset?: number): Promise<Release[]> {
-        if (!this.db) await this.init();
+        const db = await this.ensureDb();
 
         try {
             // Type for SQLite parameters
@@ -146,7 +155,7 @@ class DatabaseService implements IDatabaseService {
                 params.push(limit, offset);
             }
 
-            const rows = await this.db!.getAllAsync<Release>(query, params);
+            const rows = await db.getAllAsync<Release>(query, params);
             return rows;
         } catch (error) {
             console.error('[DB] Failed to get releases', error);
@@ -155,8 +164,8 @@ class DatabaseService implements IDatabaseService {
     }
 
     public async updateReleaseTracks(userId: string, releaseId: number, tracksJson: string) {
-        if (!this.db) await this.init();
-        await this.db!.runAsync(
+        const db = await this.ensureDb();
+        await db.runAsync(
             'UPDATE releases SET tracks = ? WHERE id = ? AND userId = ?',
             tracksJson,
             releaseId,
@@ -165,13 +174,13 @@ class DatabaseService implements IDatabaseService {
     }
 
     public async clearUserCollection(userId: string) {
-        if (!this.db) await this.init();
-        await this.db!.runAsync('DELETE FROM releases WHERE userId = ?', userId);
+        const db = await this.ensureDb();
+        await db.runAsync('DELETE FROM releases WHERE userId = ?', userId);
     }
 
     public async clearAll() {
-        if (!this.db) await this.init();
-        await this.db!.execAsync('DELETE FROM releases');
+        const db = await this.ensureDb();
+        await db.execAsync('DELETE FROM releases');
     }
 
     // Only for testing
