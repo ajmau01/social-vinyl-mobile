@@ -5,6 +5,7 @@ import { View, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket } from '@/hooks';
+import { ServiceProvider } from '@/contexts/ServiceContext';
 
 export default function RootLayout() {
   const { username, authToken } = useSessionStore();
@@ -20,12 +21,14 @@ export default function RootLayout() {
   }, [username, authToken, connect, disconnect]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </View>
+    <ServiceProvider>
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </View>
+    </ServiceProvider>
   );
 }
 
