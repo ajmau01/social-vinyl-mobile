@@ -28,7 +28,7 @@ export interface ServiceContextValue {
 export interface ServiceProviderProps {
     children: React.ReactNode;
     webSocketService?: IWebSocketService;
-    syncService?: ISyncService;
+    collectionSyncService?: ISyncService;
     databaseService?: IDatabaseService;
 }
 
@@ -54,7 +54,7 @@ ServiceContext.displayName = 'ServiceContext';
  * // Test usage (injects mocks)
  * <ServiceProvider 
  *   webSocketService={mockWebSocketService}
- *   syncService={mockSyncService}
+ *   collectionSyncService={mockSyncService}
  * >
  *   <ComponentUnderTest />
  * </ServiceProvider>
@@ -62,14 +62,14 @@ ServiceContext.displayName = 'ServiceContext';
 export const ServiceProvider: React.FC<ServiceProviderProps> = ({
     children,
     webSocketService = wsService,
-    syncService: syncServiceProp = syncService,
+    collectionSyncService = syncService,
     databaseService = dbService,
 }) => {
     const value = useMemo<ServiceContextValue>(() => ({
         webSocketService,
-        syncService: syncServiceProp,
+        syncService: collectionSyncService,
         databaseService,
-    }), [webSocketService, syncServiceProp, databaseService]);
+    }), [webSocketService, collectionSyncService, databaseService]);
 
     return (
         <ServiceContext.Provider value={value}>

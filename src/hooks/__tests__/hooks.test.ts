@@ -3,6 +3,7 @@ import { useWebSocket } from '../useWebSocket';
 import { useSyncCollection } from '../useSyncCollection';
 import { useCollectionData } from '../useCollectionData';
 import { useGroupedReleases } from '../useGroupedReleases';
+import { TestWrapper } from './testUtils';
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
 import { dbService } from '@/services/DatabaseService';
@@ -50,7 +51,7 @@ describe('Phase 2 Hooks', () => {
                 callback = cb;
             });
 
-            const { result } = renderHook(() => useWebSocket());
+            const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
 
             expect(result.current.connectionState).toBe('disconnected');
 
@@ -70,7 +71,7 @@ describe('Phase 2 Hooks', () => {
                 callback = cb;
             });
 
-            const { result } = renderHook(() => useWebSocket());
+            const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
 
             const nowPlaying = { track: 'Help!', artist: 'The Beatles', album: 'Help!' };
             act(() => {
@@ -81,7 +82,7 @@ describe('Phase 2 Hooks', () => {
         });
 
         it('should provide connection actions', () => {
-            const { result } = renderHook(() => useWebSocket());
+            const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
 
             act(() => {
                 result.current.connect();
@@ -95,7 +96,7 @@ describe('Phase 2 Hooks', () => {
         });
 
         it('should clean up callbacks on unmount', () => {
-            const { unmount } = renderHook(() => useWebSocket());
+            const { unmount } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
             unmount();
             expect(wsService.clearCallbacks).toHaveBeenCalled();
         });
@@ -109,7 +110,7 @@ describe('Phase 2 Hooks', () => {
                 data: { itemCount: 10, syncTime: 12345 }
             });
 
-            const { result } = renderHook(() => useSyncCollection());
+            const { result } = renderHook(() => useSyncCollection(), { wrapper: TestWrapper });
 
             await act(async () => {
                 await result.current.sync('custom-user');
@@ -125,7 +126,7 @@ describe('Phase 2 Hooks', () => {
                 error: new Error('Sync Failed')
             });
 
-            const { result } = renderHook(() => useSyncCollection());
+            const { result } = renderHook(() => useSyncCollection(), { wrapper: TestWrapper });
 
             await act(async () => {
                 await result.current.sync('test-user');
@@ -146,7 +147,7 @@ describe('Phase 2 Hooks', () => {
                 { id: 1, instanceId: 101, title: 'Album 1', artist: 'Artist 1' }
             ]);
 
-            const { result } = renderHook(() => useCollectionData());
+            const { result } = renderHook(() => useCollectionData(), { wrapper: TestWrapper });
 
             await act(async () => { }); // Wait for useEffect
 
