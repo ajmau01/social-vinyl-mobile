@@ -10,6 +10,7 @@ import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/utils/logger';
+import { TrackListSchema } from '@/types/schemas';
 
 interface ReleaseDetailsModalProps {
     visible: boolean;
@@ -29,8 +30,16 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
         if (visible && release) {
             if (release.tracks) {
                 try {
-                    setTracks(JSON.parse(release.tracks));
+                    const rawTracks = JSON.parse(release.tracks);
+                    const validation = TrackListSchema.safeParse(rawTracks);
+                    if (validation.success) {
+                        setTracks(validation.data);
+                    } else {
+                        logger.error('[Details] Track validation failed:', validation.error);
+                        setTracks([]);
+                    }
                 } catch (e) {
+                    logger.error('[Details] Failed to parse tracks JSON:', e);
                     setTracks([]);
                 }
             } else {
