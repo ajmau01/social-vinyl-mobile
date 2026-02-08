@@ -128,6 +128,10 @@ class WebSocketService implements IWebSocketService {
                 }));
             };
 
+            tempSocket.onerror = (e) => {
+                logger.error('[WS] Login socket error:', e);
+            };
+
             tempSocket.onmessage = (event) => {
                 try {
                     const rawData = JSON.parse(event.data);

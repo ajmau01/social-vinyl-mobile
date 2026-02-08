@@ -44,9 +44,9 @@ export const WebSocketMessageSchema = z.object({
  * Schema for Authentication response.
  */
 export const AuthResponseSchema = z.object({
-    type: z.enum(['admin-login-success', 'session-joined', 'error']),
+    type: z.string().min(1), // Relaxed from enum to allow all intermediate handshake messages
     authToken: z.string().optional(),
-    sessionId: z.string().optional(),
+    sessionId: z.union([z.string(), z.number().transform(v => v.toString())]).optional(),
     username: z.string().optional(),
     message: z.string().optional(),
 }).passthrough();

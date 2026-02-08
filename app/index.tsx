@@ -301,6 +301,8 @@ export default function HubScreen() {
                         </BlurView>
 
                         <Text style={styles.footerText}>© 2026 Social Vinyl. Powered by Discogs.</Text>
+
+
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
