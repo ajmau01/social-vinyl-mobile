@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '@/utils/storage';
 
 import { NowPlaying, SyncStatus, ConnectionState } from '@/types';
 
@@ -13,6 +14,7 @@ interface SessionState {
     authToken: string | null;
     lastMode: 'host' | 'guest' | 'solo' | null;
     error: string | null;
+    lastInteractionTime: number;
 
     // Actions
     setConnectionState: (state: ConnectionState) => void;
@@ -20,7 +22,10 @@ interface SessionState {
     setNowPlaying: (track: NowPlaying | null) => void;
     setUsername: (username: string | null) => void;
     setAvatarUrl: (url: string | null) => void;
-    setAuthToken: (token: string | null) => void;
+    setAuthToken: (token: string | null) => Promise<void>;
+    hydrateAuthToken: () => Promise<void>;
+    updateLastInteraction: () => void;
+    clearSession: () => Promise<void>;
     setLastMode: (mode: 'host' | 'guest' | 'solo' | null) => void;
     setError: (error: Error | string | null) => void;
 
@@ -46,13 +51,39 @@ export const useSessionStore = create<SessionState>()(
             authToken: null,
             lastMode: null,
             error: null,
+            lastInteractionTime: Date.now(),
 
             setConnectionState: (state) => set({ connectionState: state }),
             setSessionId: (id) => set({ sessionId: id }),
             setNowPlaying: (track) => set({ nowPlaying: track }),
             setUsername: (username) => set({ username }),
             setAvatarUrl: (url) => set({ avatarUrl: url }),
-            setAuthToken: (token) => set({ authToken: token }),
+            setAuthToken: async (token) => {
+                if (token) {
+                    await secureStorage.saveAuthToken(token);
+                } else {
+                    await secureStorage.deleteAuthToken();
+                }
+                set({ authToken: token, lastInteractionTime: Date.now() });
+            },
+            hydrateAuthToken: async () => {
+                const token = await secureStorage.getAuthToken();
+                if (token) {
+                    set({ authToken: token });
+                }
+            },
+            updateLastInteraction: () => set({ lastInteractionTime: Date.now() }),
+            clearSession: async () => {
+                await secureStorage.deleteAuthToken();
+                set({
+                    sessionId: null,
+                    authToken: null,
+                    username: null,
+                    avatarUrl: null,
+                    nowPlaying: null,
+                    lastInteractionTime: Date.now()
+                });
+            },
             setLastMode: (mode) => set({ lastMode: mode }),
             setError: (error) => set({
                 error: error instanceof Error ? error.message : error
@@ -73,7 +104,6 @@ export const useSessionStore = create<SessionState>()(
             partialize: (state) => ({
                 username: state.username,
                 avatarUrl: state.avatarUrl,
-                authToken: state.authToken,
                 lastMode: state.lastMode,
                 lastSyncTime: state.lastSyncTime
             }),
