@@ -30,16 +30,19 @@ export default {
         },
         plugins: [
             "expo-router",
-            "expo-secure-store"
+            "expo-secure-store",
+            "@sentry/react-native/expo"
         ],
         experiments: {
             typedRoutes: true
         },
         extra: {
             // Environment-based configuration (Issue #66)
-            apiUrl: process.env.API_URL || 'https://toddler-verified-guys-democrat.trycloudflare.com',
-            wsUrl: process.env.WS_URL || 'wss://toddler-verified-guys-democrat.trycloudflare.com/ws/listening-bin',
+            apiUrl: process.env.API_URL || 'http://localhost:9080',
+            wsUrl: process.env.WS_URL || 'ws://localhost:9080/ws/listening-bin',
             debugWs: process.env.DEBUG_WS === 'true',
+            sentryDsn: process.env.SENTRY_DSN || null,
+            // Security flags
             sslPinningEnabled: process.env.SSL_PINNING_ENABLED === 'true',
             useMessageAuth: process.env.USE_MESSAGE_AUTH === 'true',
         }

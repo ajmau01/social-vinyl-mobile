@@ -21,6 +21,12 @@ export const TrackSchema = z.object({
 export const TrackListSchema = z.array(TrackSchema);
 
 /**
+ * Helper to handle IDs that can be either strings or numbers,
+ * normalizing them to strings.
+ */
+const IdSchema = z.union([z.string(), z.number().transform(n => n.toString())]);
+
+/**
  * Base schema for WebSocket messages to ensure minimal structure.
  */
 export const WebSocketMessageSchema = z.object({
@@ -29,24 +35,25 @@ export const WebSocketMessageSchema = z.object({
     action: z.string().optional(),
     message: z.string().optional(),
     error: z.string().optional(),
-    sessionId: z.string().optional(),
+    sessionId: IdSchema.optional(),
     authToken: z.string().optional(),
     username: z.string().optional(),
     album: z.object({
         title: z.string(),
         artist: z.string(),
         coverImage: z.string(),
-        releaseId: z.number().or(z.string().transform(v => parseInt(v))),
+        releaseId: IdSchema,
     }).optional(),
 }).passthrough(); // Allow extra fields but ensure base structure
 
 /**
  * Schema for Authentication response.
+ * Broadened to allow ignoring non-auth messages on the login socket.
  */
 export const AuthResponseSchema = z.object({
-    type: z.string().min(1), // Relaxed from enum to allow all intermediate handshake messages
+    type: z.string(), // Relaxed to allow all intermediate handshake messages (access-level, state, etc)
     authToken: z.string().optional(),
-    sessionId: z.union([z.string(), z.number().transform(v => v.toString())]).optional(),
+    sessionId: IdSchema.optional(),
     username: z.string().optional(),
     message: z.string().optional(),
 }).passthrough();

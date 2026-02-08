@@ -1,3 +1,6 @@
+import * as Sentry from '@sentry/react-native';
+import { CONFIG } from '@/config';
+
 /**
  * Production-Safe Logger Utility
  * 
@@ -34,17 +37,25 @@ class Logger {
 
     /**
      * Error logging - always logged
-     * TODO: Integrate with Sentry for production error tracking
+     * In production, this also reports to Sentry.
      */
     error(...args: any[]) {
         console.error(...args);
 
-        // TODO: Send to Sentry in production
-        // if (!__DEV__) {
-        //     Sentry.captureException(args[0], {
-        //         extra: { additionalContext: args.slice(1) }
-        //     });
-        // }
+        // Issue #64: Report to Sentry in production (if initialized)
+        if (CONFIG.SENTRY_DSN) {
+            try {
+                const error = args[0] instanceof Error ? args[0] : new Error(String(args[0]));
+                Sentry.captureException(error, {
+                    extra: {
+                        additionalContext: args.slice(1),
+                    },
+                });
+            } catch (e) {
+                // Prevent recursive logging failure
+                console.error('[Logger] Failed to report error to Sentry:', e);
+            }
+        }
     }
 
     /**
