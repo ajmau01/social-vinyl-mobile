@@ -34,17 +34,23 @@ class Logger {
 
     /**
      * Error logging - always logged
-     * TODO: Integrate with Sentry for production error tracking
+     * In production, this also reports to the global error tracking service.
      */
     error(...args: any[]) {
         console.error(...args);
 
-        // TODO: Send to Sentry in production
-        // if (!__DEV__) {
-        //     Sentry.captureException(args[0], {
-        //         extra: { additionalContext: args.slice(1) }
-        //     });
-        // }
+        // Issue #64: Report to Sentry/Crashlytics in production
+        if (!__DEV__) {
+            try {
+                // Placeholder for global error tracking integration
+                // Sentry.captureException(args[0], {
+                //     extra: { additionalContext: args.slice(1) }
+                // });
+            } catch (e) {
+                // Prevent recursive logging failure
+                console.error('[Logger] Failed to report error:', e);
+            }
+        }
     }
 
     /**

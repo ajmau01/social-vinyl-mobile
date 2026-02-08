@@ -6,6 +6,7 @@ import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 /**
  * WebSocketManager - Manages WebSocket connection lifecycle
@@ -39,21 +40,23 @@ export default function RootLayout() {
   useSessionTimeout();
 
   return (
-    <ServiceProvider>
-      <WebSocketManager />
-      <View
-        style={styles.container}
-        onStartShouldSetResponderCapture={() => {
-          updateLastInteraction();
-          return false; // Don't block child responders
-        }}
-      >
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-      </View>
-    </ServiceProvider>
+    <ErrorBoundary>
+      <ServiceProvider>
+        <WebSocketManager />
+        <View
+          style={styles.container}
+          onStartShouldSetResponderCapture={() => {
+            updateLastInteraction();
+            return false; // Don't block child responders
+          }}
+        >
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </View>
+      </ServiceProvider>
+    </ErrorBoundary>
   );
 }
 
