@@ -11,7 +11,8 @@ import { ServiceProvider } from '@/contexts/ServiceContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Initialize Sentry before the component renders
-if (CONFIG.SENTRY_DSN) {
+// Harden check: Only initialize if DSN looks valid (starts with https://)
+if (CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string' && CONFIG.SENTRY_DSN.startsWith('https://')) {
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
     debug: __DEV__,
