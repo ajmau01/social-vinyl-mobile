@@ -8,6 +8,7 @@ import {
 } from '@/types';
 import { CONFIG } from '../config';
 import { ISyncService } from './interfaces';
+import { logger } from '@/utils/logger';
 
 interface BackendAlbum {
     releaseId: number;
@@ -43,7 +44,7 @@ class CollectionSyncService implements ISyncService {
         callbacks?.onProgress(10); // Started
 
         try {
-            if (CONFIG.DEBUG_WS) console.log('[Sync] Starting sync for user:', userId);
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Starting sync for user:', userId);
 
             // Fetch cached data (Read-Only)
             const data = await this.fetchScan(userId);
@@ -56,12 +57,12 @@ class CollectionSyncService implements ISyncService {
 
             // DESTRUCTIVE SYNC: Clear old data for this user to prevent accumulation
             // and ensure a "mirror" of the Discogs collection.
-            if (CONFIG.DEBUG_WS) console.log('[Sync] Clearing old data for user:', userId);
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Clearing old data for user:', userId);
             await dbService.clearUserCollection(userId);
 
             await this.saveReleases(data.albums, userId);
 
-            if (CONFIG.DEBUG_WS) console.log('[Sync] Complete. Items:', data.albums.length);
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Complete. Items:', data.albums.length);
             callbacks?.onStatusChange('complete');
             callbacks?.onProgress(100);
 
@@ -75,7 +76,7 @@ class CollectionSyncService implements ISyncService {
             };
 
         } catch (error) {
-            console.error('[Sync] Error:', error);
+            logger.error('[Sync] Error:', error);
             callbacks?.onStatusChange('error');
             return { success: false, error: error instanceof Error ? error : new Error('Unknown sync error') };
         } finally {
@@ -92,7 +93,7 @@ class CollectionSyncService implements ISyncService {
         try {
             // Use format=json to get cached collection (Read-Only)
             const url = `${CONFIG.API_URL}/collection?format=json&username=${userId}`;
-            console.log('[Sync] Fetching:', url);
+            logger.log('[Sync] Fetching:', url);
 
             const response = await fetch(url);
 
@@ -114,7 +115,7 @@ class CollectionSyncService implements ISyncService {
             if (rawData && rawData.albums && !Array.isArray(rawData.albums)) {
                 const uniqueAlbumsMap = new Map<number, BackendAlbum>();
                 const categories = Object.keys(rawData.albums);
-                console.log('[Sync] Categories found:', categories.join(', '));
+                logger.log('[Sync] Categories found:', categories.join(', '));
 
                 for (const [category, albums] of Object.entries(rawData.albums)) {
                     const albumList = albums as BackendAlbum[];
@@ -146,7 +147,7 @@ class CollectionSyncService implements ISyncService {
                 }
 
                 const flatAlbums = Array.from(uniqueAlbumsMap.values());
-                console.log(`[Sync] Flattening complete. Total unique instances: ${flatAlbums.length}`);
+                logger.log(`[Sync] Flattening complete. Total unique instances: ${flatAlbums.length}`);
 
                 return {
                     albums: flatAlbums,
@@ -158,7 +159,7 @@ class CollectionSyncService implements ISyncService {
 
             return rawData;
         } catch (error) {
-            console.error(`[Sync] Failed to fetch collection`, error);
+            logger.error(`[Sync] Failed to fetch collection`, error);
             if (error instanceof Error && error.message.includes('not scanned')) {
                 throw error;
             }
@@ -168,7 +169,7 @@ class CollectionSyncService implements ISyncService {
 
     private async saveReleases(items: BackendAlbum[], userId: string) {
         if (CONFIG.DEBUG_WS && items.length > 0) {
-            console.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}`);
+            logger.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}`);
         }
 
         // Filter and map - skip albums missing instanceId (fail fast approach)
@@ -178,7 +179,7 @@ class CollectionSyncService implements ISyncService {
         for (const item of items) {
             const rawInstanceId = item.instance_id || item.instanceId;
             if (!rawInstanceId) {
-                console.error('[Sync] Album missing instanceId, skipping:', item.title, item.releaseId);
+                logger.error('[Sync] Album missing instanceId, skipping:', item.title, item.releaseId);
                 skippedCount++;
                 continue;
             }
@@ -200,7 +201,7 @@ class CollectionSyncService implements ISyncService {
         }
 
         if (skippedCount > 0) {
-            console.warn(`[Sync] Skipped ${skippedCount} albums missing instanceId`);
+            logger.warn(`[Sync] Skipped ${skippedCount} albums missing instanceId`);
         }
 
         await dbService.saveReleasesBatch(releases);
@@ -209,7 +210,7 @@ class CollectionSyncService implements ISyncService {
     public async fetchTracks(userId: string, releaseId: number): AsyncResult<Track[]> {
         try {
             const url = `${CONFIG.API_URL}/collection?mode=tracklist&releaseId=${releaseId}`;
-            if (CONFIG.DEBUG_WS) console.log('[Sync] Fetching tracks:', url);
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Fetching tracks:', url);
             const response = await fetch(url);
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
             const data = await response.json();
@@ -222,7 +223,7 @@ class CollectionSyncService implements ISyncService {
             }
             return { success: false, error: new Error('No tracks found') };
         } catch (error) {
-            console.error('[Sync] Failed to fetch tracks:', error);
+            logger.error('[Sync] Failed to fetch tracks:', error);
             return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
         }
     }

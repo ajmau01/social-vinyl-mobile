@@ -7,6 +7,7 @@ import {
     LoginResult
 } from '@/types';
 import { IWebSocketService } from './interfaces';
+import { logger } from '@/utils/logger';
 
 class WebSocketService implements IWebSocketService {
     private static instance: WebSocketService;
@@ -42,7 +43,7 @@ class WebSocketService implements IWebSocketService {
         this.shouldReconnect = true;
 
         if (!username) {
-            if (CONFIG.DEBUG_WS) console.log('[WS] Skip connect: No username');
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Skip connect: No username');
             this.callbacks?.onConnectionStateChange('disconnected');
             return;
         }
@@ -57,7 +58,7 @@ class WebSocketService implements IWebSocketService {
         }
 
         const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
-        if (CONFIG.DEBUG_WS) console.log('[WS] Connecting to:', wsUrlWithParams);
+        if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting to:', wsUrlWithParams);
 
         this.socket = new WebSocket(wsUrlWithParams);
 
@@ -102,7 +103,7 @@ class WebSocketService implements IWebSocketService {
             }, 10000);
 
             const wsUrl = `${CONFIG.WS_URL}?username=default`;
-            if (CONFIG.DEBUG_WS) console.log('[WS] Login connecting to:', wsUrl);
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Login connecting to:', wsUrl);
 
             tempSocket = new WebSocket(wsUrl);
 
@@ -119,7 +120,7 @@ class WebSocketService implements IWebSocketService {
                     const data = JSON.parse(event.data);
                     const type = data.type || data.messageType;
 
-                    if (CONFIG.DEBUG_WS) console.log('[WS] Login received:', type, data);
+                    if (CONFIG.DEBUG_WS) logger.log('[WS] Login received:', type, data);
 
                     // Support both admin-login-success and Atomic Login (session-joined with authToken)
                     if (type === 'admin-login-success' || (type === 'session-joined' && data.authToken)) {
@@ -151,13 +152,13 @@ class WebSocketService implements IWebSocketService {
 
             tempSocket.onclose = () => {
                 // If this happens unexpectedly before resolve
-                if (CONFIG.DEBUG_WS) console.log('[WS] Login socket closed');
+                if (CONFIG.DEBUG_WS) logger.log('[WS] Login socket closed');
             };
         });
     }
 
     private handleOpen = () => {
-        console.log('[WS] Connected');
+        logger.log('[WS] Connected');
         this.reconnectAttempts = 0;
         this.callbacks?.onConnectionStateChange('connected');
     };
@@ -166,7 +167,7 @@ class WebSocketService implements IWebSocketService {
         try {
             const rawData = JSON.parse(event.data);
             const type = rawData.type || rawData.messageType;
-            if (CONFIG.DEBUG_WS) console.log('[WS] Raw:', type, rawData);
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Raw:', type, rawData);
 
             // Always emit raw message for flexible consumption
             this.callbacks?.onMessage(rawData);
@@ -209,12 +210,12 @@ class WebSocketService implements IWebSocketService {
                     break;
             }
         } catch (e) {
-            console.error('[WS] Failed to parse message', e);
+            logger.error('[WS] Failed to parse message', e);
         }
     };
 
     private handleClose = (event: CloseEvent) => {
-        console.log('[WS] Disconnected', event.code, event.reason);
+        logger.log('[WS] Disconnected', event.code, event.reason);
         this.callbacks?.onConnectionStateChange('disconnected');
 
         if (this.shouldReconnect) {
@@ -224,18 +225,18 @@ class WebSocketService implements IWebSocketService {
     };
 
     private handleError = (event: Event) => {
-        console.log('[WS] Connection failed (retrying...)');
+        logger.log('[WS] Connection failed (retrying...)');
         this.callbacks?.onError(new Error('WebSocket connection error'));
     };
 
     private attemptReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.warn('[WS] Max reconnect attempts reached');
+            logger.warn('[WS] Max reconnect attempts reached');
             return;
         }
 
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
-        console.log(`[WS] Reconnecting in ${delay}ms...`);
+        logger.log(`[WS] Reconnecting in ${delay}ms...`);
 
         this.reconnectAttempts++;
         this.reconnectTimeout = setTimeout(() => {

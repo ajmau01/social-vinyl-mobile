@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SyncStatus } from '@/types';
+import { logger } from '@/utils/logger';
 
 export interface CollectionHeaderProps {
     title: string;
@@ -49,7 +50,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
         if (mode) {
             onViewModeChange(mode);
         } else {
-            console.error(`[CollectionHeader] Unknown view mode: ${val}`);
+            logger.error(`[CollectionHeader] Unknown view mode: ${val}`);
         }
     }, [onViewModeChange]);
 
