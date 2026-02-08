@@ -21,6 +21,11 @@ jest.mock('expo-sqlite', () => ({
     })),
 }));
 
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+    require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
 // Mock expo-modules-core
 jest.mock('expo-modules-core', () => ({
     EventEmitter: jest.fn(() => ({
@@ -28,6 +33,7 @@ jest.mock('expo-modules-core', () => ({
         removeListeners: jest.fn(),
     })),
     ProxyNativeModule: {},
+    requireNativeModule: jest.fn(() => ({})),
 }));
 
 export { };

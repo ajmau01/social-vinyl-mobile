@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
-import { useWebSocket } from '@/hooks';
+import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 
 /**
@@ -28,10 +28,26 @@ function WebSocketManager() {
 }
 
 export default function RootLayout() {
+  const { hydrateAuthToken, updateLastInteraction } = useSessionStore();
+
+  // Hydrate token from SecureStore on app start
+  useEffect(() => {
+    hydrateAuthToken();
+  }, []);
+
+  // Activate Session Timeout Logic
+  useSessionTimeout();
+
   return (
     <ServiceProvider>
       <WebSocketManager />
-      <View style={styles.container}>
+      <View
+        style={styles.container}
+        onStartShouldSetResponderCapture={() => {
+          updateLastInteraction();
+          return false; // Don't block child responders
+        }}
+      >
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
