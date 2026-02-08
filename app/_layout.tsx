@@ -14,7 +14,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 if (CONFIG.SENTRY_DSN) {
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
-    debug: __DEV__, // If `true`, Sentry will try to print out useful debugging information if something goes wrong with sending the event. Set it to `false` in production
+    debug: __DEV__,
+    integrations: [
+      new Sentry.ReactNativeTracing(),
+    ],
+    tracesSampleRate: 1.0, // Adjust this in production to control costs
   });
 }
 
