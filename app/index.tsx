@@ -21,6 +21,8 @@ import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
 import { StatusBar } from 'expo-status-bar';
 
+import { validateUsername, validatePartyCode } from '@/utils/validation';
+
 type PersonaMode = 'none' | 'host' | 'guest' | 'solo';
 
 export default function HubScreen() {
@@ -81,14 +83,14 @@ export default function HubScreen() {
     };
 
     const handleSoloBrowse = async () => {
-        if (!inputValue.trim()) {
-            setError('Please enter a Discogs username');
+        const userId = inputValue.trim();
+        if (!validateUsername(userId)) {
+            setError('Please enter a valid Discogs username (3-30 chars, alphanumeric)');
             return;
         }
         setLoading(true);
         setError(null);
         try {
-            const userId = inputValue.trim();
             const result = await syncService.syncCollection(userId, {
                 onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
                 onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
@@ -113,8 +115,8 @@ export default function HubScreen() {
     };
 
     const handleGuestJoin = () => {
-        if (inputValue.length !== 5) {
-            setError('Please enter a 5-character code');
+        if (!validatePartyCode(inputValue)) {
+            setError('Please enter a valid 5-character alphanumeric code');
             return;
         }
         // Guest logic would go here
@@ -122,15 +124,16 @@ export default function HubScreen() {
     };
 
     const handleHostLogin = async () => {
-        if (!inputValue.trim() || !password.trim()) {
-            setError('Enter username and password');
+        const userId = inputValue.trim();
+        if (!validateUsername(userId) || !password.trim()) {
+            setError('Enter a valid username and password');
             return;
         }
 
         setLoading(true);
         setError(null);
         try {
-            const result = await wsService.login(inputValue.trim(), password);
+            const result = await wsService.login(userId, password);
             if (result.success) {
                 const { data } = result;
                 const userId = data.userId || inputValue.trim();

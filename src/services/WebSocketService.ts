@@ -8,6 +8,7 @@ import {
 } from '@/types';
 import { IWebSocketService } from './interfaces';
 import { logger } from '@/utils/logger';
+import { AuthResponseSchema, WebSocketMessageSchema } from '@/types/schemas';
 
 class WebSocketService implements IWebSocketService {
     private static instance: WebSocketService;
@@ -117,8 +118,16 @@ class WebSocketService implements IWebSocketService {
 
             tempSocket.onmessage = (event) => {
                 try {
-                    const data = JSON.parse(event.data);
-                    const type = data.type || data.messageType;
+                    const rawData = JSON.parse(event.data);
+                    const validation = AuthResponseSchema.safeParse(rawData);
+
+                    if (!validation.success) {
+                        if (CONFIG.DEBUG_WS) logger.log('[WS] Login validation failed:', validation.error);
+                        return; // Ignore malformed auth messages
+                    }
+
+                    const data = validation.data;
+                    const type = data.type || (data as any).messageType; // messageType fallback for back compat
 
                     if (CONFIG.DEBUG_WS) logger.log('[WS] Login received:', type, data);
 
@@ -130,7 +139,7 @@ class WebSocketService implements IWebSocketService {
                             success: true,
                             data: {
                                 sessionId: data.sessionId || '',
-                                token: data.authToken,
+                                token: data.authToken as string,
                                 userId: data.username || username
                             }
                         });
@@ -166,11 +175,19 @@ class WebSocketService implements IWebSocketService {
     private handleMessage = (event: MessageEvent) => {
         try {
             const rawData = JSON.parse(event.data);
-            const type = rawData.type || rawData.messageType;
-            if (CONFIG.DEBUG_WS) logger.log('[WS] Raw:', type, rawData);
+            const validation = WebSocketMessageSchema.safeParse(rawData);
+
+            if (!validation.success) {
+                if (CONFIG.DEBUG_WS) logger.log('[WS] Message validation failed:', validation.error);
+                return;
+            }
+
+            const data = validation.data;
+            const type = data.type || (data as any).messageType;
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Raw:', type, data);
 
             // Always emit raw message for flexible consumption
-            this.callbacks?.onMessage(rawData);
+            this.callbacks?.onMessage(data as unknown as WebSocketMessage);
 
             // Semantic Event Emission (Architectural Cleanup)
             switch (type) {
@@ -180,15 +197,15 @@ class WebSocketService implements IWebSocketService {
                 case 'session-joined':
                 case 'admin-login-success':
                     this.callbacks?.onSessionJoined?.({
-                        sessionId: rawData.sessionId || '',
-                        authToken: rawData.authToken,
-                        username: rawData.username
+                        sessionId: data.sessionId || '',
+                        authToken: data.authToken,
+                        username: data.username
                     });
                     break;
                 case 'NOW_PLAYING':
                 case 'now-playing':
-                    if (rawData.album) {
-                        const { album } = rawData;
+                    if (data.album) {
+                        const { album } = data;
                         this.callbacks?.onNowPlaying?.({
                             track: album.title,
                             artist: album.artist,
@@ -204,8 +221,8 @@ class WebSocketService implements IWebSocketService {
                     break;
                 case 'ACCESS_LEVEL':
                 case 'access-level':
-                    if (rawData.message) {
-                        this.callbacks?.onAccessLevel?.(rawData.message);
+                    if (data.message) {
+                        this.callbacks?.onAccessLevel?.(data.message);
                     }
                     break;
             }

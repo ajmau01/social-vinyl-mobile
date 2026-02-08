@@ -3,6 +3,7 @@ import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
+import { sanitizeSearchQuery } from '@/utils/validation';
 
 export interface SearchBarProps {
     value: string;
@@ -19,6 +20,10 @@ export const SearchBar: React.FC<SearchBarProps> = React.memo(({
         onChangeText('');
     }, [onChangeText]);
 
+    const handleChangeText = useCallback((text: string) => {
+        onChangeText(sanitizeSearchQuery(text));
+    }, [onChangeText]);
+
     return (
         <View style={styles.searchContainer}>
             <BlurView intensity={20} tint="light" style={styles.searchBlur}>
@@ -29,7 +34,7 @@ export const SearchBar: React.FC<SearchBarProps> = React.memo(({
                         placeholder={placeholder}
                         placeholderTextColor={THEME.colors.textDim}
                         value={value}
-                        onChangeText={onChangeText}
+                        onChangeText={handleChangeText}
                         autoCapitalize="none"
                         autoCorrect={false}
                         returnKeyType="search"
