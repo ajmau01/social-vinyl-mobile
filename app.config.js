@@ -37,8 +37,8 @@ export default {
         },
         extra: {
             // Environment-based configuration (Issue #66)
-            apiUrl: process.env.API_URL || 'http://localhost:9080',
-            wsUrl: process.env.WS_URL || 'ws://localhost:9080/ws/listening-bin',
+            apiUrl: process.env.API_URL || 'https://toddler-verified-guys-democrat.trycloudflare.com',
+            wsUrl: process.env.WS_URL || 'wss://toddler-verified-guys-democrat.trycloudflare.com/ws/listening-bin',
             debugWs: process.env.DEBUG_WS === 'true',
             sslPinningEnabled: process.env.SSL_PINNING_ENABLED === 'true',
             useMessageAuth: process.env.USE_MESSAGE_AUTH === 'true',
