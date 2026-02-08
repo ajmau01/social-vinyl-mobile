@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react-native';
+import { CONFIG } from '@/config';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +9,14 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Initialize Sentry before the component renders
+if (CONFIG.SENTRY_DSN) {
+  Sentry.init({
+    dsn: CONFIG.SENTRY_DSN,
+    debug: __DEV__, // If `true`, Sentry will try to print out useful debugging information if something goes wrong with sending the event. Set it to `false` in production
+  });
+}
 
 /**
  * WebSocketManager - Manages WebSocket connection lifecycle
@@ -28,7 +38,7 @@ function WebSocketManager() {
   return null; // This component only manages side effects
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { hydrateAuthToken, updateLastInteraction } = useSessionStore();
 
   // Hydrate token from SecureStore on app start
@@ -59,6 +69,8 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+export default Sentry.wrap(RootLayout);
 
 const styles = StyleSheet.create({
   container: {
