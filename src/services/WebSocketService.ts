@@ -10,6 +10,8 @@ import { IWebSocketService } from './interfaces';
 import { logger } from '@/utils/logger';
 import { AuthResponseSchema, WebSocketMessageSchema } from '@/types/schemas';
 
+import { networkSecurity } from '@/utils/network';
+
 class WebSocketService implements IWebSocketService {
     private static instance: WebSocketService;
     private socket: WebSocket | null = null;
@@ -19,6 +21,7 @@ class WebSocketService implements IWebSocketService {
     private shouldReconnect = true;
     private callbacks: WebSocketCallbacks | null = null;
     private currentConfig: { username: string; authToken?: string } | null = null;
+    private authTimeout: NodeJS.Timeout | null = null;
 
     private constructor() { }
 
@@ -39,6 +42,7 @@ class WebSocketService implements IWebSocketService {
 
     public connect(username: string, authToken?: string) {
         if (this.socket?.readyState === WebSocket.OPEN) return;
+        if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting...');
 
         this.currentConfig = { username, authToken };
         this.shouldReconnect = true;
@@ -54,13 +58,15 @@ class WebSocketService implements IWebSocketService {
             watchedUsername: username // For now, we watch our own bin
         });
 
-        if (authToken) {
+        // Issue #68: Only append token to URL if not using message-based auth
+        if (authToken && !CONFIG.USE_MESSAGE_AUTH) {
             params.append('authToken', authToken);
         }
 
         const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
         if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting to:', wsUrlWithParams);
 
+        // TODO: In production, wrap this with SSL Pinning if networkSecurity.isSslPinningEnabled()
         this.socket = new WebSocket(wsUrlWithParams);
 
         this.socket.onopen = this.handleOpen;
@@ -72,11 +78,17 @@ class WebSocketService implements IWebSocketService {
     }
 
     public disconnect() {
+        if (CONFIG.DEBUG_WS) logger.log('[WS] Disconnecting...');
         this.shouldReconnect = false;
 
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
+        }
+
+        if (this.authTimeout) {
+            clearTimeout(this.authTimeout);
+            this.authTimeout = null;
         }
 
         if (this.socket) {
@@ -114,6 +126,10 @@ class WebSocketService implements IWebSocketService {
                     username,
                     password
                 }));
+            };
+
+            tempSocket.onerror = (e) => {
+                logger.error('[WS] Login socket error:', e);
             };
 
             tempSocket.onmessage = (event) => {
@@ -169,7 +185,25 @@ class WebSocketService implements IWebSocketService {
     private handleOpen = () => {
         logger.log('[WS] Connected');
         this.reconnectAttempts = 0;
-        this.callbacks?.onConnectionStateChange('connected');
+
+        // Issue #68: Message-based authentication preparation
+        if (CONFIG.USE_MESSAGE_AUTH && this.currentConfig?.authToken) {
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Sending authenticate message');
+            this.socket?.send(JSON.stringify({
+                action: 'authenticate',
+                authToken: this.currentConfig.authToken,
+                username: this.currentConfig.username
+            }));
+
+            // Set a timeout for authentication confirmation
+            this.authTimeout = setTimeout(() => {
+                logger.error('[WS] Authentication timed out');
+                this.disconnect();
+                this.callbacks?.onError(new Error('Authentication timed out'));
+            }, 10000);
+        } else {
+            this.callbacks?.onConnectionStateChange('connected');
+        }
     };
 
     private handleMessage = (event: MessageEvent) => {
@@ -196,11 +230,36 @@ class WebSocketService implements IWebSocketService {
                 case 'SESSION_JOINED':
                 case 'session-joined':
                 case 'admin-login-success':
+                    if (this.authTimeout) {
+                        global.clearTimeout(this.authTimeout);
+                        this.authTimeout = null;
+                    }
+                    this.callbacks?.onConnectionStateChange('connected');
                     this.callbacks?.onSessionJoined?.({
                         sessionId: data.sessionId || '',
                         authToken: data.authToken,
                         username: data.username
                     });
+                    break;
+                case 'AUTH_SUCCESS':
+                case 'auth-success':
+                    if (this.authTimeout) {
+                        global.clearTimeout(this.authTimeout);
+                        this.authTimeout = null;
+                    }
+                    this.callbacks?.onConnectionStateChange('connected');
+                    break;
+                case 'AUTH_ERROR':
+                case 'auth-error':
+                case 'error':
+                    if (this.authTimeout) {
+                        global.clearTimeout(this.authTimeout);
+                        this.authTimeout = null;
+                    }
+                    if (type === 'AUTH_ERROR' || type === 'auth-error' || (type === 'error' && data.message?.includes('auth'))) {
+                        this.callbacks?.onError(new Error(data.message || 'Authentication failed'));
+                        this.disconnect();
+                    }
                     break;
                 case 'NOW_PLAYING':
                 case 'now-playing':

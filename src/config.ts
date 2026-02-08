@@ -16,11 +16,14 @@ import Constants from 'expo-constants';
  * API_URL=https://prod.example.com WS_URL=wss://prod.example.com/ws/listening-bin eas build
  */
 export const CONFIG = {
-    // Environment-based configuration with localhost defaults for development
-    API_URL: Constants.expoConfig?.extra?.apiUrl || 'http://localhost:9080',
-    WS_URL: Constants.expoConfig?.extra?.wsUrl || 'ws://localhost:9080/ws/listening-bin',
+    // Environment-based configuration with stable tunnel defaults for development
+    API_URL: Constants.expoConfig?.extra?.apiUrl || 'https://toddler-verified-guys-democrat.trycloudflare.com',
+    WS_URL: Constants.expoConfig?.extra?.wsUrl || 'wss://toddler-verified-guys-democrat.trycloudflare.com/ws/listening-bin',
 
     // Issue #74: Use __DEV__ for automatic dev/prod separation
     // Can be overridden via DEBUG_WS environment variable if needed
     DEBUG_WS: Constants.expoConfig?.extra?.debugWs ?? __DEV__,
+
+    // Issue #68: Preparation for message-based authentication
+    USE_MESSAGE_AUTH: Constants.expoConfig?.extra?.useMessageAuth ?? false,
 };
