@@ -14,7 +14,7 @@ class MockWebSocket {
     onclose: ((event: any) => void) | null = null;
     onerror: ((event: any) => void) | null = null;
 
-    constructor(url: string) {
+    constructor(public url: string) {
         MockWebSocket.instances.push(this);
     }
 }
@@ -24,6 +24,7 @@ describe('WebSocketService Authentication', () => {
     let wsService: any;
     let CONFIG: any;
     let logger: any;
+    let callbacks: any;
 
     beforeEach(() => {
         jest.resetModules();
@@ -53,12 +54,13 @@ describe('WebSocketService Authentication', () => {
         CONFIG = require('@/config').CONFIG;
         logger = require('@/utils/logger').logger;
 
-        wsService.setCallbacks({
+        callbacks = {
             onConnectionStateChange: jest.fn(),
             onMessage: jest.fn(),
             onError: jest.fn(),
             onSessionJoined: jest.fn(),
-        });
+        };
+        wsService.setCallbacks(callbacks);
     });
 
     afterEach(() => {
@@ -89,6 +91,7 @@ describe('WebSocketService Authentication', () => {
 
         expect(mockSocket.close).toHaveBeenCalled();
         expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Authentication timed out'));
+        expect(callbacks.onError).toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('clears timeout and stays connected on AUTH_SUCCESS', () => {
@@ -104,6 +107,22 @@ describe('WebSocketService Authentication', () => {
 
         expect(spy).toHaveBeenCalled();
         expect(mockSocket.close).not.toHaveBeenCalled();
+        expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
+    });
+
+    it('clears auth timeout on WELCOME message', () => {
+        const spy = jest.spyOn(global, 'clearTimeout');
+        wsService.connect('test-user', 'test-token');
+        const mockSocket = MockWebSocket.instances[0];
+
+        mockSocket.onopen?.();
+
+        mockSocket.onmessage?.({
+            data: JSON.stringify({ type: 'WELCOME', sessionId: 'test-session' })
+        });
+
+        expect(spy).toHaveBeenCalled();
+        expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
     });
 
     it('handles AUTH_ERROR and disconnects', () => {
@@ -117,6 +136,23 @@ describe('WebSocketService Authentication', () => {
         });
 
         expect(mockSocket.close).toHaveBeenCalled();
-        expect(logger.error).not.toHaveBeenCalled();
+        expect(callbacks.onError).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('includes authToken in URL when USE_MESSAGE_AUTH is false', () => {
+        // We need to re-require with different mock
+        jest.resetModules();
+        jest.doMock('@/config', () => ({
+            CONFIG: {
+                WS_URL: 'ws://test-url',
+                USE_MESSAGE_AUTH: false
+            }
+        }));
+        const newWsService = require('../WebSocketService').wsService;
+
+        newWsService.connect('test-user', 'test-token');
+        const mockSocket = MockWebSocket.instances[0];
+
+        expect(mockSocket.url).toContain('authToken=test-token');
     });
 });
