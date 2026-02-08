@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import { Release } from '@/types';
+import { logger } from '@/utils/logger';
 import { IDatabaseService } from './interfaces';
 
 class DatabaseService implements IDatabaseService {
@@ -32,11 +33,11 @@ class DatabaseService implements IDatabaseService {
 
         this.initPromise = (async () => {
             try {
-                console.log('[DB] Initializing SQLite...');
+                logger.log('[DB] Initializing SQLite...');
                 this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
                 if (!this.db) throw new Error('Failed to open database');
 
-                console.log('[DB] Database opened. Checking schema...');
+                logger.log('[DB] Database opened. Checking schema...');
 
                 // AGGRESSIVE SCHEMA MIGRATION: 
                 // We must ensure 'instanceId' is the SOLE primary key.
@@ -46,7 +47,7 @@ class DatabaseService implements IDatabaseService {
 
                 // If the table exists but the PK is wrong (or missing instanceId), drop it.
                 if (tableInfo.length > 0 && !isCorrectPk) {
-                    console.warn('[DB] Schema mismatch: Primary Key is not instanceId. Dropping releases table...');
+                    logger.warn('[DB] Schema mismatch: Primary Key is not instanceId. Dropping releases table...');
                     await this.db.execAsync('DROP TABLE IF EXISTS releases');
                 }
 
@@ -72,9 +73,9 @@ class DatabaseService implements IDatabaseService {
                     CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
                     CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
                 `);
-                console.log('[DB] Schema verified/initialized');
+                logger.log('[DB] Schema verified/initialized');
             } catch (error) {
-                console.error('[DB] Failed to initialize', error);
+                logger.error('[DB] Failed to initialize', error);
                 this.initPromise = null;
                 throw error;
             }
@@ -103,7 +104,7 @@ class DatabaseService implements IDatabaseService {
                 release.tracks || null
             );
         } catch (error) {
-            console.error('[DB] Failed to save release', error);
+            logger.error('[DB] Failed to save release', error);
             throw error;
         }
     }
@@ -132,7 +133,7 @@ class DatabaseService implements IDatabaseService {
                 }
             });
         } catch (error) {
-            console.error('[DB] Failed to batch save releases', error);
+            logger.error('[DB] Failed to batch save releases', error);
             throw error;
         }
     }
@@ -158,7 +159,7 @@ class DatabaseService implements IDatabaseService {
             const rows = await db.getAllAsync<Release>(query, params);
             return rows;
         } catch (error) {
-            console.error('[DB] Failed to get releases', error);
+            logger.error('[DB] Failed to get releases', error);
             throw error;
         }
     }

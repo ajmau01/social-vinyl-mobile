@@ -4,17 +4,12 @@ import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
 import { dbService } from '@/services/DatabaseService';
-import { Release } from '@/types';
+import { Release, Track } from '@/types';
 import { syncService } from '@/services/CollectionSyncService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Ionicons } from '@expo/vector-icons';
-
-interface Track {
-    position?: string;
-    title: string;
-    duration?: string;
-}
+import { logger } from '@/utils/logger';
 
 interface ReleaseDetailsModalProps {
     visible: boolean;
@@ -54,7 +49,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
         if (result.success) {
             setTracks(result.data);
         } else {
-            console.error('[Details] Failed to fetch tracks:', result.error);
+            logger.error('[Details] Failed to fetch tracks:', result.error);
         }
         setLoading(false);
     };

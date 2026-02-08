@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useServices } from '@/contexts/ServiceContext';
+import { dbService } from '@/services/DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release } from '@/types';
+import { logger } from '@/utils/logger';
 import { CONFIG } from '@/config';
 
 /**
@@ -11,7 +12,6 @@ import { CONFIG } from '@/config';
  * Supports search and auto-refresh on sync completion.
  */
 export const useCollectionData = (searchQuery: string = '') => {
-    const { databaseService } = useServices();
     const { username } = useSessionStore();
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
@@ -30,19 +30,19 @@ export const useCollectionData = (searchQuery: string = '') => {
         try {
             // Fetch all releases at once (no pagination)
             // Search filtering is done client-side by useGroupedReleases hook with diacritic support
-            const items = await databaseService.getReleases(username);
+            const items = await dbService.getReleases(username);
             setReleases(items);
 
             if (CONFIG.DEBUG_WS) {
-                console.log(`[useCollectionData] Loaded ${items.length} items.`);
+                logger.log(`[useCollectionData] Loaded ${items.length} items.`);
             }
         } catch (error) {
-            console.error('[useCollectionData] Load failed', error);
+            logger.error('[useCollectionData] Load failed', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [databaseService, username, searchQuery, loading]);
+    }, [username, searchQuery, loading]);
 
     // Initial load and search trigger
     useEffect(() => {
@@ -54,7 +54,7 @@ export const useCollectionData = (searchQuery: string = '') => {
     useEffect(() => {
         if (syncStatus === 'complete') {
             if (CONFIG.DEBUG_WS) {
-                console.log('[useCollectionData] Sync complete, reloading...');
+                logger.log('[useCollectionData] Sync complete, reloading...');
             }
             // Small delay to ensure all DB writes are committed
             setTimeout(() => loadData(true), 100);

@@ -1,11 +1,26 @@
+import Constants from 'expo-constants';
+
+/**
+ * Application Configuration
+ * 
+ * Security Hardening:
+ * - Issue #74: Debug flags now use __DEV__ instead of hardcoded values
+ * - Issue #66: API URLs now use environment variables instead of hardcoded values
+ * 
+ * Environment Variables (set during build):
+ * - API_URL: Backend API base URL
+ * - WS_URL: WebSocket endpoint URL
+ * - DEBUG_WS: Enable WebSocket debug logging (optional, defaults to __DEV__)
+ * 
+ * Example build command:
+ * API_URL=https://prod.example.com WS_URL=wss://prod.example.com/ws/listening-bin eas build
+ */
 export const CONFIG = {
-    // Cloudflare Tunnel
-    API_URL: 'https://toddler-verified-guys-democrat.trycloudflare.com',
-    WS_URL: 'wss://toddler-verified-guys-democrat.trycloudflare.com/ws/listening-bin',
+    // Environment-based configuration with localhost defaults for development
+    API_URL: Constants.expoConfig?.extra?.apiUrl || 'http://localhost:9080',
+    WS_URL: Constants.expoConfig?.extra?.wsUrl || 'ws://localhost:9080/ws/listening-bin',
 
-    // Local Dev (Commented Out)
-    // API_URL: 'http://localhost:9080', 
-    // WS_URL: 'ws://localhost:9080/listening-bin',
-
-    DEBUG_WS: false,
+    // Issue #74: Use __DEV__ for automatic dev/prod separation
+    // Can be overridden via DEBUG_WS environment variable if needed
+    DEBUG_WS: Constants.expoConfig?.extra?.debugWs ?? __DEV__,
 };
