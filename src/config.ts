@@ -23,4 +23,7 @@ export const CONFIG = {
     // Issue #74: Use __DEV__ for automatic dev/prod separation
     // Can be overridden via DEBUG_WS environment variable if needed
     DEBUG_WS: Constants.expoConfig?.extra?.debugWs ?? __DEV__,
+
+    // Issue #68: Preparation for message-based authentication
+    USE_MESSAGE_AUTH: Constants.expoConfig?.extra?.useMessageAuth ?? false,
 };
