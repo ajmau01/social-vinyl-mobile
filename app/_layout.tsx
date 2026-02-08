@@ -15,10 +15,9 @@ if (CONFIG.SENTRY_DSN) {
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
     debug: __DEV__,
-    integrations: [
-      new Sentry.ReactNativeTracing(),
-    ],
-    tracesSampleRate: 1.0, // Adjust this in production to control costs
+    // Tracing is already partially handled by Sentry.wrap()
+    // and the Expo plugin. Basic init is safest for now.
+    tracesSampleRate: 1.0,
   });
 }
 

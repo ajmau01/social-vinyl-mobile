@@ -30,9 +30,3 @@ export const CONFIG = {
     // Issue #64: Sentry Configuration
     SENTRY_DSN: Constants.expoConfig?.extra?.sentryDsn || null,
 };
-
-// Diagnostic log to verify environment configuration during manual testing
-if (__DEV__) {
-    console.log('[Config] Resolved API_URL:', CONFIG.API_URL);
-    console.log('[Config] Resolved WS_URL:', CONFIG.WS_URL);
-}
