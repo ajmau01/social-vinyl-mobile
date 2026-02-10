@@ -1,0 +1,537 @@
+title:	Implement End-to-End Testing with Detox
+state:	OPEN
+author:	ajmau01
+labels:	testing
+comments:	0
+assignees:	
+projects:	
+milestone:	Phase 6: Quality & Testing Improvements
+number:	60
+--
+## Problem
+Currently, there are no automated end-to-end (E2E) tests to verify critical user journeys work correctly on real devices. While unit and component tests exist, they cannot catch:
+- Navigation flow issues
+- Integration problems between screens
+- Native module failures
+- Real WebSocket connection issues
+- Actual sync/database operations
+- Cross-component state management bugs
+
+**Missing Coverage:**
+- ❌ User login flow
+- ❌ Collection sync process
+- ❌ Search and filtering
+- ❌ Release detail viewing
+- ❌ View mode switching (artist/genre/decade)
+- ❌ Listening bin management
+- ❌ Session joining/leaving
+
+## Implementation Approach
+
+### 1. Install Detox
+```bash
+npm install --save-dev detox detox-cli
+npm install --save-dev jest-circus
+```
+
+### 2. Configure Detox
+
+**.detoxrc.js**
+```javascript
+module.exports = {
+  testRunner: {
+    args: {
+      '$0': 'jest',
+      config: 'e2e/jest.config.js'
+    },
+    jest: {
+      setupTimeout: 120000
+    }
+  },
+  apps: {
+    'ios.debug': {
+      type: 'ios.app',
+      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SocialVinylMobile.app',
+      build: 'xcodebuild -workspace ios/SocialVinylMobile.xcworkspace -scheme SocialVinylMobile -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build'
+    },
+    'ios.release': {
+      type: 'ios.app',
+      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/SocialVinylMobile.app',
+      build: 'xcodebuild -workspace ios/SocialVinylMobile.xcworkspace -scheme SocialVinylMobile -configuration Release -sdk iphonesimulator -derivedDataPath ios/build'
+    },
+    'android.debug': {
+      type: 'android.apk',
+      binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
+      build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+      reversePorts: [8081]
+    },
+    'android.release': {
+      type: 'android.apk',
+      binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
+      build: 'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release'
+    }
+  },
+  devices: {
+    simulator: {
+      type: 'ios.simulator',
+      device: {
+        type: 'iPhone 15 Pro'
+      }
+    },
+    emulator: {
+      type: 'android.emulator',
+      device: {
+        avdName: 'Pixel_7_API_33'
+      }
+    }
+  },
+  configurations: {
+    'ios.sim.debug': {
+      device: 'simulator',
+      app: 'ios.debug'
+    },
+    'ios.sim.release': {
+      device: 'simulator',
+      app: 'ios.release'
+    },
+    'android.emu.debug': {
+      device: 'emulator',
+      app: 'android.debug'
+    },
+    'android.emu.release': {
+      device: 'emulator',
+      app: 'android.release'
+    }
+  }
+};
+```
+
+**e2e/jest.config.js**
+```javascript
+module.exports = {
+  rootDir: '..',
+  testMatch: ['<rootDir>/e2e/**/*.e2e.ts'],
+  testTimeout: 120000,
+  maxWorkers: 1,
+  globalSetup: 'detox/runners/jest/globalSetup',
+  globalTeardown: 'detox/runners/jest/globalTeardown',
+  reporters: ['detox/runners/jest/reporter'],
+  testEnvironment: 'detox/runners/jest/testEnvironment',
+  verbose: true,
+};
+```
+
+### 3. Update package.json Scripts
+```json
+{
+  "scripts": {
+    "e2e:build:ios": "detox build --configuration ios.sim.debug",
+    "e2e:test:ios": "detox test --configuration ios.sim.debug",
+    "e2e:build:android": "detox build --configuration android.emu.debug",
+    "e2e:test:android": "detox test --configuration android.emu.debug",
+    "e2e:test": "npm run e2e:test:ios"
+  }
+}
+```
+
+### 4. Add testID Props to All Interactive Elements
+
+**Critical Elements Needing testIDs:**
+```typescript
+// Login screen
+<TextInput testID="login-username-input" />
+<TextInput testID="login-password-input" />
+<TouchableOpacity testID="login-submit-button" />
+
+// Collection screen
+<TouchableOpacity testID="collection-sync-button" />
+<TextInput testID="collection-search-input" />
+<TouchableOpacity testID={\`view-mode-\${mode}\`} />
+<Pressable testID={\`release-card-\${release.instanceId}\`} />
+
+// Release modal
+<TouchableOpacity testID="modal-close-button" />
+<TouchableOpacity testID="modal-add-to-bin-button" />
+
+// Session drawer
+<TouchableOpacity testID="session-join-button" />
+<TouchableOpacity testID="session-leave-button" />
+```
+
+### 5. Create E2E Test Suites
+
+#### **e2e/setup.e2e.ts**
+```typescript
+import { device } from 'detox';
+
+beforeAll(async () => {
+  await device.launchApp({
+    newInstance: true,
+    permissions: { notifications: 'YES' }
+  });
+});
+
+afterAll(async () => {
+  await device.terminateApp();
+});
+```
+
+#### **e2e/login.e2e.ts**
+```typescript
+import { by, device, element, expect as detoxExpect } from 'detox';
+
+describe('Login Flow', () => {
+  beforeEach(async () => {
+    await device.reloadReactNative();
+  });
+
+  it('should display login screen on first launch', async () => {
+    await detoxExpect(element(by.id('login-username-input'))).toBeVisible();
+    await detoxExpect(element(by.id('login-password-input'))).toBeVisible();
+    await detoxExpect(element(by.id('login-submit-button'))).toBeVisible();
+  });
+
+  it('should show error for invalid credentials', async () => {
+    await element(by.id('login-username-input')).typeText('wronguser');
+    await element(by.id('login-password-input')).typeText('wrongpass');
+    await element(by.id('login-submit-button')).tap();
+    
+    await detoxExpect(element(by.text('Invalid credentials'))).toBeVisible();
+  });
+
+  it('should successfully login with valid credentials', async () => {
+    await element(by.id('login-username-input')).typeText('testuser');
+    await element(by.id('login-password-input')).typeText('testpass');
+    await element(by.id('login-submit-button')).tap();
+    
+    // Should navigate to collection screen
+    await detoxExpect(element(by.id('collection-screen'))).toBeVisible();
+  });
+
+  it('should persist login across app restarts', async () => {
+    // First login
+    await element(by.id('login-username-input')).typeText('testuser');
+    await element(by.id('login-password-input')).typeText('testpass');
+    await element(by.id('login-submit-button')).tap();
+    
+    await detoxExpect(element(by.id('collection-screen'))).toBeVisible();
+    
+    // Restart app
+    await device.reloadReactNative();
+    
+    // Should still be on collection screen (not login)
+    await detoxExpect(element(by.id('collection-screen'))).toBeVisible();
+  });
+});
+```
+
+#### **e2e/collection-sync.e2e.ts**
+```typescript
+import { by, device, element, expect as detoxExpect, waitFor } from 'detox';
+
+describe('Collection Sync', () => {
+  beforeEach(async () => {
+    await device.reloadReactNative();
+    // Assume user is logged in (use beforeAll login helper)
+  });
+
+  it('should sync collection when sync button pressed', async () => {
+    await element(by.id('collection-sync-button')).tap();
+    
+    // Should show syncing status
+    await waitFor(element(by.text('Syncing...')))
+      .toBeVisible()
+      .withTimeout(2000);
+    
+    // Should complete and show success
+    await waitFor(element(by.text('Synced')))
+      .toBeVisible()
+      .withTimeout(30000);
+    
+    // Should display collection items
+    await detoxExpect(element(by.id('collection-list'))).toBeVisible();
+  });
+
+  it('should show progress bar during sync', async () => {
+    await element(by.id('collection-sync-button')).tap();
+    
+    await waitFor(element(by.id('collection-header-progress-bar')))
+      .toBeVisible()
+      .withTimeout(2000);
+  });
+
+  it('should disable sync button while syncing', async () => {
+    await element(by.id('collection-sync-button')).tap();
+    
+    // Button should be disabled
+    await detoxExpect(element(by.id('collection-sync-button'))).toHaveToggleValue(false);
+  });
+
+  it('should handle sync errors gracefully', async () => {
+    // TODO: Mock backend to return error
+    await device.setURLBlacklist(['https://toddler-verified-guys-democrat.trycloudflare.com/*']);
+    
+    await element(by.id('collection-sync-button')).tap();
+    
+    await waitFor(element(by.text(/error|failed/i)))
+      .toBeVisible()
+      .withTimeout(10000);
+  });
+});
+```
+
+#### **e2e/collection-navigation.e2e.ts**
+```typescript
+import { by, element, expect as detoxExpect } from 'detox';
+
+describe('Collection Navigation', () => {
+  beforeEach(async () => {
+    // Ensure collection is synced
+    await element(by.id('collection-sync-button')).tap();
+    await waitFor(element(by.text('Synced'))).toBeVisible().withTimeout(30000);
+  });
+
+  it('should switch between view modes', async () => {
+    // Default is artist mode
+    await detoxExpect(element(by.id('view-mode-artist'))).toBeVisible();
+    
+    // Switch to genre mode
+    await element(by.id('view-mode-genre')).tap();
+    await detoxExpect(element(by.text(/genre/i))).toBeVisible();
+    
+    // Switch to decade mode
+    await element(by.id('view-mode-decade')).tap();
+    await detoxExpect(element(by.text(/1960s|1970s|1980s/i))).toBeVisible();
+  });
+
+  it('should open release details when release tapped', async () => {
+    // Tap first release card
+    await element(by.id('collection-list')).atIndex(0).tap();
+    
+    // Modal should open
+    await detoxExpect(element(by.id('release-details-modal'))).toBeVisible();
+    await detoxExpect(element(by.id('modal-close-button'))).toBeVisible();
+  });
+
+  it('should close release modal when close button tapped', async () => {
+    await element(by.id('collection-list')).atIndex(0).tap();
+    await detoxExpect(element(by.id('release-details-modal'))).toBeVisible();
+    
+    await element(by.id('modal-close-button')).tap();
+    await detoxExpect(element(by.id('release-details-modal'))).not.toBeVisible();
+  });
+});
+```
+
+#### **e2e/search.e2e.ts**
+```typescript
+import { by, element, expect as detoxExpect } from 'detox';
+
+describe('Search', () => {
+  beforeEach(async () => {
+    // Ensure collection is synced
+    await element(by.id('collection-sync-button')).tap();
+    await waitFor(element(by.text('Synced'))).toBeVisible().withTimeout(30000);
+  });
+
+  it('should filter collection by search query', async () => {
+    await element(by.id('collection-search-input')).typeText('Beatles');
+    
+    // Should only show Beatles releases
+    await detoxExpect(element(by.text(/Beatles/i))).toBeVisible();
+    
+    // Non-Beatles releases should not be visible
+    await detoxExpect(element(by.text('Pink Floyd'))).not.toBeVisible();
+  });
+
+  it('should clear search when clear button pressed', async () => {
+    await element(by.id('collection-search-input')).typeText('Beatles');
+    await element(by.id('search-clear-button')).tap();
+    
+    // Search input should be empty
+    await detoxExpect(element(by.id('collection-search-input'))).toHaveText('');
+    
+    // All releases should be visible again
+    await detoxExpect(element(by.id('collection-list'))).toBeVisible();
+  });
+
+  it('should handle diacritics in search', async () => {
+    // Search for "resume" should find "résumé"
+    await element(by.id('collection-search-input')).typeText('cafe');
+    await detoxExpect(element(by.text(/café/i))).toBeVisible();
+  });
+});
+```
+
+#### **e2e/listening-bin.e2e.ts**
+```typescript
+import { by, element, expect as detoxExpect } from 'detox';
+
+describe('Listening Bin', () => {
+  it('should navigate to bin tab', async () => {
+    await element(by.id('tab-bin')).tap();
+    await detoxExpect(element(by.id('bin-screen'))).toBeVisible();
+  });
+
+  it('should add release to bin from collection', async () => {
+    // Open release modal
+    await element(by.id('collection-list')).atIndex(0).tap();
+    
+    // Add to bin
+    await element(by.id('modal-add-to-bin-button')).tap();
+    
+    // Navigate to bin
+    await element(by.id('tab-bin')).tap();
+    
+    // Release should be in bin
+    await detoxExpect(element(by.id('bin-screen'))).toBeVisible();
+    // TODO: Verify specific release is shown
+  });
+
+  it('should remove release from bin', async () => {
+    await element(by.id('tab-bin')).tap();
+    
+    // Swipe to delete
+    await element(by.id('bin-item-0')).swipe('left');
+    await element(by.id('bin-delete-button')).tap();
+    
+    // Item should be removed
+    await detoxExpect(element(by.id('bin-item-0'))).not.toExist();
+  });
+});
+```
+
+### 6. Setup Mock Backend for Tests
+
+**e2e/helpers/mockServer.ts**
+```typescript
+import { Server } from 'mock-socket';
+
+export class MockBackendServer {
+  private server: Server | null = null;
+
+  start(port: number = 8080) {
+    this.server = new Server(\`http://localhost:\${port}\`);
+    
+    this.server.on('connection', (socket) => {
+      console.log('[MockServer] Client connected');
+      
+      socket.on('message', (data) => {
+        const message = JSON.parse(data as string);
+        
+        // Mock login response
+        if (message.type === 'LOGIN') {
+          socket.send(JSON.stringify({
+            type: 'login-result',
+            success: message.username === 'testuser',
+            token: 'mock-token-12345'
+          }));
+        }
+        
+        // Mock collection data
+        if (message.type === 'SYNC') {
+          socket.send(JSON.stringify({
+            type: 'collection-data',
+            albums: { /* mock albums */ }
+          }));
+        }
+      });
+    });
+  }
+
+  stop() {
+    this.server?.close();
+  }
+}
+```
+
+### 7. Add CI/CD Integration
+
+**.github/workflows/e2e-tests.yml**
+```yaml
+name: E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  e2e-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install detox CLI
+        run: npm install -g detox-cli
+      
+      - name: Build app for testing
+        run: npm run e2e:build:ios
+      
+      - name: Run E2E tests
+        run: npm run e2e:test:ios
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-results
+          path: e2e/artifacts/
+
+  e2e-android:
+    runs-on: ubuntu-latest
+    steps:
+      # Similar to iOS but for Android
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - name: Setup Android emulator
+        run: |
+          echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-33;google_apis;x86_64'
+          echo "no" | $ANDROID_HOME/tools/bin/avdmanager create avd -n Pixel_7_API_33 -k 'system-images;android-33;google_apis;x86_64'
+      
+      - run: npm ci
+      - run: npm run e2e:build:android
+      - run: npm run e2e:test:android
+```
+
+## Acceptance Criteria
+- [ ] Detox installed and configured for iOS and Android
+- [ ] All interactive elements have \`testID\` props
+- [ ] E2E tests cover:
+  - [ ] Login flow (success, failure, persistence)
+  - [ ] Collection sync (trigger, progress, completion, errors)
+  - [ ] View mode switching (artist/genre/decade)
+  - [ ] Search and filtering (with diacritics)
+  - [ ] Release detail modal (open, close)
+  - [ ] Listening bin (add, remove, navigate)
+  - [ ] Session management (join, leave, share)
+- [ ] Tests run successfully on iOS simulator
+- [ ] Tests run successfully on Android emulator
+- [ ] CI/CD pipeline runs E2E tests on PRs
+- [ ] Test artifacts (screenshots, logs) uploaded on failure
+- [ ] Mock backend server for deterministic tests
+- [ ] Documentation for running tests locally
+
+## Technical Considerations
+- **Detox vs Appium**: Detox is faster and more reliable for React Native
+- **Flaky Tests**: Use \`waitFor\` with timeouts, avoid hardcoded delays
+- **Test Data**: Reset database before each test for consistency
+- **Environment**: Use separate backend URL for E2E tests
+- **Parallelization**: Run tests sequentially (\`maxWorkers: 1\`) to avoid conflicts
+- **Screenshots**: Detox automatically captures screenshots on failure
+- **CI Performance**: iOS tests require macOS runners (expensive), consider Android-only for PRs
+
+## Dependencies
+- Issue #57 (environment variables) should be completed first for test environment configuration
+
+## Priority
+**High** - Critical for preventing regressions and ensuring user flows work end-to-end
+
+## Estimated Effort
+- Setup and configuration: 4-6 hours
+- Writing tests: 8-12 hours
+- CI/CD integration: 2-4 hours
+- **Total: 14-22 hours**
