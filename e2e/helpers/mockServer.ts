@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 
 const PORT = 9080;
 
@@ -64,22 +64,29 @@ const SEED_COLLECTION: MockRelease[] = [
 
 export class MockBackendServer {
     private wss: WebSocketServer | null = null;
+    private server: any = null;
     private clients: Set<WebSocket> = new Set();
 
     start() {
         console.log(`[MockServer] Starting on port ${PORT}...`);
-        this.wss = new WebSocketServer({ port: PORT, path: '/ws' });
+
+        this.server = createServer((req, res) => {
+            const url = new URL(req.url || '', `http://localhost:${PORT}`);
+
+            if (url.pathname === '/collection' && req.method === 'GET') {
+                this.handleHttpRequest(req, res, url);
+                return;
+            }
+
+            res.statusCode = 404;
+            res.end('Not Found');
+        });
+
+        this.wss = new WebSocketServer({ server: this.server, path: '/ws' });
 
         this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
             console.log('[MockServer] Client connected');
             this.clients.add(ws);
-
-            // Extract auth token from URL if present (legacy support)
-            const url = new URL(req.url || '', `http://localhost:${PORT}`);
-            const token = url.searchParams.get('authToken');
-            if (token) {
-                console.log(`[MockServer] Client connected with token: ${token}`);
-            }
 
             ws.on('message', (data: any) => {
                 try {
@@ -99,13 +106,42 @@ export class MockBackendServer {
             // Send WELCOME message immediately
             ws.send(JSON.stringify({ type: 'WELCOME', message: 'Welcome to Social Vinyl Mock Server' }));
         });
+
+        this.server.listen(PORT, () => {
+            console.log(`[MockServer] Server listening on http://localhost:${PORT}`);
+        });
+    }
+
+    private handleHttpRequest(req: IncomingMessage, res: ServerResponse, url: URL) {
+        console.log(`[MockServer] HTTP ${req.method} ${req.url}`);
+
+        const username = url.searchParams.get('username') || 'mock-user';
+
+        // Group by primary genre for the response
+        const grouped: Record<string, MockRelease[]> = {};
+        SEED_COLLECTION.forEach(r => {
+            const primaryGenre = r.genres.split(',')[0].trim();
+            if (!grouped[primaryGenre]) grouped[primaryGenre] = [];
+            grouped[primaryGenre].push(r);
+        });
+
+        const responseData = {
+            username,
+            albums: grouped,
+            avatarUrl: 'https://example.com/avatar.jpg'
+        };
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(responseData));
     }
 
     stop() {
         console.log('[MockServer] Stopping...');
         this.clients.forEach(client => client.close());
         this.wss?.close();
+        this.server?.close();
         this.wss = null;
+        this.server = null;
     }
 
     private handleMessage(ws: WebSocket, message: any) {
@@ -113,6 +149,10 @@ export class MockBackendServer {
             case 'authenticate': // Legacy/Current action name
             case 'AUTH':
                 this.handleLogin(ws, message);
+                break;
+
+            case 'admin-login':
+                this.handleAdminLogin(ws, message);
                 break;
 
             case 'sync-collection':
@@ -144,6 +184,29 @@ export class MockBackendServer {
                 message: 'Invalid credentials'
             }));
         }
+    }
+
+    private handleAdminLogin(ws: WebSocket, message: any) {
+        console.log(`[MockServer] Admin Login request for: ${message.userId || message.username}`);
+
+        if (message.username === 'wrong_user' || message.password === 'wrong_pass') {
+            const response = {
+                type: 'error',
+                message: 'Invalid credentials'
+            };
+            ws.send(JSON.stringify(response));
+            return;
+        }
+
+        // Simulate success
+        const response = {
+            type: 'admin-login-success',
+            messageType: 'admin-login-success',
+            sessionId: 'mock-session-id',
+            authToken: 'mock-auth-token',
+            username: message.userId || message.username || 'mock-admin'
+        };
+        ws.send(JSON.stringify(response));
     }
 
     private handleSync(ws: WebSocket, message: any) {

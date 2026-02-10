@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -19,6 +20,7 @@ import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
+import { CONFIG } from '@/config';
 import { StatusBar } from 'expo-status-bar';
 
 import { validateUsername, validatePartyCode } from '@/utils/validation';
@@ -47,6 +49,8 @@ export default function HubScreen() {
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        if (CONFIG.IS_E2E) return;
+
         const startRotation = () => {
             rotateAnim.setValue(0);
             Animated.timing(rotateAnim, {
@@ -63,12 +67,6 @@ export default function HubScreen() {
 
         startRotation();
     }, [rotateAnim]);
-
-    /* 
-       AUTO-REDIRECT DISABLED: 
-       Per user request, the Hub should be the mandatory landing page on launch.
-       Redirection is now handled only via explicit persona actions.
-    */
 
     const rotation = rotateAnim.interpolate({
         inputRange: [0, 1],
@@ -119,7 +117,6 @@ export default function HubScreen() {
             setError('Please enter a valid 5-character alphanumeric code');
             return;
         }
-        // Guest logic would go here
         setError('Guest mode coming soon in Phase 4');
     };
 
@@ -145,13 +142,9 @@ export default function HubScreen() {
                     useSessionStore.getState().setSessionId(data.sessionId);
                 }
 
-                // Set syncing status BEFORE navigation for immediate UX feedback
                 useSessionStore.getState().setSyncStatus('syncing');
-
-                // Navigate immediately - don't block on sync
                 router.replace('/(tabs)/collection');
 
-                // Fire sync in background (no await)
                 syncService.syncCollection(userId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
                     onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
@@ -172,7 +165,6 @@ export default function HubScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Background Mesh (Simulated with View) */}
             <View style={styles.meshBg}>
                 <View style={styles.meshNode1} />
                 <View style={styles.meshNode2} />
@@ -187,43 +179,68 @@ export default function HubScreen() {
                     <ScrollView contentContainerStyle={styles.scrollContent}>
                         <BlurView intensity={10} tint="dark" style={styles.glassPanel}>
                             {mode === 'none' ? (
-                                <View style={styles.hubContent}>
-                                    <View style={styles.logoContainer}>
-                                        <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
-                                            <View style={styles.vinylCenter} />
-                                        </Animated.View>
-                                    </View>
-
-                                    <Text style={styles.title}>Social Vinyl</Text>
-                                    <Text style={styles.subtitle}>The digital companion for physical collections.</Text>
-
-                                    <View style={styles.personaOptions}>
+                                CONFIG.IS_E2E ? (
+                                    <View style={styles.hubContent}>
+                                        <Text style={styles.title}>E2E VERSION 2</Text>
+                                        <Text style={styles.subtitle}>Detox Sync Test Screen</Text>
                                         <TouchableOpacity
+                                            testID="mode-host"
                                             style={[styles.btnModern, styles.btnPrimary]}
                                             onPress={() => setMode('host')}
                                         >
-                                            <Text style={styles.btnText}>Unlock the DJ Booth</Text>
-                                            <Text style={styles.btnIcon}>→</Text>
+                                            <Text style={styles.btnText}>Open Host Login</Text>
                                         </TouchableOpacity>
-
                                         <TouchableOpacity
+                                            testID="mode-guest"
                                             style={styles.btnModern}
                                             onPress={() => setMode('guest')}
                                         >
-                                            <Text style={styles.btnText}>Join a Listening Party</Text>
-                                            <Text style={styles.btnIcon}>→</Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={styles.btnModern}
-                                            onPress={() => setMode('solo')}
-                                        >
-                                            <Text style={styles.btnText}>Browse Collection Solo</Text>
-                                            <Text style={styles.btnIcon}>→</Text>
+                                            <Text style={styles.btnText}>Guest Mode</Text>
                                         </TouchableOpacity>
                                     </View>
-                                </View>
+                                ) : (
+                                    <View style={styles.hubContent}>
+                                        <View style={styles.logoContainer}>
+                                            <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
+                                                <View style={styles.vinylCenter} />
+                                            </Animated.View>
+                                        </View>
+
+                                        <Text style={styles.title}>Social Vinyl</Text>
+                                        <Text style={styles.subtitle}>The digital companion for physical collections.</Text>
+
+                                        <View style={styles.personaOptions}>
+                                            <TouchableOpacity
+                                                testID="mode-host"
+                                                style={[styles.btnModern, styles.btnPrimary]}
+                                                onPress={() => setMode('host')}
+                                            >
+                                                <Text style={styles.btnText}>Unlock the DJ Booth</Text>
+                                                <Text style={styles.btnIcon}>→</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                testID="mode-guest"
+                                                style={styles.btnModern}
+                                                onPress={() => setMode('guest')}
+                                            >
+                                                <Text style={styles.btnText}>Join a Listening Party</Text>
+                                                <Text style={styles.btnIcon}>→</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                testID="mode-solo"
+                                                style={styles.btnModern}
+                                                onPress={() => setMode('solo')}
+                                            >
+                                                <Text style={styles.btnText}>Browse Collection Solo</Text>
+                                                <Text style={styles.btnIcon}>→</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )
                             ) : (
+
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
                                         {mode === 'host' && 'Host Login'}
@@ -236,6 +253,7 @@ export default function HubScreen() {
                                             {mode === 'guest' ? 'Join Code' : 'Discogs Username'}
                                         </Text>
                                         <TextInput
+                                            testID="login-input"
                                             style={styles.input}
                                             value={inputValue}
                                             onChangeText={setInputValue}
@@ -250,6 +268,7 @@ export default function HubScreen() {
                                         <View style={styles.inputGroup}>
                                             <Text style={styles.label}>Password</Text>
                                             <TextInput
+                                                testID="login-password"
                                                 style={styles.input}
                                                 value={password}
                                                 onChangeText={setPassword}
@@ -260,14 +279,15 @@ export default function HubScreen() {
                                         </View>
                                     )}
 
-                                    {error && <Text style={styles.errorMsg}>{error}</Text>}
+                                    {error && <Text testID="login-error" style={styles.errorMsg}>{error}</Text>}
 
                                     <View style={styles.authActions}>
-                                        <TouchableOpacity style={styles.btnModern} onPress={handleBack}>
+                                        <TouchableOpacity testID="login-cancel" style={styles.btnModern} onPress={handleBack}>
                                             <Text style={styles.btnText}>Cancel</Text>
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
+                                            testID="login-submit"
                                             style={[styles.btnModern, styles.btnPrimary]}
                                             onPress={() => {
                                                 if (mode === 'solo') handleSoloBrowse();
@@ -301,8 +321,6 @@ export default function HubScreen() {
                         </BlurView>
 
                         <Text style={styles.footerText}>© 2026 Social Vinyl. Powered by Discogs.</Text>
-
-
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
@@ -385,11 +403,10 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontWeight: '700', // Playfair Display equivalent
+        fontWeight: '700',
         color: '#fff',
         marginBottom: 10,
         textAlign: 'center',
-        // fontFamily: 'Playfair Display', // If available
     },
     subtitle: {
         fontSize: 16,

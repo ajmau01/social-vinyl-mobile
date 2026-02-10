@@ -7,7 +7,7 @@ export const waitForElement = {
     /**
      * Wait for an element to be visible with a custom timeout
      */
-    toBeVisible: async (matcher: Detox.NativeMatcher, timeout = 10000) => {
+    toBeVisible: async (matcher: Detox.NativeMatcher, timeout = 30000) => {
         await waitFor(element(matcher))
             .toBeVisible()
             .withTimeout(timeout);

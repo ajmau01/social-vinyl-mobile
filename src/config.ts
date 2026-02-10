@@ -16,7 +16,7 @@ import Constants from 'expo-constants';
  * API_URL=https://prod.example.com WS_URL=wss://prod.example.com/ws/listening-bin eas build
  */
 // Check for E2E mode (injected via Metro/Babel or process.env)
-const IS_E2E = process.env.E2E_MODE === 'true';
+const IS_E2E = process.env.EXPO_PUBLIC_E2E_MODE === 'true' || process.env.E2E_MODE === 'true';
 
 export const CONFIG = {
     // Environment-based configuration with localhost defaults for development

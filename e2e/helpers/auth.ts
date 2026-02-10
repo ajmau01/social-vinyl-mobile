@@ -7,64 +7,86 @@ import { waitForElement } from './waitFor';
  */
 
 const TEST_IDS = {
-    LOGIN_SCREEN: 'login-screen',
-    USERNAME_INPUT: 'login-username-input',
-    LOGIN_BUTTON: 'login-button',
-    LOGOUT_BUTTON: 'logout-button',
-    HOST_TAB: 'tab-host', // Assuming we have this
-    SETTINGS_BUTTON: 'settings-button', // Or wherever logout is
+    // Mode Selection
+    MODE_HOST: 'mode-host',
+    MODE_GUEST: 'mode-guest',
+    MODE_SOLO: 'mode-solo',
+
+    // Login Form
+    LOGIN_INPUT: 'login-input',
+    LOGIN_PASSWORD: 'login-password', // Only for host
+    LOGIN_SUBMIT: 'login-submit',
+    LOGIN_CANCEL: 'login-cancel',
+    LOGIN_ERROR: 'login-error',
+
+    // Navigation / Headers
+    HEADER_TITLE: 'header-title',
+    COLLECTION_HEADER: 'collection-header-title',
+    MENU_BUTTON: 'collection-header-menu-button',
+
+    // Drawer
+    DRAWER_LOGOUT: 'drawer-logout-button',
+    DRAWER_CLOSE: 'drawer-close-button',
 };
 
 export const Auth = {
     /**
      * Login as a standard host user
      */
-    loginAsHost: async (username = 'testuser') => {
-        // Ensure we are on login screen
-        await waitForElement.toBeVisible(by.id(TEST_IDS.LOGIN_SCREEN));
+    loginAsHost: async (username = 'testuser', password = 'password') => {
+        // 1. Select Host Mode
+        await waitForElement.toBeVisible(by.id(TEST_IDS.MODE_HOST));
+        await element(by.id(TEST_IDS.MODE_HOST)).tap();
 
-        // Type credentials
-        await element(by.id(TEST_IDS.USERNAME_INPUT)).typeText(username);
-        // Dismiss keyboard if needed (sometimes necessary in iOS)
-        await element(by.id(TEST_IDS.USERNAME_INPUT)).tapReturnKey();
+        // 2. Enter Credentials
+        await waitForElement.toBeVisible(by.id(TEST_IDS.LOGIN_INPUT));
+        await element(by.id(TEST_IDS.LOGIN_INPUT)).typeText(username);
+        // await element(by.id(TEST_IDS.LOGIN_INPUT)).tapReturnKey(); // Optional
 
-        // Tap login
-        await element(by.id(TEST_IDS.LOGIN_BUTTON)).tap();
+        await element(by.id(TEST_IDS.LOGIN_PASSWORD)).typeText(password);
+        await element(by.id(TEST_IDS.LOGIN_PASSWORD)).tapReturnKey();
 
-        // Wait for successful login (e.g., transition to main app)
-        // We assume 'collection-header' is a good indicator of home screen
-        await waitForElement.toBeVisible(by.id('collection-header'));
+        // 3. Submit
+        await element(by.id(TEST_IDS.LOGIN_SUBMIT)).tap();
+
+        // 3. Verify Login
+        await waitForElement.toBeVisible(by.id(TEST_IDS.COLLECTION_HEADER), 30000);
     },
 
     /**
      * Login as a solo user (no remote auth)
      */
     loginAsSolo: async () => {
-        await Auth.loginAsHost('solo_user');
+        // 1. Select Solo Mode
+        await waitForElement.toBeVisible(by.id(TEST_IDS.MODE_SOLO));
+        await element(by.id(TEST_IDS.MODE_SOLO)).tap();
+
+        // 2. Solo mode might jump straight in, or ask for simple username
+        // Assuming simple username for now based on app code
+        try {
+            await waitForElement.toBeVisible(by.id(TEST_IDS.LOGIN_INPUT));
+            await element(by.id(TEST_IDS.LOGIN_INPUT)).typeText('solo_user');
+            await element(by.id(TEST_IDS.LOGIN_SUBMIT)).tap();
+        } catch (e) {
+            // Already in?
+        }
+
+        await waitForElement.toBeVisible(by.id(TEST_IDS.HEADER_TITLE));
     },
 
     /**
      * Logout from the application
      */
     logout: async () => {
-        // Implementation depends on where logout button is.
-        // Assuming it's in a side drawer or settings.
-        const sessionDrawerBtn = by.id('session-drawer-trigger');
+        // 1. Open Menu
+        await waitForElement.toBeVisible(by.id(TEST_IDS.MENU_BUTTON));
+        await element(by.id(TEST_IDS.MENU_BUTTON)).tap();
 
-        // Check if we can see the trigger
-        try {
-            await expect(element(sessionDrawerBtn)).toBeVisible();
-            await element(sessionDrawerBtn).tap();
+        // 2. Tap Logout in Drawer
+        await waitForElement.toBeVisible(by.id(TEST_IDS.DRAWER_LOGOUT));
+        await element(by.id(TEST_IDS.DRAWER_LOGOUT)).tap();
 
-            const logoutBtn = by.id('session-logout-button');
-            await waitForElement.toBeVisible(logoutBtn);
-            await element(logoutBtn).tap();
-
-            // Verify we are back at login
-            await waitForElement.toBeVisible(by.id(TEST_IDS.LOGIN_SCREEN));
-        } catch (e) {
-            console.warn('Logout failed or button not found:', e);
-            // Fallback or re-throw
-        }
+        // 3. Verify back at Mode Selection
+        await waitForElement.toBeVisible(by.id(TEST_IDS.MODE_HOST));
     }
 };
