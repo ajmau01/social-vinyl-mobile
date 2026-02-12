@@ -27,7 +27,7 @@ export const CONFIG = {
         : 'http://localhost:8080'),
     WS_URL: process.env.EXPO_PUBLIC_WS_URL || (IS_E2E
         ? 'ws://localhost:9080/ws'
-        : 'http://localhost:8080/ws'),
+        : 'ws://localhost:8080/ws'),
     IS_E2E,
 
     // Issue #74: Use __DEV__ for automatic dev/prod separation

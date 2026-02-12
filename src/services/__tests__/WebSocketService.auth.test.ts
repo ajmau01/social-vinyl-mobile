@@ -114,7 +114,7 @@ describe('WebSocketService Authentication', () => {
 
     it('clears auth timeout on WELCOME message', () => {
         const spy = jest.spyOn(global, 'clearTimeout');
-        wsService.connect('test-user', 'test-token');
+        wsService.connect('test-user', 'test-token', 'test-session', 'test-secret');
         const mockSocket = MockWebSocket.instances[0];
 
         mockSocket.onopen?.();
@@ -125,6 +125,21 @@ describe('WebSocketService Authentication', () => {
 
         expect(spy).toHaveBeenCalled();
         expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
+    });
+
+    it('clears auth timeout on access-level message (PR #99 feedback)', () => {
+        const spy = jest.spyOn(global, 'clearTimeout');
+        wsService.connect('test-user', 'test-token', 'test-session', 'test-secret');
+        const mockSocket = MockWebSocket.instances[0];
+
+        mockSocket.onopen?.();
+
+        mockSocket.onmessage?.({
+            data: JSON.stringify({ type: 'ACCESS_LEVEL', message: 'host' })
+        });
+
+        expect(spy).toHaveBeenCalled();
+        expect(mockSocket.close).not.toHaveBeenCalled();
     });
 
     it('handles AUTH_ERROR and disconnects', () => {

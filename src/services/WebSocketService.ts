@@ -284,6 +284,10 @@ class WebSocketService implements IWebSocketService {
                     break;
                 case 'ACCESS_LEVEL':
                 case 'access-level':
+                    if (this.authTimeout) {
+                        global.clearTimeout(this.authTimeout);
+                        this.authTimeout = null;
+                    }
                     if (data.message) {
                         this.callbacks?.onAccessLevel?.(data.message);
                     }

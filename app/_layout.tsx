@@ -57,10 +57,8 @@ function RootLayout() {
     hydrateCredentials();
   }, []);
 
-  // Activate Session Timeout Logic (disabled in E2E)
-  if (!CONFIG.IS_E2E) {
-    useSessionTimeout();
-  }
+  // Activate Session Timeout Logic (handles E2E internally)
+  useSessionTimeout();
 
   return (
     <ErrorBoundary>
