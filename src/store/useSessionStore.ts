@@ -12,6 +12,7 @@ interface SessionState {
     username: string | null;
     avatarUrl: string | null;
     authToken: string | null;
+    sessionSecret: string | null;
     lastMode: 'host' | 'guest' | 'solo' | null;
     error: string | null;
     lastInteractionTime: number;
@@ -23,7 +24,8 @@ interface SessionState {
     setUsername: (username: string | null) => void;
     setAvatarUrl: (url: string | null) => void;
     setAuthToken: (token: string | null) => Promise<void>;
-    hydrateAuthToken: () => Promise<void>;
+    setSessionSecret: (secret: string | null) => Promise<void>;
+    hydrateCredentials: () => Promise<void>;
     updateLastInteraction: () => void;
     clearSession: () => Promise<void>;
     setLastMode: (mode: 'host' | 'guest' | 'solo' | null) => void;
@@ -49,12 +51,20 @@ export const useSessionStore = create<SessionState>()(
             username: null,
             avatarUrl: null,
             authToken: null,
+            sessionSecret: null,
             lastMode: null,
             error: null,
             lastInteractionTime: Date.now(),
 
             setConnectionState: (state) => set({ connectionState: state }),
-            setSessionId: (id) => set({ sessionId: id }),
+            setSessionId: async (id) => {
+                set({ sessionId: id });
+                // If we have both id and secret, save them securely
+                const { sessionSecret } = useSessionStore.getState();
+                if (id && sessionSecret) {
+                    await secureStorage.saveSessionCredentials(id, sessionSecret);
+                }
+            },
             setNowPlaying: (track) => set({ nowPlaying: track }),
             setUsername: (username) => set({ username }),
             setAvatarUrl: (url) => set({ avatarUrl: url }),
@@ -66,18 +76,30 @@ export const useSessionStore = create<SessionState>()(
                 }
                 set({ authToken: token, lastInteractionTime: Date.now() });
             },
-            hydrateAuthToken: async () => {
-                const token = await secureStorage.getAuthToken();
-                if (token) {
-                    set({ authToken: token });
+            setSessionSecret: async (secret) => {
+                set({ sessionSecret: secret });
+                const { sessionId } = useSessionStore.getState();
+                if (sessionId && secret) {
+                    await secureStorage.saveSessionCredentials(sessionId, secret);
                 }
+            },
+            hydrateCredentials: async () => {
+                const token = await secureStorage.getAuthToken();
+                const { sessionId, sessionSecret } = await secureStorage.getSessionCredentials();
+                set({
+                    authToken: token,
+                    sessionId: sessionId || useSessionStore.getState().sessionId,
+                    sessionSecret: sessionSecret
+                });
             },
             updateLastInteraction: () => set({ lastInteractionTime: Date.now() }),
             clearSession: async () => {
                 await secureStorage.deleteAuthToken();
+                await secureStorage.deleteSessionCredentials();
                 set({
                     sessionId: null,
                     authToken: null,
+                    sessionSecret: null,
                     username: null,
                     avatarUrl: null,
                     nowPlaying: null,
@@ -104,6 +126,8 @@ export const useSessionStore = create<SessionState>()(
             partialize: (state) => ({
                 username: state.username,
                 avatarUrl: state.avatarUrl,
+                sessionId: state.sessionId,
+                sessionSecret: state.sessionSecret,
                 lastMode: state.lastMode,
                 lastSyncTime: state.lastSyncTime
             }),

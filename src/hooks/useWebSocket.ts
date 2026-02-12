@@ -30,8 +30,10 @@ export const useWebSocket = (): UseWebSocketResult => {
         error,
         username,
         authToken,
+        sessionSecret,
         setConnectionState,
         setSessionId,
+        setSessionSecret,
         setNowPlaying,
         setError
     } = useSessionStore();
@@ -55,6 +57,12 @@ export const useWebSocket = (): UseWebSocketResult => {
                             ? (payload as { sessionId?: string }).sessionId
                             : undefined);
                     if (sessionId) setSessionId(sessionId);
+
+                    const secret = message.sessionSecret ||
+                        (payload && typeof payload === 'object' && 'sessionSecret' in payload
+                            ? (payload as { sessionSecret?: string }).sessionSecret
+                            : undefined);
+                    if (secret) setSessionSecret(secret);
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     setNowPlaying(payload as NowPlaying);
                 }
@@ -71,13 +79,18 @@ export const useWebSocket = (): UseWebSocketResult => {
             // Fix memory leak by clearing callbacks on unmount
             webSocketService.clearCallbacks();
         };
-    }, [webSocketService, setConnectionState, setSessionId, setNowPlaying, setError]);
+    }, [webSocketService, setConnectionState, setSessionId, setSessionSecret, setNowPlaying, setError]);
 
     const connect = useCallback(() => {
         if (username) {
-            webSocketService.connect(username, authToken || undefined);
+            webSocketService.connect(
+                username,
+                authToken || undefined,
+                sessionId || undefined,
+                sessionSecret || undefined
+            );
         }
-    }, [webSocketService, username, authToken]);
+    }, [webSocketService, username, authToken, sessionId, sessionSecret]);
 
     const disconnect = useCallback(() => {
         webSocketService.disconnect();

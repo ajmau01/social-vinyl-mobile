@@ -68,7 +68,7 @@ describe('WebSocketService Authentication', () => {
     });
 
     it('sends authenticate message on connect when USE_MESSAGE_AUTH is true', () => {
-        wsService.connect('test-user', 'test-token');
+        wsService.connect('test-user', 'test-token', 'test-session', 'test-secret');
         const mockSocket = MockWebSocket.instances[0];
 
         mockSocket.onopen?.();
@@ -76,6 +76,8 @@ describe('WebSocketService Authentication', () => {
         expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({
             action: 'authenticate',
             authToken: 'test-token',
+            sessionId: 'test-session',
+            sessionSecret: 'test-secret',
             username: 'test-user'
         }));
     });
@@ -112,7 +114,7 @@ describe('WebSocketService Authentication', () => {
 
     it('clears auth timeout on WELCOME message', () => {
         const spy = jest.spyOn(global, 'clearTimeout');
-        wsService.connect('test-user', 'test-token');
+        wsService.connect('test-user', 'test-token', 'test-session', 'test-secret');
         const mockSocket = MockWebSocket.instances[0];
 
         mockSocket.onopen?.();
@@ -123,6 +125,21 @@ describe('WebSocketService Authentication', () => {
 
         expect(spy).toHaveBeenCalled();
         expect(callbacks.onConnectionStateChange).toHaveBeenCalledWith('connected');
+    });
+
+    it('clears auth timeout on access-level message (PR #99 feedback)', () => {
+        const spy = jest.spyOn(global, 'clearTimeout');
+        wsService.connect('test-user', 'test-token', 'test-session', 'test-secret');
+        const mockSocket = MockWebSocket.instances[0];
+
+        mockSocket.onopen?.();
+
+        mockSocket.onmessage?.({
+            data: JSON.stringify({ type: 'ACCESS_LEVEL', message: 'host' })
+        });
+
+        expect(spy).toHaveBeenCalled();
+        expect(mockSocket.close).not.toHaveBeenCalled();
     });
 
     it('handles AUTH_ERROR and disconnects', () => {
@@ -139,7 +156,7 @@ describe('WebSocketService Authentication', () => {
         expect(callbacks.onError).toHaveBeenCalledWith(expect.any(Error));
     });
 
-    it('includes authToken in URL when USE_MESSAGE_AUTH is false', () => {
+    it('does NOT include authToken in URL even if WE_MESSAGE_AUTH is false (Security Hardening)', () => {
         // We need to re-require with different mock
         jest.resetModules();
         jest.doMock('@/config', () => ({
@@ -153,6 +170,7 @@ describe('WebSocketService Authentication', () => {
         newWsService.connect('test-user', 'test-token');
         const mockSocket = MockWebSocket.instances[0];
 
-        expect(mockSocket.url).toContain('authToken=test-token');
+        expect(mockSocket.url).not.toContain('authToken=test-token');
+        expect(mockSocket.url).toContain('username=test-user');
     });
 });

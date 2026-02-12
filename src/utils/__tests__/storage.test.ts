@@ -1,5 +1,12 @@
-import { secureStorage } from '../storage';
 import * as SecureStore from 'expo-secure-store';
+// Mock logger before importing storage
+jest.mock('../logger', () => ({
+    logger: {
+        error: jest.fn()
+    }
+}));
+
+import { secureStorage } from '../storage';
 
 jest.mock('expo-secure-store', () => ({
     setItemAsync: jest.fn(),
@@ -33,5 +40,25 @@ describe('secureStorage', () => {
     it('deletes the auth token', async () => {
         await secureStorage.deleteAuthToken();
         expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_token');
+    });
+
+    it('saves session credentials', async () => {
+        await secureStorage.saveSessionCredentials('id', 'secret');
+        expect(SecureStore.setItemAsync).toHaveBeenCalledWith('session_id', 'id');
+        expect(SecureStore.setItemAsync).toHaveBeenCalledWith('session_secret', 'secret');
+    });
+
+    it('retrieves session credentials', async () => {
+        (SecureStore.getItemAsync as jest.Mock)
+            .mockResolvedValueOnce('id')
+            .mockResolvedValueOnce('secret');
+        const credentials = await secureStorage.getSessionCredentials();
+        expect(credentials).toEqual({ sessionId: 'id', sessionSecret: 'secret' });
+    });
+
+    it('deletes session credentials', async () => {
+        await secureStorage.deleteSessionCredentials();
+        expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('session_id');
+        expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('session_secret');
     });
 });

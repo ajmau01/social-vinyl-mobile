@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 /**
  * Application Configuration
@@ -20,8 +21,13 @@ const IS_E2E = process.env.EXPO_PUBLIC_E2E_MODE === 'true' || process.env.E2E_MO
 
 export const CONFIG = {
     // Environment-based configuration with localhost defaults for development
-    API_URL: IS_E2E ? 'http://localhost:9080' : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080'),
-    WS_URL: IS_E2E ? 'ws://localhost:9080/ws' : (process.env.EXPO_PUBLIC_WS_URL || 'ws://localhost:8080/ws'),
+    // Note: We use localhost:9080 for E2E because Detox/ADB handles port reversal
+    API_URL: process.env.EXPO_PUBLIC_API_URL || (IS_E2E
+        ? 'http://localhost:9080'
+        : 'http://localhost:8080'),
+    WS_URL: process.env.EXPO_PUBLIC_WS_URL || (IS_E2E
+        ? 'ws://localhost:9080/ws'
+        : 'ws://localhost:8080/ws'),
     IS_E2E,
 
     // Issue #74: Use __DEV__ for automatic dev/prod separation
@@ -29,7 +35,7 @@ export const CONFIG = {
     DEBUG_WS: Constants.expoConfig?.extra?.debugWs || __DEV__,
 
     // Issue #68: Preparation for message-based authentication
-    USE_MESSAGE_AUTH: Constants.expoConfig?.extra?.useMessageAuth ?? false,
+    USE_MESSAGE_AUTH: Constants.expoConfig?.extra?.useMessageAuth ?? true,
 
     // Issue #64: Sentry Configuration
     SENTRY_DSN: Constants.expoConfig?.extra?.sentryDsn || null,

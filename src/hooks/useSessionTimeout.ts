@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useSessionStore } from '@/store/useSessionStore';
 import { logger } from '@/utils/logger';
+import { CONFIG } from '@/config';
 
 const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
@@ -14,7 +15,10 @@ const CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
 export const useSessionTimeout = () => {
     const router = useRouter();
     const { lastInteractionTime, clearSession, username } = useSessionStore();
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<any>(null);
+
+    // Issue #3 review feedback: Early return for E2E mode
+    if (CONFIG.IS_E2E) return;
 
     useEffect(() => {
         if (!username) {
