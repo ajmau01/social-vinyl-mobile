@@ -17,11 +17,16 @@ class WebSocketService implements IWebSocketService {
     private socket: WebSocket | null = null;
     private reconnectAttempts = 0;
     private maxReconnectAttempts = 5;
-    private reconnectTimeout: NodeJS.Timeout | null = null;
+    private reconnectTimeout: any = null;
     private shouldReconnect = true;
     private callbacks: WebSocketCallbacks | null = null;
-    private currentConfig: { username: string; authToken?: string } | null = null;
-    private authTimeout: NodeJS.Timeout | null = null;
+    private currentConfig: {
+        username: string;
+        authToken?: string;
+        sessionId?: string;
+        sessionSecret?: string;
+    } | null = null;
+    private authTimeout: any = null;
 
     private constructor() { }
 
@@ -40,11 +45,11 @@ class WebSocketService implements IWebSocketService {
         this.callbacks = null;
     }
 
-    public connect(username: string, authToken?: string) {
+    public connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string) {
         if (this.socket?.readyState === WebSocket.OPEN) return;
         if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting...');
 
-        this.currentConfig = { username, authToken };
+        this.currentConfig = { username, authToken, sessionId, sessionSecret };
         this.shouldReconnect = true;
 
         if (!username) {
@@ -53,17 +58,10 @@ class WebSocketService implements IWebSocketService {
             return;
         }
 
-        const params = new URLSearchParams({
-            username,
-            watchedUsername: username // For now, we watch our own bin
-        });
+        // Issue #68: Credentials are now sent via message-based auth
+        // We only send username/watchedUsername in the URL
 
-        // Issue #68: Only append token to URL if not using message-based auth
-        if (authToken && !CONFIG.USE_MESSAGE_AUTH) {
-            params.append('authToken', authToken);
-        }
-
-        const wsUrlWithParams = `${CONFIG.WS_URL}?${params.toString()}`;
+        const wsUrlWithParams = `${CONFIG.WS_URL}?username=${username}&watchedUsername=${username}`;
         if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting to:', wsUrlWithParams);
 
         // TODO: In production, wrap this with SSL Pinning if networkSecurity.isSslPinningEnabled()
@@ -186,12 +184,14 @@ class WebSocketService implements IWebSocketService {
         logger.log('[WS] Connected');
         this.reconnectAttempts = 0;
 
-        // Issue #68: Message-based authentication preparation
-        if (CONFIG.USE_MESSAGE_AUTH && this.currentConfig?.authToken) {
+        // Issue #68: Message-based authentication handshake
+        if (CONFIG.USE_MESSAGE_AUTH && (this.currentConfig?.authToken || this.currentConfig?.sessionSecret)) {
             if (CONFIG.DEBUG_WS) logger.log('[WS] Sending authenticate message');
             this.socket?.send(JSON.stringify({
                 action: 'authenticate',
                 authToken: this.currentConfig.authToken,
+                sessionId: this.currentConfig.sessionId,
+                sessionSecret: this.currentConfig.sessionSecret,
                 username: this.currentConfig.username
             }));
 
@@ -201,7 +201,11 @@ class WebSocketService implements IWebSocketService {
                 this.disconnect();
                 this.callbacks?.onError(new Error('Authentication timed out'));
             }, 10000);
+        } else if (!this.currentConfig?.username) {
+            // No credentials and no user? This shouldn't really happen if connect was called correctly
+            this.callbacks?.onConnectionStateChange('connected');
         } else {
+            // Legacy mode or guest connection
             this.callbacks?.onConnectionStateChange('connected');
         }
     };
@@ -317,7 +321,12 @@ class WebSocketService implements IWebSocketService {
         this.reconnectAttempts++;
         this.reconnectTimeout = setTimeout(() => {
             if (this.currentConfig) {
-                this.connect(this.currentConfig.username, this.currentConfig.authToken);
+                this.connect(
+                    this.currentConfig.username,
+                    this.currentConfig.authToken,
+                    this.currentConfig.sessionId,
+                    this.currentConfig.sessionSecret
+                );
             }
         }, delay);
     }

@@ -10,9 +10,16 @@ import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+import { LogBox } from 'react-native';
+
+if (CONFIG.IS_E2E) {
+  LogBox.ignoreAllLogs();
+  console.log('[BOOT] E2E Mode detected. IS_E2E:', CONFIG.IS_E2E);
+}
+
 // Initialize Sentry before the component renders
 // Harden check: Only initialize if DSN looks valid (starts with https://)
-if (CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string' && CONFIG.SENTRY_DSN.startsWith('https://')) {
+if (!CONFIG.IS_E2E && CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string' && CONFIG.SENTRY_DSN.startsWith('https://')) {
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
     debug: __DEV__,
@@ -43,15 +50,17 @@ function WebSocketManager() {
 }
 
 function RootLayout() {
-  const { hydrateAuthToken, updateLastInteraction } = useSessionStore();
+  const { hydrateCredentials, updateLastInteraction } = useSessionStore();
 
   // Hydrate token from SecureStore on app start
   useEffect(() => {
-    hydrateAuthToken();
+    hydrateCredentials();
   }, []);
 
-  // Activate Session Timeout Logic
-  useSessionTimeout();
+  // Activate Session Timeout Logic (disabled in E2E)
+  if (!CONFIG.IS_E2E) {
+    useSessionTimeout();
+  }
 
   return (
     <ErrorBoundary>
@@ -74,7 +83,8 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+const ExportedLayout = CONFIG.IS_E2E ? RootLayout : Sentry.wrap(RootLayout);
+export default ExportedLayout;
 
 const styles = StyleSheet.create({
   container: {

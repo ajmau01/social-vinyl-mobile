@@ -8,6 +8,8 @@ import { logger } from './logger';
  */
 
 const AUTH_TOKEN_KEY = 'auth_token';
+const SESSION_ID_KEY = 'session_id';
+const SESSION_SECRET_KEY = 'session_secret';
 
 export const secureStorage = {
     /**
@@ -42,6 +44,46 @@ export const secureStorage = {
             await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
         } catch (error) {
             logger.error('[Storage] Failed to delete secure token:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Saves session credentials securely.
+     */
+    async saveSessionCredentials(sessionId: string, sessionSecret: string): Promise<void> {
+        try {
+            await SecureStore.setItemAsync(SESSION_ID_KEY, sessionId);
+            await SecureStore.setItemAsync(SESSION_SECRET_KEY, sessionSecret);
+        } catch (error) {
+            logger.error('[Storage] Failed to save session credentials:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Retrieves session credentials securely.
+     */
+    async getSessionCredentials(): Promise<{ sessionId: string | null; sessionSecret: string | null }> {
+        try {
+            const sessionId = await SecureStore.getItemAsync(SESSION_ID_KEY);
+            const sessionSecret = await SecureStore.getItemAsync(SESSION_SECRET_KEY);
+            return { sessionId, sessionSecret };
+        } catch (error) {
+            logger.error('[Storage] Failed to get session credentials:', error);
+            return { sessionId: null, sessionSecret: null };
+        }
+    },
+
+    /**
+     * Deletes session credentials securely.
+     */
+    async deleteSessionCredentials(): Promise<void> {
+        try {
+            await SecureStore.deleteItemAsync(SESSION_ID_KEY);
+            await SecureStore.deleteItemAsync(SESSION_SECRET_KEY);
+        } catch (error) {
+            logger.error('[Storage] Failed to delete session credentials:', error);
             throw error;
         }
     }

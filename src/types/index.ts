@@ -128,6 +128,7 @@ export interface WebSocketMessage {
     payload?: LoginResult | SyncResult | NowPlaying | { message: string } | Record<string, unknown>;
     sessionId?: string;
     authToken?: string;
+    sessionSecret?: string;
     username?: string;
     album?: {
         title: string;
