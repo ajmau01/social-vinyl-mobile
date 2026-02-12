@@ -197,6 +197,13 @@ export default function HubScreen() {
                                         >
                                             <Text style={styles.btnText}>Guest Mode</Text>
                                         </TouchableOpacity>
+                                        <TouchableOpacity
+                                            testID="mode-solo"
+                                            style={styles.btnModern}
+                                            onPress={() => setMode('solo')}
+                                        >
+                                            <Text style={styles.btnText}>Browse Solo</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 ) : (
                                     <View style={styles.hubContent}>
@@ -261,6 +268,8 @@ export default function HubScreen() {
                                             placeholderTextColor={THEME.colors.textMuted}
                                             autoCapitalize={mode === 'guest' ? 'characters' : 'none'}
                                             maxLength={mode === 'guest' ? 5 : 50}
+                                            autoComplete="off"
+                                            importantForAutofill="no"
                                         />
                                     </View>
 
@@ -275,6 +284,8 @@ export default function HubScreen() {
                                                 secureTextEntry
                                                 placeholder="Enter password"
                                                 placeholderTextColor={THEME.colors.textMuted}
+                                                autoComplete="off"
+                                                importantForAutofill="no"
                                             />
                                         </View>
                                     )}

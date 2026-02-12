@@ -12,19 +12,23 @@ module.exports = {
     apps: {
         'ios.debug': {
             type: 'ios.app',
-            binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SocialVinylMobile.app',
-            build: 'xcodebuild -workspace ios/SocialVinylMobile.xcworkspace -scheme SocialVinylMobile -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build'
+            binaryPath: 'ios/build_detox/Build/Products/Debug-iphonesimulator/socialvinylmobile.app',
+            // Note: EXPO_PUBLIC_E2E_MODE is required for Metro to bundle with E2E config.
+            // E2E_MODE is used for backend/logic that isn't exposed via Expo public env.
+            build: 'E2E_MODE=true EXPO_PUBLIC_E2E_MODE=true xcodebuild -workspace ios/socialvinylmobile.xcworkspace -scheme socialvinylmobile -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build_detox'
         },
         'ios.release': {
             type: 'ios.app',
-            binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/SocialVinylMobile.app',
-            build: 'xcodebuild -workspace ios/SocialVinylMobile.xcworkspace -scheme SocialVinylMobile -configuration Release -sdk iphonesimulator -derivedDataPath ios/build'
+            binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/socialvinylmobile.app',
+            build: 'xcodebuild -workspace ios/socialvinylmobile.xcworkspace -scheme socialvinylmobile -configuration Release -sdk iphonesimulator -derivedDataPath ios/build'
         },
         'android.debug': {
             type: 'android.apk',
             binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
-            build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
-            reversePorts: [8081]
+            // Note: EXPO_PUBLIC_E2E_MODE is required for Metro to bundle with E2E config.
+            build: 'export JAVA_HOME=$(/usr/libexec/java_home -v 17) && E2E_MODE=true EXPO_PUBLIC_E2E_MODE=true cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+            // Port 8081: Metro, 9080: Mock Server, 8097: React DevTools/Profiler
+            reversePorts: [8081, 9080, 8097]
         },
         'android.release': {
             type: 'android.apk',
@@ -36,13 +40,19 @@ module.exports = {
         simulator: {
             type: 'ios.simulator',
             device: {
-                type: 'iPhone 15 Pro'
+                type: 'iPhone SE (3rd generation)'
             }
         },
         emulator: {
             type: 'android.emulator',
             device: {
                 avdName: 'Pixel_7_API_33'
+            }
+        },
+        attached: {
+            type: 'android.attached',
+            device: {
+                adbName: '.*' // Match any attached device
             }
         }
     },
@@ -62,6 +72,10 @@ module.exports = {
         'android.emu.release': {
             device: 'emulator',
             app: 'android.release'
+        },
+        'android.att.debug': {
+            device: 'attached',
+            app: 'android.debug'
         }
     }
 };
