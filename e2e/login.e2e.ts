@@ -2,8 +2,18 @@ import { by, device, element, expect, waitFor } from 'detox';
 import { Auth } from './helpers/auth';
 import { waitForElement } from './helpers/waitFor';
 import { delay } from './helpers/waitFor';
+import { dismissKeyboard } from './helpers/keyboard';
 
 describe('Login Flow', () => {
+    /**
+     * Android Lifecycle Strategy:
+     * Unlike iOS which uses reloadReactNative() in beforeEach, Android E2E
+     * is more stable with a single launch in beforeAll. We then use
+     * in-app navigation (e.g. Cancel button) to reset state between tests.
+     * 
+     * Rationale: reloadReactNative() on Android can cause parity issues
+     * with Expo's dev-client architecture during high-frequency cycles.
+     */
     beforeAll(async () => {
         console.log('[E2E] Starting launchApp...');
         await device.launchApp({
@@ -36,9 +46,8 @@ describe('Login Flow', () => {
         await element(by.id('login-password')).tap();
         await element(by.id('login-password')).typeText('wrong_pass');
 
-        // Dismiss keyboard by pressing back on Android
-        await device.pressBack();
-        await delay(500);
+        // Dismiss keyboard
+        await dismissKeyboard();
 
         // Tap submit
         await element(by.id('login-submit')).tap();
@@ -62,8 +71,7 @@ describe('Login Flow', () => {
         await element(by.id('login-input')).typeText('ABC12');
 
         // Dismiss keyboard
-        await device.pressBack();
-        await delay(500);
+        await dismissKeyboard();
 
         await element(by.id('login-submit')).tap();
 
@@ -90,8 +98,7 @@ describe('Login Flow', () => {
         await element(by.id('login-password')).typeText('password');
 
         // Dismiss keyboard
-        await device.pressBack();
-        await delay(500);
+        await dismissKeyboard();
 
         // Tap submit
         await element(by.id('login-submit')).tap();

@@ -6,12 +6,25 @@ const path = require('path');
 module.exports = async (config) => {
     console.log('[E2E Setup] Applying port forwarding via ADB...');
     try {
-        const deviceId = 'R3CWA0K6XLN';
+        // Get attached device dynamically to avoid hardcoding ID (Fix for PR #98)
+        let deviceId = '';
+        try {
+            deviceId = execSync("adb devices | grep -v 'List' | grep 'device$' | awk '{print $1}' | head -1")
+                .toString()
+                .trim();
+        } catch (e) {
+            console.warn('[E2E Setup] Failed to auto-detect ADB device using shell commands.');
+        }
+
+        if (!deviceId) {
+            console.warn('[E2E Setup] No Android device found. Skipping adb reverse.');
+            return;
+        }
 
         // Apply specific port forwards (safe: overwrites existing entries)
         execSync(`adb -s ${deviceId} reverse tcp:8081 tcp:8081`); // Metro
         execSync(`adb -s ${deviceId} reverse tcp:9080 tcp:9080`); // Mock Server
-        console.log('[E2E Setup] Port forwarding applied successfully to device', deviceId);
+        console.log('[E2E Setup] Port forwarding applied successfully to device:', deviceId);
     } catch (e) {
         console.warn('[E2E Setup] Failed to apply adb reverse.', e.message);
     }

@@ -13,6 +13,8 @@ module.exports = {
         'ios.debug': {
             type: 'ios.app',
             binaryPath: 'ios/build_detox/Build/Products/Debug-iphonesimulator/socialvinylmobile.app',
+            // Note: EXPO_PUBLIC_E2E_MODE is required for Metro to bundle with E2E config.
+            // E2E_MODE is used for backend/logic that isn't exposed via Expo public env.
             build: 'E2E_MODE=true EXPO_PUBLIC_E2E_MODE=true xcodebuild -workspace ios/socialvinylmobile.xcworkspace -scheme socialvinylmobile -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build_detox'
         },
         'ios.release': {
@@ -23,7 +25,9 @@ module.exports = {
         'android.debug': {
             type: 'android.apk',
             binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
+            // Note: EXPO_PUBLIC_E2E_MODE is required for Metro to bundle with E2E config.
             build: 'export JAVA_HOME=$(/usr/libexec/java_home -v 17) && E2E_MODE=true EXPO_PUBLIC_E2E_MODE=true cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+            // Port 8081: Metro, 9080: Mock Server, 8097: React DevTools/Profiler
             reversePorts: [8081, 9080, 8097]
         },
         'android.release': {
