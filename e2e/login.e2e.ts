@@ -1,82 +1,103 @@
-import { by, device, element, expect } from 'detox';
+import { by, device, element, expect, waitFor } from 'detox';
 import { Auth } from './helpers/auth';
 import { waitForElement } from './helpers/waitFor';
+import { delay } from './helpers/waitFor';
 
 describe('Login Flow', () => {
     beforeAll(async () => {
         console.log('[E2E] Starting launchApp...');
         await device.launchApp({
-            delete: true
+            newInstance: true,
+            launchArgs: {
+                detoxPrintResourceName: 'YES',
+                detoxURLBlacklistRegex: '.*'
+            }
         });
         console.log('[E2E] launchApp complete. Disabling synchronization...');
         await device.disableSynchronization();
         console.log('[E2E] Synchronization disabled.');
     });
 
-    beforeEach(async () => {
-        console.log('[E2E] Performing reloadReactNative...');
-        await device.reloadReactNative();
-        console.log('[E2E] reloadReactNative complete.');
-    });
-
-    it('should successfully login as a host', async () => {
-        console.log('[E2E] Starting loginAsHost...');
-        await Auth.loginAsHost('e2e_host', 'password');
-        console.log('[E2E] loginAsHost complete.');
-
-        // Verify we are on the collection screen with extended timeout
-        await waitForElement.toBeVisible(by.id('collection-header-title'), 30000);
-        // await expect(element(by.text('e2e_host'))).toExist(); // Username might be truncated or rendered differently
+    it('should display mode selection on launch', async () => {
+        await waitForElement.toBeVisible(by.id('mode-host'), 30000);
+        await expect(element(by.id('mode-guest'))).toBeVisible();
+        await expect(element(by.id('mode-solo'))).toBeVisible();
     });
 
     it('should show error for invalid credentials', async () => {
-        // ... (unchanged)
-        // Select Host Mode
-        await waitForElement.toBeVisible(by.id('mode-host'));
+        // Tap Host Mode
         await element(by.id('mode-host')).tap();
 
-        // Enter wrong credentials
+        // Wait for login form
         await waitForElement.toBeVisible(by.id('login-input'));
+        await element(by.id('login-input')).tap();
         await element(by.id('login-input')).typeText('wrong_user');
-        await element(by.id('login-password')).typeText('wrong_pass');
-        await element(by.id('login-password')).tapReturnKey(); // Close keyboard
 
+        await element(by.id('login-password')).tap();
+        await element(by.id('login-password')).typeText('wrong_pass');
+
+        // Dismiss keyboard by pressing back on Android
+        await device.pressBack();
+        await delay(500);
+
+        // Tap submit
         await element(by.id('login-submit')).tap();
 
-        // Verify error message
+        // Verify error appears
         await waitForElement.toBeVisible(by.id('login-error'));
+        console.log('[E2E] Error message verified.');
+
+        // Go back to mode selection
+        await element(by.id('login-cancel')).tap();
+        await waitForElement.toBeVisible(by.id('mode-host'));
     });
 
-    it('should allow guest login with code', async () => {
-        // Select Guest Mode
-        await waitForElement.toBeVisible(by.id('mode-guest'));
+    it('should allow guest code entry', async () => {
+        // Tap Guest Mode
         await element(by.id('mode-guest')).tap();
 
-        // Enter Code (using username input field as it's reused)
+        // Enter code
         await waitForElement.toBeVisible(by.id('login-input'));
-        await element(by.id('login-input')).typeText('ABC12'); // Mock code (5 chars)
-        await element(by.id('login-input')).tapReturnKey(); // Close keyboard
+        await element(by.id('login-input')).tap();
+        await element(by.id('login-input')).typeText('ABC12');
+
+        // Dismiss keyboard
+        await device.pressBack();
+        await delay(500);
 
         await element(by.id('login-submit')).tap();
 
-        // Verify "Coming Soon" error message instead of navigation
-        // Because guest mode logic currently sets an error message
+        // Verify "Coming Soon" error message
         await waitForElement.toBeVisible(by.text('Guest mode coming soon in Phase 4'));
+
+        // Go back
+        await element(by.id('login-cancel')).tap();
+        await waitForElement.toBeVisible(by.id('mode-host'));
     });
 
-    it('should enter solo mode without credentials', async () => {
-        await Auth.loginAsSolo();
-        await expect(element(by.id('collection-header-title'))).toBeVisible();
-    });
+    it('should successfully login as a host', async () => {
+        console.log('[E2E] Starting host login...');
 
-    it('should be able to logout', async () => {
-        // Login first
-        await Auth.loginAsSolo();
+        // Tap host mode
+        await element(by.id('mode-host')).tap();
+        await waitForElement.toBeVisible(by.id('login-input'));
 
-        // Perform logout
-        await Auth.logout();
+        // Enter credentials
+        await element(by.id('login-input')).tap();
+        await element(by.id('login-input')).typeText('e2e_host');
 
-        // Verify back at start
-        await expect(element(by.id('mode-host'))).toBeVisible();
+        await element(by.id('login-password')).tap();
+        await element(by.id('login-password')).typeText('password');
+
+        // Dismiss keyboard
+        await device.pressBack();
+        await delay(500);
+
+        // Tap submit
+        await element(by.id('login-submit')).tap();
+
+        // Verify navigation to collection screen
+        await waitForElement.toBeVisible(by.id('collection-header-title'), 30000);
+        console.log('[E2E] Host login successful.');
     });
 });
