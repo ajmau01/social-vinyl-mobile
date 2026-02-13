@@ -1,30 +1,29 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 import { useSessionStore } from '@/store/useSessionStore';
-import { useRouter } from 'expo-router';
 import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
 import { SessionDrawer } from '@/components/SessionDrawer';
 import { CollectionHeader } from '@/components/CollectionHeader';
 import { SearchBar } from '@/components/SearchBar';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
-import { useCollectionData, useGroupedReleases, useSyncCollection } from '@/hooks';
+import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode } from '@/hooks';
 
 export default function CollectionScreen() {
-    const router = useRouter();
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isMenuVisible, setIsMenuVisible] = useState(false);
-    const [viewMode, setViewMode] = useState<'artist' | 'genre' | 'decade'>('genre');
+    const [viewMode, setViewMode] = useState<ViewMode>('genre');
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
 
     const {
         username,
         syncStatus,
         syncProgress,
-        setLastMode,
-        setAuthToken
+        lastSyncTime
     } = useSessionStore();
 
     // Hooks for data and sync
@@ -43,11 +42,10 @@ export default function CollectionScreen() {
         refresh();
     }, [username, sync, refresh]);
 
-    const handleBackPress = useCallback(() => {
-        setLastMode(null);
-        setAuthToken(null);
-        router.replace('/');
-    }, [setLastMode, setAuthToken, router]);
+    const handleRandomPress = useCallback(() => {
+        // TODO: Phase 9 logic
+        logger.info('[CollectionScreen] Random album requested');
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -58,19 +56,22 @@ export default function CollectionScreen() {
                     title={username ? `${username}'s Crate` : 'The Crate'}
                     syncStatus={syncStatus}
                     syncProgress={syncProgress}
-                    itemCount={releases.length}
                     viewMode={viewMode}
-                    onBackPress={handleBackPress}
-                    onSyncPress={handleSync}
+                    lastSyncTime={lastSyncTime}
+                    isSearchVisible={isSearchVisible}
+                    onSearchPress={() => setIsSearchVisible(!isSearchVisible)}
+                    onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
                     onViewModeChange={setViewMode}
                 />
 
-                <SearchBar
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder="Search Artists or Albums..."
-                />
+                {isSearchVisible && (
+                    <SearchBar
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        placeholder="Search LPs..."
+                    />
+                )}
 
                 <CollectionSectionView
                     sections={groupedReleases}

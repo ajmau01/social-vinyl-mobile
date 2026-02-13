@@ -1,48 +1,74 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { SyncStatus } from '@/types';
 import { logger } from '@/utils/logger';
+import { ViewMode } from '@/hooks/useGroupedReleases';
 
 export interface CollectionHeaderProps {
     title: string;
     syncStatus: SyncStatus;
     syncProgress: number | null;
-    itemCount: number;
-    viewMode: 'artist' | 'genre' | 'decade';
-    onBackPress: () => void;
-    onSyncPress: () => void;
+    viewMode: ViewMode;
+    lastSyncTime: number | null;
+    isSearchVisible: boolean;
+    onSearchPress: () => void;
+    onRandomPress: () => void;
     onMenuPress: () => void;
-    onViewModeChange: (mode: 'artist' | 'genre' | 'decade') => void;
+    onViewModeChange: (mode: ViewMode) => void;
 }
 
-const VIEW_MODE_MAP: Record<string, 'artist' | 'genre' | 'decade'> = {
-    'A-Z': 'artist',
+const VIEW_MODE_MAP: Record<string, ViewMode> = {
     'Genre': 'genre',
-    'Decade': 'decade'
+    'A-Z': 'artist',
+    'Decade': 'decade',
+    'New': 'new',
+    'Spin': 'spin',
+    'Saved': 'saved',
 };
 
-const REVERSE_VIEW_MODE_MAP: Record<'artist' | 'genre' | 'decade', string> = {
-    'artist': 'A-Z',
+const REVERSE_VIEW_MODE_MAP: Record<string, string> = {
     'genre': 'Genre',
-    'decade': 'Decade'
+    'artist': 'A-Z',
+    'decade': 'Decade',
+    'new': 'New',
+    'spin': 'Spin',
+    'saved': 'Saved',
 };
+
+function getCacheStatusText(lastSyncTime: number | null): string {
+    if (!lastSyncTime) return 'Not synced';
+    const diffMs = Date.now() - lastSyncTime;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Updated just now';
+    if (diffMin < 60) return `Updated ${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `Updated ${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `Updated ${diffDays}d ago`;
+}
+
+function isCacheStale(lastSyncTime: number | null): boolean {
+    if (!lastSyncTime) return true;
+    return Date.now() - lastSyncTime > 6 * 60 * 60 * 1000; // 6 hours
+}
 
 export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     title,
     syncStatus,
     syncProgress,
-    itemCount,
     viewMode,
-    onBackPress,
-    onSyncPress,
+    lastSyncTime,
+    isSearchVisible,
+    onSearchPress,
+    onRandomPress,
     onMenuPress,
     onViewModeChange
 }) => {
     const getSegmentedValue = useCallback(() => {
-        return REVERSE_VIEW_MODE_MAP[viewMode];
+        return REVERSE_VIEW_MODE_MAP[viewMode] || 'Genre';
     }, [viewMode]);
 
     const handleSegmentedChange = useCallback((val: string) => {
@@ -55,49 +81,44 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     }, [onViewModeChange]);
 
     const isSyncing = syncStatus === 'syncing';
+    const stale = isCacheStale(lastSyncTime);
 
     return (
         <View>
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <TouchableOpacity
-                        testID="collection-header-back-button"
-                        style={styles.iconBtn}
-                        onPress={onBackPress}
-                        accessibilityRole="button"
-                        accessibilityLabel="Go back to login"
-                        accessibilityHint="Returns to the login screen"
-                    >
-                        <Ionicons name="arrow-back" size={24} color={THEME.colors.white} />
-                    </TouchableOpacity>
                     <View>
-                        <Text style={styles.title}>{title}</Text>
-                        {isSyncing ? (
-                            <View style={styles.syncStatus}>
-                                <ActivityIndicator size="small" color={THEME.colors.primary} />
-                                <Text style={styles.syncText}>{syncProgress ?? 0}%</Text>
-                            </View>
-                        ) : (
-                            <Text style={styles.countText}>{itemCount} Items</Text>
-                        )}
+                        <Text testID="collection-header-title" style={styles.title}>{title}</Text>
+                        <Text
+                            testID="collection-header-cache-status"
+                            style={[styles.cacheText, stale && !isSyncing && styles.cacheTextStale]}
+                        >
+                            {isSyncing ? `Syncing... ${syncProgress ?? 0}%` : getCacheStatusText(lastSyncTime)}
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
-                        testID="collection-header-sync-button"
+                        testID="collection-header-search-button"
                         style={styles.iconBtn}
-                        onPress={onSyncPress}
-                        disabled={isSyncing}
+                        onPress={onSearchPress}
                         accessibilityRole="button"
-                        accessibilityLabel="Sync collection"
-                        accessibilityHint="Refreshes your collection from Discogs"
-                        accessibilityState={{ disabled: isSyncing }}
+                        accessibilityLabel={isSearchVisible ? 'Close search' : 'Open search'}
                     >
                         <Ionicons
-                            name={isSyncing ? "sync" : "sync-outline"}
-                            size={24}
-                            color={isSyncing ? THEME.colors.primary : THEME.colors.white}
+                            name={isSearchVisible ? 'close' : 'search'}
+                            size={22}
+                            color={THEME.colors.white}
                         />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        testID="collection-header-dice-button"
+                        style={styles.iconBtn}
+                        onPress={onRandomPress}
+                        accessibilityRole="button"
+                        accessibilityLabel="Random album"
+                    >
+                        <Ionicons name="dice-outline" size={22} color={THEME.colors.white} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         testID="collection-header-menu-button"
@@ -105,7 +126,6 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
                         onPress={onMenuPress}
                         accessibilityRole="button"
                         accessibilityLabel="Open menu"
-                        accessibilityHint="Opens the session drawer menu"
                     >
                         <Ionicons name="menu" size={24} color={THEME.colors.white} />
                     </TouchableOpacity>
@@ -114,7 +134,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
 
             <View style={styles.segmentedControlContainer}>
                 <SegmentedControl
-                    options={['Genre', 'A-Z', 'Decade']}
+                    options={['Genre', 'A-Z', 'Decade', 'New', 'Spin', 'Saved']}
                     selected={getSegmentedValue()}
                     onChange={handleSegmentedChange}
                 />
@@ -141,7 +161,7 @@ const styles = StyleSheet.create({
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: THEME.spacing.sm,
+        gap: THEME.spacing.xs,
     },
     title: {
         fontSize: 22,
@@ -165,21 +185,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    syncStatus: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: THEME.spacing.xs,
-        marginTop: 2,
-    },
-    syncText: {
-        color: THEME.colors.primary,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    countText: {
+    cacheText: {
         color: THEME.colors.textDim,
         fontSize: 12,
         marginTop: 2,
+    },
+    cacheTextStale: {
+        color: '#f59e0b',
     },
     segmentedControlContainer: {
         paddingHorizontal: THEME.spacing.md,

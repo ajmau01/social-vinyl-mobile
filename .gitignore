@@ -43,3 +43,12 @@ yarn-error.*
 # test coverage
 /coverage
 
+# logs and traces
+*.log
+sim_log*.txt
+artifacts/
+detox_*.log
+e2e_trace.log
+screenshot.png
+Pixel_7_*.log
+sim_log*

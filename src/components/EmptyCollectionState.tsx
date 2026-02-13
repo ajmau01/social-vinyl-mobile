@@ -13,7 +13,7 @@ export const EmptyCollectionState: React.FC<EmptyCollectionStateProps> = React.m
     const isSoloMode = !username || username === SOLO_MODE_USERNAME;
 
     return (
-        <View style={styles.emptyContainer}>
+        <View testID="empty-collection-state" style={styles.emptyContainer}>
             <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
             <Text style={styles.emptyText}>
                 {isSoloMode ? 'No collection synced' : 'Your collection is empty'}

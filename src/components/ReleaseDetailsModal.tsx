@@ -85,7 +85,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
                 <View style={styles.container}>
                     {/* Header / Close Button */}
                     <View style={styles.header}>
-                        <Pressable onPress={onClose} style={styles.closeButton}>
+                        <Pressable testID="modal-close-button" onPress={onClose} style={styles.closeButton}>
                             <Ionicons name="close" size={24} color={THEME.colors.textDim} />
                         </Pressable>
                     </View>
@@ -108,8 +108,8 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
 
                         {/* Metadata */}
                         <View style={styles.info}>
-                            <Text style={styles.title}>{release.title}</Text>
-                            <Text style={styles.artist}>{release.artist}</Text>
+                            <Text testID="modal-title" style={styles.title}>{release.title}</Text>
+                            <Text testID="modal-artist" style={styles.artist}>{release.artist}</Text>
 
                             <View style={styles.metaRow}>
                                 <Text style={styles.metaText}>
@@ -135,6 +135,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
                                 ))
                             ) : (
                                 <Pressable
+                                    testID="modal-view-tracks-button"
                                     style={({ pressed }) => [styles.fetchButton, pressed && styles.pressed]}
                                     onPress={fetchTracks}
                                 >
@@ -147,6 +148,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
                         {/* Actions */}
                         <View style={styles.actions}>
                             <Pressable
+                                testID="modal-add-to-bin-button"
                                 style={({ pressed }) => [
                                     styles.secondaryButton,
                                     pressed && styles.pressed,
