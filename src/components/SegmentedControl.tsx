@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, LayoutAnimation } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { ScrollView, Text, TouchableOpacity, StyleSheet, LayoutAnimation } from 'react-native';
 import { THEME } from '@/constants/theme';
 
 interface SegmentedControlProps {
@@ -16,65 +15,59 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({ options, sel
     };
 
     return (
-        <View style={styles.container}>
-            <BlurView intensity={20} tint="light" style={styles.blur}>
-                <View style={styles.content}>
-                    {options.map((option) => {
-                        const isSelected = selected === option;
-                        return (
-                            <TouchableOpacity
-                                key={option}
-                                style={[styles.option, isSelected && styles.selectedOption]}
-                                onPress={() => handlePress(option)}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[styles.text, isSelected && styles.selectedText]}>
-                                    {option}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-            </BlurView>
-        </View>
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipContainer}
+            style={styles.scrollView}
+        >
+            {options.map((option) => {
+                const isSelected = selected === option;
+                return (
+                    <TouchableOpacity
+                        key={option}
+                        testID={`segment-${option.toLowerCase().replace(' ', '-')}`}
+                        style={[styles.chip, isSelected && styles.activeChip]}
+                        onPress={() => handlePress(option)}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={[styles.chipText, isSelected && styles.activeChipText]}>
+                            {option}
+                        </Text>
+                    </TouchableOpacity>
+                );
+            })}
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    scrollView: {
         marginBottom: THEME.spacing.md,
         marginHorizontal: THEME.spacing.md,
-        borderRadius: THEME.radius.lg,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: THEME.colors.glassBorder,
     },
-    blur: {
-        width: '100%',
-    },
-    content: {
+    chipContainer: {
         flexDirection: 'row',
-        padding: 4,
+        gap: 8,
+        paddingRight: THEME.spacing.md,
     },
-    option: {
-        flex: 1,
+    chip: {
+        paddingHorizontal: 16,
         paddingVertical: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: THEME.radius.md,
+        borderRadius: 20,
     },
-    selectedOption: {
-        backgroundColor: THEME.colors.glass, // Using theme glass
-        borderColor: THEME.colors.glassBorder,
+    activeChip: {
+        backgroundColor: 'rgba(124, 58, 237, 0.2)',
         borderWidth: 1,
+        borderColor: THEME.colors.primary,
     },
-    text: {
-        fontSize: 14,
+    chipText: {
+        fontSize: 13,
         fontWeight: '600',
         color: THEME.colors.textDim,
     },
-    selectedText: {
+    activeChipText: {
         color: THEME.colors.white,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
 });
