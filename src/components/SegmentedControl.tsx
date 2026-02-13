@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'transparent',
     },
     activeChip: {
         backgroundColor: 'rgba(124, 58, 237, 0.2)',

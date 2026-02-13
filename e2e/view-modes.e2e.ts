@@ -15,48 +15,45 @@ describe('View Modes', () => {
         // Login for each test to ensure fresh state
         await Auth.loginAsHost('view_mode_user');
 
-        // Trigger Sync to populate data
-        await waitForElement.toBeVisible(by.id('collection-header-sync-button'));
-        await element(by.id('collection-header-sync-button')).tap();
+        // Trigger Sync to populate data via Pull-to-Refresh
+        await element(by.id('collection-section-list')).swipe('down', 'fast', 0.8);
 
-        // Wait for sync to complete (button becomes enabled again)
-        await waitFor(element(by.id('collection-header-sync-button')))
-            .toBeVisible()
+        // Wait for sync to complete (should return to "Updated just now")
+        await waitFor(element(by.id('collection-header-cache-status')))
+            .toHaveText('Updated just now')
             .withTimeout(30000);
-
-        // Wait for items to be loaded
-        await waitFor(element(by.text('5 Items')))
-            .toBeVisible()
-            .withTimeout(10000);
 
         // Wait for screen to be ready
         await waitForElement.toBeVisible(by.id('segment-genre'));
     });
 
     it('should default to Genre view', async () => {
-        // Wait for segment to be visible after reload
-        await waitForElement.toBeVisible(by.id('segment-genre'));
-
-        // Check if a genre section is visible (depends on mock data)
-        // await expect(element(by.id('section-header-Rock'))).toBeVisible();
+        await expect(element(by.id('segment-genre'))).toBeVisible();
     });
 
     it('should switch to A-Z (Artist) view', async () => {
         await element(by.id('segment-a-z')).tap();
-
         // Header for Pink Floyd in A-Z mode is 'P'
         await waitForElement.toExist(by.id('section-header-P'));
     });
 
     it('should switch to Decade view', async () => {
         await element(by.id('segment-decade')).tap();
-
-        // 1982 -> 1980s, 1973 -> 1970s
         await waitForElement.toExist(by.id('section-header-1980s'));
     });
 
-    it('should switch back to Genre view', async () => {
-        await element(by.id('segment-genre')).tap();
-        // Verify return
+    it('should switch to New view (Empty state)', async () => {
+        await element(by.id('segment-new')).tap();
+        await expect(element(by.id('empty-collection-state'))).toBeVisible();
+    });
+
+    it('should switch to Spin view (Empty state)', async () => {
+        await element(by.id('segment-spin')).tap();
+        await expect(element(by.id('empty-collection-state'))).toBeVisible();
+    });
+
+    it('should switch to Saved view (Empty state)', async () => {
+        await element(by.id('segment-saved')).tap();
+        await expect(element(by.id('empty-collection-state'))).toBeVisible();
     });
 });

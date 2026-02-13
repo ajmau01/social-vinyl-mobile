@@ -40,7 +40,7 @@ export default function BinScreen() {
     };
 
     const renderItem = ({ item }: { item: BinItem }) => (
-        <View style={styles.card}>
+        <View testID={`bin-item-${item.id}`} style={styles.card}>
             <Image source={{ uri: item.thumb_url || '' }} style={styles.thumbnail} />
             <View style={styles.info}>
                 <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
@@ -50,6 +50,7 @@ export default function BinScreen() {
                 </Text>
             </View>
             <Pressable
+                testID={`bin-remove-${item.id}`}
                 onPress={() => handleRemove(item)}
                 style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
             >
@@ -64,20 +65,21 @@ export default function BinScreen() {
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Listening Bin</Text>
                     {userItems.length > 0 && (
-                        <Pressable onPress={handleClear} style={styles.clearButton}>
+                        <Pressable testID="bin-clear-button" onPress={handleClear} style={styles.clearButton}>
                             <Text style={styles.clearButtonText}>Clear All</Text>
                         </Pressable>
                     )}
                 </View>
 
                 {userItems.length === 0 ? (
-                    <View style={styles.emptyContainer}>
+                    <View testID="bin-empty-state" style={styles.emptyContainer}>
                         <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
                         <Text style={styles.emptyText}>Your bin is empty</Text>
                         <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
                     </View>
                 ) : (
                     <FlatList
+                        testID="bin-list"
                         data={userItems}
                         renderItem={renderItem}
                         keyExtractor={(item) => item.id.toString()}

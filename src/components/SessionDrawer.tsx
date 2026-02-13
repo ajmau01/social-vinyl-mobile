@@ -61,7 +61,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                     <BlurView intensity={100} tint="dark" style={styles.drawerContent}>
                         <View style={styles.header}>
                             <Text style={styles.headerTitle}>Social Vinyl Menu</Text>
-                            <TouchableOpacity onPress={onClose}>
+                            <TouchableOpacity testID="drawer-close-button" onPress={onClose}>
                                 <Ionicons name="close" size={28} color="#fff" />
                             </TouchableOpacity>
                         </View>
@@ -83,7 +83,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                         </View>
 
                         <View style={styles.optionsList}>
-                            <TouchableOpacity style={styles.optionItem} onPress={handleBackToHub}>
+                            <TouchableOpacity testID="drawer-return-to-hub" style={styles.optionItem} onPress={handleBackToHub}>
                                 <View style={[styles.iconBox, { backgroundColor: 'rgba(124, 58, 237, 0.2)' }]}>
                                     <Ionicons name="grid-outline" size={20} color={THEME.colors.primary} />
                                 </View>
@@ -101,7 +101,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
 
                             <View style={styles.divider} />
 
-                            <TouchableOpacity style={styles.optionItem} onPress={handleSwitchUser}>
+                            <TouchableOpacity testID="drawer-logout-button" style={styles.optionItem} onPress={handleSwitchUser}>
                                 <View style={[styles.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
                                     <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                                 </View>

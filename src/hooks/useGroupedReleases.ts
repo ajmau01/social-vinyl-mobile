@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Release } from '@/types';
 import { removeDiacritics, getArtistSortKey } from '@/utils/strings';
 
-export type GroupBy = 'none' | 'artist' | 'genre' | 'decade';
+export type ViewMode = 'none' | 'artist' | 'genre' | 'decade' | 'new' | 'spin' | 'saved';
 export type SortBy = 'artist' | 'title' | 'year' | 'dateAdded';
 
 export interface CollectionSection {
@@ -12,7 +12,7 @@ export interface CollectionSection {
 
 export interface UseGroupedReleasesOptions {
     releases: Release[];
-    groupBy: GroupBy;
+    groupBy: ViewMode;
     sortBy: SortBy;
     searchQuery: string;
 }
