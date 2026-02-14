@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useRouter } from 'expo-router';
+import { useSyncCollection } from '@/hooks/useSyncCollection';
+import { ActivityIndicator } from 'react-native';
 
 interface SessionDrawerProps {
     isVisible: boolean;
@@ -32,12 +34,20 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
         setAuthToken
     } = useSessionStore();
 
+    const { sync, syncStatus, syncProgress } = useSyncCollection();
+    const isSyncing = syncStatus === 'syncing';
+
     const handleSwitchUser = () => {
         setUsername(null);
         setLastMode(null);
         setAuthToken(null);
         onClose();
         router.replace('/');
+    };
+
+    const handleSync = async () => {
+        if (!username || isSyncing) return;
+        await sync(username);
     };
 
     const handleBackToHub = () => {
@@ -88,6 +98,28 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                     <Ionicons name="grid-outline" size={20} color={THEME.colors.primary} />
                                 </View>
                                 <Text style={styles.optionLabel}>Return to Hub</Text>
+                                <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                testID="drawer-sync-button"
+                                style={styles.optionItem}
+                                onPress={handleSync}
+                                disabled={isSyncing}
+                            >
+                                <View style={[styles.iconBox, { backgroundColor: isSyncing ? 'rgba(16, 185, 129, 0.2)' : 'rgba(251, 191, 36, 0.2)' }]}>
+                                    {isSyncing ? (
+                                        <ActivityIndicator size="small" color="#10b981" />
+                                    ) : (
+                                        <Ionicons name="sync-outline" size={20} color="#fbbf24" />
+                                    )}
+                                </View>
+                                <View style={styles.optionLabelContainer}>
+                                    <Text style={styles.optionLabel}>Sync Vinyl Collection</Text>
+                                    {isSyncing && (
+                                        <Text style={styles.optionSublabel}>Syncing... {syncProgress}%</Text>
+                                    )}
+                                </View>
                                 <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
                             </TouchableOpacity>
 
@@ -213,10 +245,18 @@ const styles = StyleSheet.create({
         marginRight: 15,
     },
     optionLabel: {
-        flex: 1,
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
+    },
+    optionLabelContainer: {
+        flex: 1,
+    },
+    optionSublabel: {
+        fontSize: 12,
+        color: '#10b981',
+        fontWeight: '500',
+        marginTop: 2,
     },
     divider: {
         height: 1,
