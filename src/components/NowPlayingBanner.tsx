@@ -12,7 +12,7 @@ import Animated, {
     ZoomIn,
     ZoomOut
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
 import { logger } from '@/utils/logger';
@@ -44,7 +44,12 @@ export const NowPlayingBanner = () => {
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
     return (
-        <BlurView intensity={80} tint="dark" style={styles.wrapper}>
+        <LinearGradient
+            colors={['rgba(28, 28, 30, 0.95)', 'rgba(15, 16, 22, 1)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.wrapper}
+        >
             <Animated.View layout={LinearTransition} style={styles.container}>
                 <View style={styles.content}>
                     {/* Album Art Container */}
@@ -102,7 +107,7 @@ export const NowPlayingBanner = () => {
                     </View>
                 </View>
             </Animated.View>
-        </BlurView>
+        </LinearGradient>
     );
 };
 
@@ -112,8 +117,8 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: THEME.radius.lg,
         borderTopRightRadius: THEME.radius.lg,
         borderTopWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.12)',
-        backgroundColor: 'rgba(15, 16, 22, 0.4)', // Base glass tint
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        // backgroundColor removed as LinearGradient handles it
     },
     container: {
         paddingVertical: 10, // Tighter padding for space efficiency

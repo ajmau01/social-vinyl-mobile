@@ -44,6 +44,11 @@ jest.mock('expo-blur', () => ({
     BlurView: ({ children, style }) => <View style={style}>{children}</View>,
 }));
 
+// Mock expo-linear-gradient
+jest.mock('expo-linear-gradient', () => ({
+    LinearGradient: ({ children, style }) => <View style={style}>{children}</View>,
+}));
+
 // Mock expo-haptics
 jest.mock('expo-haptics', () => ({
     impactAsync: jest.fn(),
