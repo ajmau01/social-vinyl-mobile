@@ -47,6 +47,7 @@ export interface IDatabaseService {
     saveReleasesBatch(releases: Release[]): Promise<void>;
     getReleases(userId: string, limit?: number, offset?: number): Promise<Release[]>;
     updateReleaseTracks(userId: string, releaseId: number, tracksJson: string): Promise<void>;
+    toggleSaved(instanceId: number): Promise<boolean>;
     clearUserCollection(userId: string): Promise<void>;
     clearAll(): Promise<void>;
 }

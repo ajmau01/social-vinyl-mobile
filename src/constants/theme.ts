@@ -17,6 +17,7 @@ export const COLORS = {
     warning: '#ffaa00',
     error: '#ff4444',
   },
+  gold: '#ffd700',
 };
 
 export const SPACING = {

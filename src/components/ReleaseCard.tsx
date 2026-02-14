@@ -1,14 +1,17 @@
 import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 
 interface ReleaseCardProps {
     release: Release;
     onPress?: () => void;
+    onLongPress?: () => void;
     style?: StyleProp<ViewStyle>;
 }
 
-export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
+export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCardProps) => {
     return (
         <Pressable
             style={({ pressed }) => [
@@ -17,6 +20,8 @@ export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
                 pressed && styles.pressed
             ]}
             onPress={onPress}
+            onLongPress={onLongPress}
+            delayLongPress={500}
         >
             <View style={styles.imageContainer}>
                 {release.thumb_url ? (
@@ -30,6 +35,18 @@ export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
                     <View style={styles.placeholder}>
                         <Text style={styles.placeholderText}>No Image</Text>
                     </View>
+                )}
+
+                {release.isSaved && (
+                    <Animated.View
+                        entering={ZoomIn.duration(200)}
+                        exiting={ZoomOut.duration(200)}
+                        style={styles.bookmarkOverlay}
+                    >
+                        <View style={styles.bookmarkBackground}>
+                            <Ionicons name="bookmark" size={14} color={THEME.colors.gold} />
+                        </View>
+                    </Animated.View>
                 )}
             </View>
 
@@ -91,5 +108,21 @@ const styles = StyleSheet.create({
         color: THEME.colors.primary,
         fontSize: 10,
         fontWeight: '600',
+    },
+    bookmarkOverlay: {
+        position: 'absolute',
+        top: THEME.spacing.xs,
+        left: THEME.spacing.xs,
+        zIndex: 10,
+    },
+    bookmarkBackground: {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
     },
 });

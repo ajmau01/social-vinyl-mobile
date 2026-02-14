@@ -40,6 +40,7 @@ export interface Release {
     label?: string;
     format?: string;
     tracks?: string; // JSON String
+    isSaved?: boolean;
 }
 
 /**

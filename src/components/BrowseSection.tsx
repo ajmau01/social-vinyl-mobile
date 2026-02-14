@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 import { ReleaseCard } from './ReleaseCard';
@@ -7,15 +7,29 @@ import { ReleaseCard } from './ReleaseCard';
 interface BrowseSectionProps {
     title: string;
     releases: Release[];
-    onPressRelease?: (release: Release) => void;
+    onPress?: (release: Release) => void;
+    onLongPress?: (release: Release) => void;
+    style?: StyleProp<ViewStyle>;
 }
 
 export const BrowseSection: React.FC<BrowseSectionProps> = ({
     title,
     releases,
-    onPressRelease,
+    onPress,
+    onLongPress,
 }) => {
     if (releases.length === 0) return null;
+
+    const renderItem = useCallback(({ item }: { item: Release }) => (
+        <View style={styles.cardWrapper}>
+            <ReleaseCard
+                release={item}
+                onPress={() => onPress?.(item)}
+                onLongPress={() => onLongPress?.(item)}
+                style={{ maxWidth: '100%' }}
+            />
+        </View>
+    ), [onPress, onLongPress]);
 
     return (
         <View style={styles.container}>
@@ -26,15 +40,7 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
 
             <FlatList
                 data={releases}
-                renderItem={({ item }) => (
-                    <View style={styles.cardWrapper}>
-                        <ReleaseCard
-                            release={item}
-                            onPress={() => onPressRelease?.(item)}
-                            style={{ maxWidth: '100%' }} // Override grid layout
-                        />
-                    </View>
-                )}
+                renderItem={renderItem}
                 keyExtractor={(item) => item.instanceId.toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}

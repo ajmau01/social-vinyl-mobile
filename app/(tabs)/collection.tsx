@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { CollectionHeader } from '@/components/CollectionHeader';
 import { SearchBar } from '@/components/SearchBar';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode } from '@/hooks';
+import { DatabaseService } from '@/services/DatabaseService';
 
 export default function CollectionScreen() {
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
@@ -58,6 +60,25 @@ export default function CollectionScreen() {
         }
     }, [isSearchVisible]);
 
+    const handleReleaseLongPress = useCallback(async (release: Release) => {
+        try {
+            const db = DatabaseService.getInstance();
+            const isSaved = await db.toggleSaved(release.instanceId);
+
+            // Visual/Tactile Feedback
+            if (isSaved) {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+
+            logger.info(`[CollectionScreen] Release ${release.title} saved: ${isSaved}`);
+            refresh(); // Trigger data refresh to show the indicator
+        } catch (error) {
+            logger.error('[CollectionScreen] Failed to toggle saved state', error);
+        }
+    }, [refresh]);
+
     return (
         <View style={styles.container}>
             <View style={styles.background} />
@@ -93,6 +114,7 @@ export default function CollectionScreen() {
                 <CollectionSectionView
                     sections={groupedReleases}
                     onReleasePress={setSelectedRelease}
+                    onReleaseLongPress={handleReleaseLongPress}
                     onRefresh={handleSync}
                     refreshing={syncStatus === 'syncing'}
                     loading={loading}

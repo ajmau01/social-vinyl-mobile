@@ -4,7 +4,7 @@ import { Release } from '@/types';
 import { logger } from '@/utils/logger';
 import { IDatabaseService } from './interfaces';
 
-class DatabaseService implements IDatabaseService {
+export class DatabaseService implements IDatabaseService {
     private static instance: DatabaseService;
     private db: SQLite.SQLiteDatabase | null = null;
     private initPromise: Promise<void> | null = null;
@@ -51,6 +51,14 @@ class DatabaseService implements IDatabaseService {
                     await this.db.execAsync('DROP TABLE IF EXISTS releases');
                 }
 
+                // Ensure 'isSaved' column exists (Migration for Issue #105)
+                const columns = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(releases)");
+                const hasIsSaved = columns.some(col => col.name === 'isSaved');
+                if (!hasIsSaved && columns.length > 0) {
+                    logger.log('[DB] Migrating: Adding isSaved column...');
+                    await this.db.execAsync('ALTER TABLE releases ADD COLUMN isSaved INTEGER DEFAULT 0');
+                }
+
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
                         id INTEGER NOT NULL,
@@ -65,6 +73,7 @@ class DatabaseService implements IDatabaseService {
                         label TEXT,
                         format TEXT,
                         tracks TEXT,
+                        isSaved INTEGER DEFAULT 0,
                         PRIMARY KEY (instanceId)
                     );
 
@@ -89,7 +98,7 @@ class DatabaseService implements IDatabaseService {
 
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
                 release.id,
                 release.instanceId,
                 release.userId,
@@ -101,7 +110,8 @@ class DatabaseService implements IDatabaseService {
                 release.genres || null,
                 release.label || null,
                 release.format || null,
-                release.tracks || null
+                release.tracks || null,
+                release.instanceId
             );
         } catch (error) {
             logger.error('[DB] Failed to save release', error);
@@ -116,7 +126,7 @@ class DatabaseService implements IDatabaseService {
             await db.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await db.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
                         release.id,
                         release.instanceId,
                         release.userId,
@@ -128,7 +138,8 @@ class DatabaseService implements IDatabaseService {
                         release.genres || null,
                         release.label || null,
                         release.format || null,
-                        release.tracks || null
+                        release.tracks || null,
+                        release.instanceId
                     );
                 }
             });
@@ -156,8 +167,11 @@ class DatabaseService implements IDatabaseService {
                 params.push(limit, offset);
             }
 
-            const rows = await db.getAllAsync<Release>(query, params);
-            return rows;
+            const rows = await db.getAllAsync<any>(query, params);
+            return rows.map(row => ({
+                ...row,
+                isSaved: row.isSaved === 1
+            }));
         } catch (error) {
             logger.error('[DB] Failed to get releases', error);
             throw error;
@@ -172,6 +186,27 @@ class DatabaseService implements IDatabaseService {
             releaseId,
             userId
         );
+    }
+
+    public async toggleSaved(instanceId: number): Promise<boolean> {
+        const db = await this.ensureDb();
+        try {
+            // Atomic toggle: 1 -> 0, 0 -> 1
+            await db.runAsync(
+                'UPDATE releases SET isSaved = 1 - isSaved WHERE instanceId = ?',
+                [instanceId]
+            );
+
+            // Fetch final state to return it correctly
+            const rows = await db.getAllAsync<{ isSaved: number }>(
+                'SELECT isSaved FROM releases WHERE instanceId = ?',
+                [instanceId]
+            );
+            return rows[0]?.isSaved === 1;
+        } catch (error) {
+            logger.error('[DB] Failed to toggle saved state', error);
+            throw error;
+        }
     }
 
     public async clearUserCollection(userId: string) {
