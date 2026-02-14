@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,6 +64,14 @@ export default function CollectionScreen() {
         try {
             const db = DatabaseService.getInstance();
             const isSaved = await db.toggleSaved(release.instanceId);
+
+            // Visual/Tactile Feedback
+            if (isSaved) {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+
             logger.info(`[CollectionScreen] Release ${release.title} saved: ${isSaved}`);
             refresh(); // Trigger data refresh to show the indicator
         } catch (error) {

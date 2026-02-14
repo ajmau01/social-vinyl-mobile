@@ -191,19 +191,18 @@ export class DatabaseService implements IDatabaseService {
     public async toggleSaved(instanceId: number): Promise<boolean> {
         const db = await this.ensureDb();
         try {
+            // Atomic toggle: 1 -> 0, 0 -> 1
+            await db.runAsync(
+                'UPDATE releases SET isSaved = 1 - isSaved WHERE instanceId = ?',
+                [instanceId]
+            );
+
+            // Fetch final state to return it correctly
             const rows = await db.getAllAsync<{ isSaved: number }>(
                 'SELECT isSaved FROM releases WHERE instanceId = ?',
                 [instanceId]
             );
-
-            if (rows.length === 0) return false;
-
-            const newState = rows[0].isSaved === 1 ? 0 : 1;
-            await db.runAsync(
-                'UPDATE releases SET isSaved = ? WHERE instanceId = ?',
-                [newState, instanceId]
-            );
-            return newState === 1;
+            return rows[0]?.isSaved === 1;
         } catch (error) {
             logger.error('[DB] Failed to toggle saved state', error);
             throw error;

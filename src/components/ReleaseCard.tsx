@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
@@ -37,11 +38,15 @@ export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCar
                 )}
 
                 {release.isSaved && (
-                    <View style={styles.bookmarkOverlay}>
+                    <Animated.View
+                        entering={ZoomIn.duration(200)}
+                        exiting={ZoomOut.duration(200)}
+                        style={styles.bookmarkOverlay}
+                    >
                         <View style={styles.bookmarkBackground}>
                             <Ionicons name="bookmark" size={14} color={THEME.colors.gold} />
                         </View>
-                    </View>
+                    </Animated.View>
                 )}
             </View>
 
