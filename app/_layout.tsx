@@ -5,11 +5,6 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, UIManager } from 'react-native';
 
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket, useSessionTimeout } from '@/hooks';
@@ -29,8 +24,6 @@ if (!CONFIG.IS_E2E && CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string'
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
     debug: __DEV__,
-    // Tracing is already partially handled by Sentry.wrap()
-    // and the Expo plugin. Basic init is safest for now.
     tracesSampleRate: 1.0,
   });
 }

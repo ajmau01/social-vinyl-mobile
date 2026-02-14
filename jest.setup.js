@@ -36,4 +36,27 @@ jest.mock('expo-modules-core', () => ({
     requireNativeModule: jest.fn(() => ({})),
 }));
 
+// Mock Reanimated
+require('react-native-reanimated/mock');
+
+// Mock expo-blur
+// Mock expo-blur
+jest.mock('expo-blur', () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return {
+        BlurView: ({ children, style }) => React.createElement(View, { style }, children),
+    };
+});
+
+// Mock expo-linear-gradient
+jest.mock('expo-linear-gradient', () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return {
+        LinearGradient: ({ children, style }) => React.createElement(View, { style }, children),
+    };
+});
+
+
 export { };
