@@ -138,7 +138,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
 
             <View style={styles.segmentedControlContainer}>
                 <SegmentedControl
-                    options={['Genre', 'A-Z', 'Decade', 'New', 'Spin', 'Saved']}
+                    options={['Genre', 'A-Z', 'Decade', 'N&N', 'Spin', 'Saved']}
                     selected={getSegmentedValue()}
                     onChange={handleSegmentedChange}
                 />
