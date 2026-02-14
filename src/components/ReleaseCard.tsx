@@ -36,7 +36,6 @@ export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
             <View style={styles.info}>
                 <Text style={styles.title} numberOfLines={1}>{release.title}</Text>
                 <Text style={styles.artist} numberOfLines={1}>{release.artist}</Text>
-                {release.year ? <Text style={styles.year}>{release.year}</Text> : null}
             </View>
         </Pressable>
     );
@@ -79,14 +78,14 @@ const styles = StyleSheet.create({
     },
     title: {
         color: THEME.colors.white,
-        fontSize: 11, // Reduced from 12
+        fontSize: 13,
         fontWeight: 'bold',
-        marginBottom: 1,
+        marginBottom: 2,
     },
     artist: {
         color: THEME.colors.textDim,
-        fontSize: 10, // Reduced from 11
-        marginBottom: 1,
+        fontSize: 11,
+        marginBottom: 2,
     },
     year: {
         color: THEME.colors.primary,
