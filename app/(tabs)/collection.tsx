@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, LayoutAnimation, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
@@ -48,9 +49,6 @@ export default function CollectionScreen() {
     }, []);
 
     const handleSearchToggle = useCallback(() => {
-        // Prepare layout animation
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
         const nextVisible = !isSearchVisible;
         setIsSearchVisible(nextVisible);
 
@@ -79,11 +77,17 @@ export default function CollectionScreen() {
                 />
 
                 {isSearchVisible && (
-                    <SearchBar
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholder="Search LPs..."
-                    />
+                    <Animated.View
+                        entering={FadeInUp.duration(250)}
+                        exiting={FadeOutUp.duration(200)}
+                        layout={LinearTransition}
+                    >
+                        <SearchBar
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholder="Search LPs..."
+                        />
+                    </Animated.View>
                 )}
 
                 <CollectionSectionView

@@ -24,10 +24,10 @@ export const CONFIG = {
     // Note: We use localhost:9080 for E2E because Detox/ADB handles port reversal
     API_URL: process.env.EXPO_PUBLIC_API_URL || (IS_E2E
         ? 'http://localhost:9080'
-        : 'http://localhost:8080'),
+        : 'https://engines-bradford-indirect-governing.trycloudflare.com'),
     WS_URL: process.env.EXPO_PUBLIC_WS_URL || (IS_E2E
-        ? 'ws://localhost:9080/ws'
-        : 'ws://localhost:8080/ws'),
+        ? 'ws://localhost:9080/ws/listening-bin'
+        : 'wss://engines-bradford-indirect-governing.trycloudflare.com/ws/listening-bin'),
     IS_E2E,
 
     // Issue #74: Use __DEV__ for automatic dev/prod separation
