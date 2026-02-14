@@ -26,6 +26,7 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
                 release={item}
                 onPress={() => onPress?.(item)}
                 onLongPress={() => onLongPress?.(item)}
+                style={{ maxWidth: '100%' }}
             />
         </View>
     ), [onPress, onLongPress]);
