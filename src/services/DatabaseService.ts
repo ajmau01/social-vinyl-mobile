@@ -65,6 +65,7 @@ class DatabaseService implements IDatabaseService {
                         label TEXT,
                         format TEXT,
                         tracks TEXT,
+                        isSaved INTEGER DEFAULT 0,
                         PRIMARY KEY (instanceId)
                     );
 
@@ -89,7 +90,7 @@ class DatabaseService implements IDatabaseService {
 
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
                 release.id,
                 release.instanceId,
                 release.userId,
@@ -101,7 +102,8 @@ class DatabaseService implements IDatabaseService {
                 release.genres || null,
                 release.label || null,
                 release.format || null,
-                release.tracks || null
+                release.tracks || null,
+                release.instanceId
             );
         } catch (error) {
             logger.error('[DB] Failed to save release', error);
@@ -116,7 +118,7 @@ class DatabaseService implements IDatabaseService {
             await db.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await db.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
                         release.id,
                         release.instanceId,
                         release.userId,
@@ -128,7 +130,8 @@ class DatabaseService implements IDatabaseService {
                         release.genres || null,
                         release.label || null,
                         release.format || null,
-                        release.tracks || null
+                        release.tracks || null,
+                        release.instanceId
                     );
                 }
             });
@@ -156,8 +159,11 @@ class DatabaseService implements IDatabaseService {
                 params.push(limit, offset);
             }
 
-            const rows = await db.getAllAsync<Release>(query, params);
-            return rows;
+            const rows = await db.getAllAsync<any>(query, params);
+            return rows.map(row => ({
+                ...row,
+                isSaved: row.isSaved === 1
+            }));
         } catch (error) {
             logger.error('[DB] Failed to get releases', error);
             throw error;

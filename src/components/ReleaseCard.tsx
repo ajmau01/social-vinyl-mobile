@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { Release } from '@/types';
 
@@ -29,6 +30,14 @@ export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
                 ) : (
                     <View style={styles.placeholder}>
                         <Text style={styles.placeholderText}>No Image</Text>
+                    </View>
+                )}
+
+                {release.isSaved && (
+                    <View style={styles.bookmarkOverlay}>
+                        <View style={styles.bookmarkBackground}>
+                            <Ionicons name="bookmark" size={14} color={THEME.colors.gold} />
+                        </View>
                     </View>
                 )}
             </View>
@@ -91,5 +100,21 @@ const styles = StyleSheet.create({
         color: THEME.colors.primary,
         fontSize: 10,
         fontWeight: '600',
+    },
+    bookmarkOverlay: {
+        position: 'absolute',
+        top: THEME.spacing.xs,
+        left: THEME.spacing.xs,
+        zIndex: 10,
+    },
+    bookmarkBackground: {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
     },
 });
