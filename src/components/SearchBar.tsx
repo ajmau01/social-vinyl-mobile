@@ -28,6 +28,12 @@ export const SearchBar: React.FC<SearchBarProps> = React.memo(({
         <View style={styles.searchContainer}>
             <BlurView intensity={20} tint="light" style={styles.searchBlur}>
                 <View style={styles.inputWrapper}>
+                    <Ionicons
+                        name="search"
+                        size={18}
+                        color={THEME.colors.textDim}
+                        style={styles.searchIcon}
+                    />
                     <TextInput
                         testID="search-bar-input"
                         style={styles.searchInput}
@@ -37,6 +43,7 @@ export const SearchBar: React.FC<SearchBarProps> = React.memo(({
                         onChangeText={handleChangeText}
                         autoCapitalize="none"
                         autoCorrect={false}
+                        autoFocus={true}
                         returnKeyType="search"
                         clearButtonMode="never"
                         enablesReturnKeyAutomatically={true}
@@ -76,6 +83,10 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingLeft: THEME.spacing.md,
+    },
+    searchIcon: {
+        marginRight: -THEME.spacing.xs,
     },
     searchInput: {
         flex: 1,

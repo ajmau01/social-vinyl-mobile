@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
@@ -47,6 +48,16 @@ export default function CollectionScreen() {
         logger.info('[CollectionScreen] Random album requested');
     }, []);
 
+    const handleSearchToggle = useCallback(() => {
+        const nextVisible = !isSearchVisible;
+        setIsSearchVisible(nextVisible);
+
+        // Clear query if closing
+        if (!nextVisible) {
+            setSearchQuery('');
+        }
+    }, [isSearchVisible]);
+
     return (
         <View style={styles.container}>
             <View style={styles.background} />
@@ -59,18 +70,24 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
-                    onSearchPress={() => setIsSearchVisible(!isSearchVisible)}
+                    onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
                     onViewModeChange={setViewMode}
                 />
 
                 {isSearchVisible && (
-                    <SearchBar
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholder="Search LPs..."
-                    />
+                    <Animated.View
+                        entering={FadeInUp.duration(250)}
+                        exiting={FadeOutUp.duration(200)}
+                        layout={LinearTransition}
+                    >
+                        <SearchBar
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholder="Search LPs..."
+                        />
+                    </Animated.View>
                 )}
 
                 <CollectionSectionView
