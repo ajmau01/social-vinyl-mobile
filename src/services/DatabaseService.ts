@@ -4,7 +4,7 @@ import { Release } from '@/types';
 import { logger } from '@/utils/logger';
 import { IDatabaseService } from './interfaces';
 
-class DatabaseService implements IDatabaseService {
+export class DatabaseService implements IDatabaseService {
     private static instance: DatabaseService;
     private db: SQLite.SQLiteDatabase | null = null;
     private initPromise: Promise<void> | null = null;
@@ -49,6 +49,14 @@ class DatabaseService implements IDatabaseService {
                 if (tableInfo.length > 0 && !isCorrectPk) {
                     logger.warn('[DB] Schema mismatch: Primary Key is not instanceId. Dropping releases table...');
                     await this.db.execAsync('DROP TABLE IF EXISTS releases');
+                }
+
+                // Ensure 'isSaved' column exists (Migration for Issue #105)
+                const columns = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(releases)");
+                const hasIsSaved = columns.some(col => col.name === 'isSaved');
+                if (!hasIsSaved && columns.length > 0) {
+                    logger.log('[DB] Migrating: Adding isSaved column...');
+                    await this.db.execAsync('ALTER TABLE releases ADD COLUMN isSaved INTEGER DEFAULT 0');
                 }
 
                 await this.db.execAsync(`
@@ -178,6 +186,28 @@ class DatabaseService implements IDatabaseService {
             releaseId,
             userId
         );
+    }
+
+    public async toggleSaved(instanceId: number): Promise<boolean> {
+        const db = await this.ensureDb();
+        try {
+            const rows = await db.getAllAsync<{ isSaved: number }>(
+                'SELECT isSaved FROM releases WHERE instanceId = ?',
+                [instanceId]
+            );
+
+            if (rows.length === 0) return false;
+
+            const newState = rows[0].isSaved === 1 ? 0 : 1;
+            await db.runAsync(
+                'UPDATE releases SET isSaved = ? WHERE instanceId = ?',
+                [newState, instanceId]
+            );
+            return newState === 1;
+        } catch (error) {
+            logger.error('[DB] Failed to toggle saved state', error);
+            throw error;
+        }
     }
 
     public async clearUserCollection(userId: string) {

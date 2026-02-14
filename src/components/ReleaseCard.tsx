@@ -6,10 +6,11 @@ import { Release } from '@/types';
 interface ReleaseCardProps {
     release: Release;
     onPress?: () => void;
+    onLongPress?: () => void;
     style?: StyleProp<ViewStyle>;
 }
 
-export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
+export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCardProps) => {
     return (
         <Pressable
             style={({ pressed }) => [
@@ -18,6 +19,8 @@ export const ReleaseCard = ({ release, onPress, style }: ReleaseCardProps) => {
                 pressed && styles.pressed
             ]}
             onPress={onPress}
+            onLongPress={onLongPress}
+            delayLongPress={500}
         >
             <View style={styles.imageContainer}>
                 {release.thumb_url ? (

@@ -10,6 +10,7 @@ import { CollectionSection } from '@/hooks/useGroupedReleases';
 export interface CollectionSectionViewProps {
     sections: CollectionSection[];
     onReleasePress: (release: Release) => void;
+    onReleaseLongPress?: (release: Release) => void;
     onRefresh: () => void;
     refreshing: boolean;
     loading: boolean;
@@ -26,6 +27,7 @@ interface TransformedSection {
 export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React.memo(({
     sections,
     onReleasePress,
+    onReleaseLongPress,
     onRefresh,
     refreshing,
     loading,
@@ -48,9 +50,10 @@ export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React
         <BrowseSection
             title={section.title}
             releases={item}
-            onPressRelease={onReleasePress}
+            onPress={onReleasePress}
+            onLongPress={onReleaseLongPress}
         />
-    ), [onReleasePress]);
+    ), [onReleasePress, onReleaseLongPress]);
 
     const renderSectionHeader = useCallback(() => null, []);
 
