@@ -244,6 +244,34 @@ class CollectionSyncService implements ISyncService {
             return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
         }
     }
+
+    /**
+     * Toggles the 'Notable' (Saved) status on the backend.
+     * This ensures the status persists across syncs.
+     */
+    public async toggleNotable(userId: string, releaseId: number): Promise<boolean> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=toggleNotable&username=${userId}&releaseId=${releaseId}`;
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Toggling notable status:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                logger.log(`[Sync] Successfully toggled notable for release ${releaseId} to ${data.isNotable}`);
+                return true;
+            } else {
+                logger.error('[Sync] Failed to toggle notable:', data.error);
+                return false;
+            }
+        } catch (error) {
+            logger.error('[Sync] Error toggling notable status:', error);
+            return false;
+        }
+    }
 }
 
 export const syncService = new CollectionSyncService();

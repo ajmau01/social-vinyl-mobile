@@ -14,6 +14,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode } from '@/hooks';
 import { DatabaseService } from '@/services/DatabaseService';
+import { syncService } from '@/services/CollectionSyncService';
 
 export default function CollectionScreen() {
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
@@ -81,12 +82,25 @@ export default function CollectionScreen() {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }
 
-            logger.info(`[CollectionScreen] Release ${release.title} saved: ${isSaved}`);
+            logger.info(`[CollectionScreen] Release ${release.title} saved locally: ${isSaved}`);
             refresh(); // Trigger data refresh to show the indicator
+
+            // Phase 9: Persist to Backend (Fire and Forget)
+            if (username) {
+                syncService.toggleNotable(username, release.id).then(success => {
+                    if (success) {
+                        logger.info(`[CollectionScreen] Release ${release.id} notable status synced to backend`);
+                    } else {
+                        logger.warn(`[CollectionScreen] Failed to sync notable status for release ${release.id}`);
+                        // Optional: Revert local state or show toast? 
+                        // For now, we trust the optimistic update and let next sync fix any drift.
+                    }
+                });
+            }
         } catch (error) {
             logger.error('[CollectionScreen] Failed to toggle saved state', error);
         }
-    }, [refresh]);
+    }, [refresh, username]);
 
     return (
         <View style={styles.container}>
