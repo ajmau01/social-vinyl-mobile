@@ -140,7 +140,19 @@ export const useGroupedReleases = ({
                     key = 'Unknown';
                 }
             } else if (groupBy === 'new') {
-                key = getTimePeriodKey(release.added_at);
+                // "N&N" Logic: Notable (Saved) + New (Last 6 Months)
+                if (release.isSaved) {
+                    key = 'Notable';
+                } else {
+                    const now = Date.now();
+                    const addedMs = release.added_at * 1000;
+                    const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
+
+                    // Filter: Only show items added in the last 6 months
+                    if (now - addedMs > sixMonthsMs) return;
+
+                    key = getTimePeriodKey(release.added_at);
+                }
             } else if (groupBy === 'saved') {
                 if (!release.isSaved) return; // Skip unsaved
                 key = 'Saved Albums';
@@ -163,7 +175,7 @@ export const useGroupedReleases = ({
                 }
 
                 if (groupBy === 'new') {
-                    const order = ['Today', 'This Week', 'This Month', 'Earlier This Year'];
+                    const order = ['Notable', 'Today', 'This Week', 'This Month', 'Earlier This Year'];
                     const indexA = order.indexOf(a);
                     const indexB = order.indexOf(b);
 

@@ -236,21 +236,19 @@ describe('Phase 2 Hooks', () => {
             expect(resDate.current.filteredReleases[0].added_at).toBe(300);
         });
 
-        it('should group by new (time periods)', () => {
+        it('should group by new and filter > 6 months', () => {
             // Mock Date.now to a fixed time: June 1, 2026 (Day 152)
             const mockNow = 1780228800000;
             jest.spyOn(Date, 'now').mockReturnValue(mockNow);
 
             const daySeconds = 24 * 60 * 60;
-            const weekSeconds = 7 * daySeconds;
-            const monthSeconds = 30 * daySeconds;
 
             const releasesWithDates: Release[] = [
                 { id: 1, title: 'Today Album', added_at: (mockNow / 1000) - (daySeconds / 2), artist: 'A' } as Release, // Today
                 { id: 2, title: 'This Week Album', added_at: (mockNow / 1000) - (3 * daySeconds), artist: 'B' } as Release, // This Week
                 { id: 3, title: 'This Month Album', added_at: (mockNow / 1000) - (15 * daySeconds), artist: 'C' } as Release, // This Month
-                { id: 4, title: 'Earlier This Year Album', added_at: (mockNow / 1000) - (60 * daySeconds), artist: 'D' } as Release, // Earlier This Year (Apr 2026)
-                { id: 5, title: 'Old Album', added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'E' } as Release // Previous Year (Apr 2025)
+                { id: 4, title: 'Earlier This Year Album', added_at: (mockNow / 1000) - (60 * daySeconds), artist: 'D' } as Release, // Earlier This Year
+                { id: 5, title: 'Old Album', added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'E' } as Release // > 6 months ago (Excluded)
             ];
 
             const { result } = renderHook(() => useGroupedReleases({
@@ -261,21 +259,45 @@ describe('Phase 2 Hooks', () => {
             }));
 
             const sections = result.current.groupedReleases;
-            expect(sections).toHaveLength(5);
+            // Old Album should be filtered out
+            expect(sections).toHaveLength(4);
             expect(sections[0].title).toBe('Today');
             expect(sections[1].title).toBe('This Week');
             expect(sections[2].title).toBe('This Month');
-            // Depending on when the mock date falls in the year vs "Earlier this year" logic
-            // 2026-02-14 - 60 days is Dec 2025? No, 60 days ago is mid-Dec 2025.
-            // Wait, logic check:
-            // mockNow = Feb 14, 2026.
-            // 60 days ago = Dec 16, 2025.
-            // So that would conform to release year != current year logic if not careful.
-            // 60 days ago from Feb 14 is Dec 16.
-            // Let's adjust mock dates to be safer for "Earlier This Year".
-            // mockNow = June 1, 2026.
             expect(sections[3].title).toBe('Earlier This Year');
-            expect(sections[4].title).toBe('2025');
+        });
+
+        it('should group saved items as Notable even if old', () => {
+            // Mock Date.now to June 1, 2026
+            const mockNow = 1780228800000;
+            jest.spyOn(Date, 'now').mockReturnValue(mockNow);
+            const daySeconds = 24 * 60 * 60;
+
+            const releases: Release[] = [
+                { id: 1, title: 'Old Saved', isSaved: true, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'A' } as Release,
+                { id: 2, title: 'New Unsaved', isSaved: false, added_at: (mockNow / 1000) - 100, artist: 'B' } as Release,
+                { id: 3, title: 'Old Unsaved', isSaved: false, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'C' } as Release
+            ];
+
+            const { result } = renderHook(() => useGroupedReleases({
+                releases,
+                groupBy: 'new',
+                sortBy: 'dateAdded',
+                searchQuery: ''
+            }));
+
+            const sections = result.current.groupedReleases;
+            expect(sections).toHaveLength(2);
+
+            // Notable should be first
+            expect(sections[0].title).toBe('Notable');
+            expect(sections[0].data).toHaveLength(1);
+            expect(sections[0].data[0].title).toBe('Old Saved');
+
+            // Today second
+            expect(sections[1].title).toBe('Today');
+            expect(sections[1].data).toHaveLength(1);
+            expect(sections[1].data[0].title).toBe('New Unsaved');
         });
 
         it('should sort new sections correctly', () => {
@@ -286,27 +308,23 @@ describe('Phase 2 Hooks', () => {
             const daySeconds = 24 * 60 * 60;
 
             const releasesWithDates: Release[] = [
-                { id: 1, title: 'Today', added_at: (mockNow / 1000) - 100, artist: 'A' } as Release, // Today
-                { id: 2, title: 'Week', added_at: (mockNow / 1000) - (2 * daySeconds), artist: 'B' } as Release, // This Week
-                { id: 3, title: 'Month', added_at: (mockNow / 1000) - (10 * daySeconds), artist: 'C' } as Release, // This Month
-                { id: 4, title: 'Year', added_at: (mockNow / 1000) - (100 * daySeconds), artist: 'D' } as Release, // Feb 2026
-                { id: 5, title: 'Older', added_at: (mockNow / 1000) - (500 * daySeconds), artist: 'E' } as Release // 2025
+                { id: 1, title: 'Today', added_at: (mockNow / 1000) - 100, artist: 'A' } as Release,
+                { id: 2, title: 'Saved', isSaved: true, added_at: 0, artist: 'B' } as Release,
+                { id: 3, title: 'Week', added_at: (mockNow / 1000) - (2 * daySeconds), artist: 'C' } as Release
             ];
 
             const { result } = renderHook(() => useGroupedReleases({
                 releases: releasesWithDates,
-                groupBy: 'new',
+                groupBy: 'new', // Maps to 'N&N' logic
                 sortBy: 'dateAdded',
                 searchQuery: ''
             }));
 
             const sections = result.current.groupedReleases;
             expect(sections.map(s => s.title)).toEqual([
+                'Notable',
                 'Today',
-                'This Week',
-                'This Month',
-                'Earlier This Year',
-                '2025'
+                'This Week'
             ]);
         });
 

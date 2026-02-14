@@ -22,6 +22,7 @@ interface BackendAlbum {
     format?: string;
     tracks?: Track[]; // FIXED: Proper type scoping
     genres?: string[]; // We will inject during flattening
+    date_added?: string; // ISO date string from Discogs/Backend
 }
 
 interface ScanResponse {
@@ -169,7 +170,7 @@ class CollectionSyncService implements ISyncService {
 
     private async saveReleases(items: BackendAlbum[], userId: string) {
         if (CONFIG.DEBUG_WS && items.length > 0) {
-            logger.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}`);
+            logger.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}, Date: ${items[0].date_added}`);
         }
 
         // Filter and map - skip albums missing instanceId (fail fast approach)
@@ -184,6 +185,18 @@ class CollectionSyncService implements ISyncService {
                 continue;
             }
 
+            // Fix for Issue #119: Use date_added from API if available, otherwise now (in seconds)
+            // Release.added_at expects Unix Timestamp (Seconds), not Milliseconds.
+            let addedAtSeconds = Math.floor(Date.now() / 1000);
+
+            if (item.date_added) {
+                // Parse ISO string (e.g. 2024-01-01T12:00:00Z) to timestamp
+                const dateMs = new Date(item.date_added).getTime();
+                if (!isNaN(dateMs)) {
+                    addedAtSeconds = Math.floor(dateMs / 1000);
+                }
+            }
+
             releases.push({
                 id: item.releaseId,
                 instanceId: Number(rawInstanceId),
@@ -191,7 +204,7 @@ class CollectionSyncService implements ISyncService {
                 title: item.title,
                 artist: item.artist,
                 thumb_url: item.coverImage || null,
-                added_at: Date.now(),
+                added_at: addedAtSeconds,
                 year: item.year,
                 genres: item.genres ? item.genres.join(', ') : undefined,
                 label: item.label,

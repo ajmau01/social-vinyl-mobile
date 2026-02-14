@@ -25,7 +25,7 @@ const VIEW_MODE_MAP: Record<string, ViewMode> = {
     'Genre': 'genre',
     'A-Z': 'artist',
     'Decade': 'decade',
-    'New': 'new',
+    'N&N': 'new',
     'Spin': 'spin',
     'Saved': 'saved',
 };
@@ -34,7 +34,7 @@ const REVERSE_VIEW_MODE_MAP: Record<string, string> = {
     'genre': 'Genre',
     'artist': 'A-Z',
     'decade': 'Decade',
-    'new': 'New',
+    'new': 'N&N',
     'spin': 'Spin',
     'saved': 'Saved',
 };
