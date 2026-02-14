@@ -48,8 +48,7 @@ export const NowPlayingBanner = () => {
             <Animated.View layout={LinearTransition} style={styles.container}>
                 <View style={styles.content}>
                     {/* Album Art Container */}
-                    <Animated.View
-                        layout={LinearTransition}
+                    <View
                         style={styles.artwork}
                     >
                         {nowPlaying?.albumArt ? (
@@ -63,12 +62,12 @@ export const NowPlayingBanner = () => {
                         ) : (
                             <View style={styles.artworkPlaceholder} />
                         )}
-                    </Animated.View>
+                    </View>
 
                     {/* Info Container */}
                     <View style={styles.info}>
                         <Animated.Text
-                            key={nowPlaying?.track || 'empty'}
+                            key={nowPlaying?.track ? `track-${nowPlaying.track}` : 'track-empty'}
                             entering={FadeIn.duration(300)}
                             style={styles.track}
                             numberOfLines={1}
@@ -76,7 +75,7 @@ export const NowPlayingBanner = () => {
                             {nowPlaying?.track || (isConnecting ? 'Connecting...' : 'Waiting for Track...')}
                         </Animated.Text>
                         <Animated.Text
-                            key={nowPlaying?.artist || 'empty'}
+                            key={nowPlaying?.artist ? `artist-${nowPlaying.artist}` : 'artist-empty'}
                             entering={FadeIn.delay(100).duration(300)}
                             style={styles.artist}
                             numberOfLines={1}
