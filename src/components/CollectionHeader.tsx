@@ -14,6 +14,7 @@ export interface CollectionHeaderProps {
     viewMode: ViewMode;
     lastSyncTime: number | null;
     isSearchVisible: boolean;
+    isRandomDisabled?: boolean;
     onSearchPress: () => void;
     onRandomPress: () => void;
     onMenuPress: () => void;
@@ -62,6 +63,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     viewMode,
     lastSyncTime,
     isSearchVisible,
+    isRandomDisabled = false,
     onSearchPress,
     onRandomPress,
     onMenuPress,
@@ -113,10 +115,12 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
                     </TouchableOpacity>
                     <TouchableOpacity
                         testID="collection-header-dice-button"
-                        style={styles.iconBtn}
+                        style={[styles.iconBtn, isRandomDisabled && { opacity: 0.5 }]}
                         onPress={onRandomPress}
+                        disabled={isRandomDisabled}
                         accessibilityRole="button"
                         accessibilityLabel="Random album"
+                        accessibilityState={{ disabled: isRandomDisabled }}
                     >
                         <Ionicons name="dice-outline" size={22} color={THEME.colors.white} />
                     </TouchableOpacity>
@@ -197,4 +201,3 @@ const styles = StyleSheet.create({
         paddingHorizontal: THEME.spacing.md,
     },
 });
-

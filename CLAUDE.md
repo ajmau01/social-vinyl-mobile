@@ -165,13 +165,65 @@ src/
 
 ## Current Sprint Focus
 
-**Theme**: Security Hardening & Testing Infrastructure
+**Status**: Feb 14, 2026
+**Active Milestone**: [Milestone 12: Phase 9 - Advanced Collection Features](https://github.com/ajmau01/social-vinyl-mobile/milestone/12)
+**Theme**: Complete Collection Browsing Experience
 
-**Critical Issues**:
-1. [#68] Auth credentials in WebSocket URL (🔴 BLOCKED - needs backend fix)
-2. [#59] Implement Error Boundary
-3. [#60] E2E Testing with Detox
-4. [#72] SSL Certificate Pinning
+### Recent Accomplishments ✅
+
+**Phase 8 (Visual Design Parity) - COMPLETE** (Feb 13-14, 2026)
+- All 8 issues merged (#100-107)
+- Compact scrollable chips, collapsible search, bookmark overlay
+- Now Playing footer overhaul, SessionDrawer sync migration
+- Mobile app now has full visual parity with web app
+
+**Security Hardening - MOSTLY COMPLETE**
+- 8 of 9 issues complete
+- WebSocket auth migrated to secure message-based protocol (#68 ✅)
+- Token storage in SecureStore (#67 ✅)
+- Session timeout implemented (#69 ✅)
+- Only #72 (SSL pinning) blocked on production domain
+
+### Current Work: Phase 9 (Feb 17 - Mar 3, 2026)
+
+**Objective**: Implement final 3 view modes + random album feature
+
+**Issues Ready for Gemini**:
+1. **[#119]** Implement 'New' and 'Saved' View Modes (HIGH priority, 3 days) ⭐ START HERE
+2. **[#120]** Random LP/Dice Button (MEDIUM priority, 1 day)
+3. **[#121]** 'Spin' View Mode (BLOCKED on backend [#242](https://github.com/ajmau01/recordcollection/issues/242))
+
+**Reference Issue**:
+- **[#115]** Phase 9.1 Overview (parent issue with full context)
+
+### Key Documentation Created (Feb 14, 2026)
+
+**In Vault** (`~/ObsidianVaults/SocialVinyl-Dev/`):
+- ✅ `_Dashboard/Roadmap-to-v1.0.md` - Complete strategic roadmap (8,000+ words)
+- ✅ `_Dashboard/Quick-Start-Phase-9.md` - Instant reference for Phase 9 work
+- ✅ `Projects/Mobile-App/Phase-9-Implementation-Plan.md` - Technical implementation guide
+- ✅ `_Dashboard/Cross-Repo-Dependencies.md` - Updated with backend #242 coordination
+
+**In GitHub**:
+- ✅ Issues #119, #120, #121 created with 200+ lines each (complete implementation details)
+- ✅ Backend issue [recordcollection#242](https://github.com/ajmau01/recordcollection/issues/242) created
+- ✅ All issues cross-linked with comments
+
+**In Project**:
+- ✅ `GEMINI.md` updated with Phase 9 rollout details (developer briefing)
+
+### What to Review (When Resuming)
+
+**Before reviewing PRs or planning next work**:
+1. Read: `_Dashboard/Current-Sprint.md` - Current status
+2. Read: `_Dashboard/Roadmap-to-v1.0.md` - Strategic context (Milestones 12-17 defined)
+3. Check: Gemini's implementation notes in `Projects/Mobile-App/Implementation-Notes/`
+4. Review: PRs for issues #119, #120 (when Gemini completes them)
+
+**Backend Coordination**:
+- Backend issue [#242](https://github.com/ajmau01/recordcollection/issues/242) blocks mobile #121
+- Track status in `_Dashboard/Cross-Repo-Dependencies.md`
+- Coordinate production deployment timing
 
 See: `_Dashboard/Current-Sprint.md` for full details
 
@@ -190,7 +242,9 @@ See: `_Dashboard/Cross-Repo-Dependencies.md`
 
 - **Repo**: https://github.com/ajmau01/social-vinyl-mobile
 - **Issues**: https://github.com/ajmau01/social-vinyl-mobile/issues
-- **Current Issues**: 12 open (tracked in vault)
+- **Current Milestone**: https://github.com/ajmau01/social-vinyl-mobile/milestone/12
+- **Backend Repo**: https://github.com/ajmau01/recordcollection
+- **Backend Coordination Issue**: https://github.com/ajmau01/recordcollection/issues/242
 
 ## Key Documentation
 
@@ -199,8 +253,11 @@ See: `_Dashboard/Cross-Repo-Dependencies.md`
 
 **In vault** (`~/ObsidianVaults/SocialVinyl-Dev/`):
 - `Projects/Mobile-App/Overview.md` - Architecture overview
+- `Projects/Mobile-App/Phase-9-Implementation-Plan.md` - **NEW** Current work (Feb 2026)
+- `_Dashboard/Roadmap-to-v1.0.md` - **NEW** Strategic roadmap to production (Feb 2026)
+- `_Dashboard/Quick-Start-Phase-9.md` - **NEW** Quick reference for Phase 9 (Feb 2026)
 - `Shared/WebSocket-Protocol.md` - Real-time communication spec
-- `Shared/Authentication-Design.md` - Security fix proposal (addresses #68)
+- `Shared/Authentication-Design.md` - Security fix proposal (now implemented)
 
 ## Conventions
 
@@ -238,14 +295,47 @@ npx tsc --noEmit
 npx eslint src/
 ```
 
+## Phase 9 Handoff (Feb 14, 2026)
+
+**What Was Completed Today**:
+- ✅ Comprehensive strategic roadmap to v1.0 created (Milestones 12-17)
+- ✅ Milestone 12 (Phase 9) created with 4 issues
+- ✅ Issues #119, #120, #121 created with complete implementation details (840+ lines total)
+- ✅ Backend coordination issue [#242](https://github.com/ajmau01/recordcollection/issues/242) created
+- ✅ All documentation committed to vault (5 documents, 10,000+ words)
+- ✅ GEMINI.md updated with developer briefing
+- ✅ All cross-linking complete (GitHub ↔ Vault)
+
+**Next Steps for Gemini** (Developer):
+1. Read `_Dashboard/Quick-Start-Phase-9.md`
+2. Implement issue #119 (New/Saved views - 3 days)
+3. Implement issue #120 (Random LP button - 1 day)
+4. Wait for backend #242, then implement #121 (Spin view - 3 days)
+
+**Next Steps for Claude** (You - Future Session):
+1. **Review Gemini's PRs** when #119 and #120 are complete
+2. **Monitor backend progress** on issue #242
+3. **Coordinate deployment** when all Phase 9 work is done
+4. **Plan Milestone 13** (Core Feature Parity) once Phase 9 is complete
+
+**Critical Files to Track**:
+- `_Dashboard/Current-Sprint.md` - Gemini updates this as they work
+- `Projects/Mobile-App/Implementation-Notes/` - Gemini documents progress here
+- `_Dashboard/Cross-Repo-Dependencies.md` - Backend coordination status
+
+---
+
 ## Remember
 
 You are part of a **multi-agent development team**. The Obsidian vault is your shared brain. Always:
-1. **Read before acting** - check what's been done
-2. **Document after completing** - leave clear notes
-3. **Coordinate breaking changes** - affects backend too
+1. **Read before acting** - check what's been done (especially `Current-Sprint.md`)
+2. **Document after completing** - leave clear notes for Gemini
+3. **Coordinate breaking changes** - affects backend too (see `Cross-Repo-Dependencies.md`)
 4. **Reference GitHub issues** - link vault notes to issues
+5. **Review the roadmap** - `Roadmap-to-v1.0.md` has the complete plan through v1.0
 
 ---
 
 *For full ecosystem context, see: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/README.md`*
+
+*Last Updated: 2026-02-14 - Phase 9 planning complete, ready for Gemini implementation*

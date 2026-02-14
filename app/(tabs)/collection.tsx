@@ -46,9 +46,18 @@ export default function CollectionScreen() {
     }, [username, sync, refresh]);
 
     const handleRandomPress = useCallback(() => {
-        // TODO: Phase 9 logic
-        logger.info('[CollectionScreen] Random album requested');
-    }, []);
+        if (!releases || releases.length === 0) return;
+
+        const randomIndex = Math.floor(Math.random() * releases.length);
+        const randomRelease = releases[randomIndex];
+
+        logger.info(`[CollectionScreen] Random album selected: ${randomRelease.title}`);
+
+        // Haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        setSelectedRelease(randomRelease);
+    }, [releases]);
 
     const handleSearchToggle = useCallback(() => {
         const nextVisible = !isSearchVisible;
@@ -91,6 +100,7 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
+                    isRandomDisabled={loading || !releases || releases.length === 0}
                     onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}

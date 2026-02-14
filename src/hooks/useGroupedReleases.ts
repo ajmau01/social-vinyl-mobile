@@ -23,6 +23,24 @@ export interface UseGroupedReleasesResult {
     isEmpty: boolean;
 }
 
+function getTimePeriodKey(addedAt: number): string {
+    const now = Date.now();
+    const addedMs = addedAt * 1000;
+    const diff = now - addedMs;
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (diff < dayMs) return 'Today';
+    if (diff < 7 * dayMs) return 'This Week';
+    if (diff < 30 * dayMs) return 'This Month';
+
+    const addedDate = new Date(addedMs);
+    const addedYear = addedDate.getFullYear();
+    const currentYear = new Date().getFullYear();
+
+    if (addedYear === currentYear) return 'Earlier This Year';
+    return addedYear.toString();
+}
+
 /**
  * useGroupedReleases Hook
  * 
@@ -121,6 +139,11 @@ export const useGroupedReleases = ({
                 } else {
                     key = 'Unknown';
                 }
+            } else if (groupBy === 'new') {
+                key = getTimePeriodKey(release.added_at);
+            } else if (groupBy === 'saved') {
+                if (!release.isSaved) return; // Skip unsaved
+                key = 'Saved Albums';
             }
 
             if (!groups[key]) {
@@ -137,6 +160,23 @@ export const useGroupedReleases = ({
                     if (b === 'Unknown') return -1;
                     // Sort decades descending
                     return parseInt(b) - parseInt(a);
+                }
+
+                if (groupBy === 'new') {
+                    const order = ['Today', 'This Week', 'This Month', 'Earlier This Year'];
+                    const indexA = order.indexOf(a);
+                    const indexB = order.indexOf(b);
+
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+
+                    // Specific years should be sorted descending (newest year first)
+                    const yearA = parseInt(a);
+                    const yearB = parseInt(b);
+                    if (!isNaN(yearA) && !isNaN(yearB)) return yearB - yearA;
+
+                    return 0;
                 }
 
                 if (a === '#' || a === 'Unknown') return 1;
