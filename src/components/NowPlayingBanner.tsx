@@ -15,7 +15,6 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
-import { logger } from '@/utils/logger';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
