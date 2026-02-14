@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, LayoutAnimation, Platform } from 'react-native';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
@@ -47,6 +47,19 @@ export default function CollectionScreen() {
         logger.info('[CollectionScreen] Random album requested');
     }, []);
 
+    const handleSearchToggle = useCallback(() => {
+        // Prepare layout animation
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+        const nextVisible = !isSearchVisible;
+        setIsSearchVisible(nextVisible);
+
+        // Clear query if closing
+        if (!nextVisible) {
+            setSearchQuery('');
+        }
+    }, [isSearchVisible]);
+
     return (
         <View style={styles.container}>
             <View style={styles.background} />
@@ -59,7 +72,7 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
-                    onSearchPress={() => setIsSearchVisible(!isSearchVisible)}
+                    onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
                     onViewModeChange={setViewMode}
