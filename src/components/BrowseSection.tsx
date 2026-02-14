@@ -52,9 +52,12 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'baseline',
-        paddingHorizontal: THEME.spacing.md,
+        paddingLeft: THEME.spacing.md - 4, // Offset by border width to maintain text alignment
+        paddingRight: THEME.spacing.md,
         marginBottom: THEME.spacing.sm,
         gap: THEME.spacing.sm,
+        borderLeftWidth: 4,
+        borderLeftColor: THEME.colors.primary,
     },
     title: {
         fontSize: 20,
