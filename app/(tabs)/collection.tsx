@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
