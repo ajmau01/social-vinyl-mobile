@@ -136,6 +136,7 @@ export default function CollectionScreen() {
                     visible={!!selectedRelease}
                     release={selectedRelease}
                     onClose={() => setSelectedRelease(null)}
+                    onRandomNext={handleRandomPress}
                 />
 
                 <SessionDrawer

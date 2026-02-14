@@ -16,9 +16,10 @@ interface ReleaseDetailsModalProps {
     visible: boolean;
     release: Release | null;
     onClose: () => void;
+    onRandomNext?: () => void;
 }
 
-export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetailsModalProps) => {
+export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }: ReleaseDetailsModalProps) => {
     const [tracks, setTracks] = useState<Track[] | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -26,6 +27,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
     const { addItem, isInBin } = useListeningBinStore();
     const isAlreadyInBin = (release && username) ? isInBin(release.id, username) : false;
 
+    // ... (useEffect remains the same) ... 
     useEffect(() => {
         if (visible && release) {
             if (release.tracks) {
@@ -83,9 +85,21 @@ export const ReleaseDetailsModal = ({ visible, release, onClose }: ReleaseDetail
                 <BlurView intensity={30} tint="dark" style={styles.blur} />
 
                 <View style={styles.container}>
-                    {/* Header / Close Button */}
-                    <View style={styles.header}>
-                        <Pressable testID="modal-close-button" onPress={onClose} style={styles.closeButton}>
+                    {/* Header / Actions */}
+                    <View style={[styles.header, onRandomNext ? styles.headerSpaceBetween : styles.headerRight]}>
+                        {onRandomNext && (
+                            <Pressable
+                                testID="modal-shuffle-button"
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    onRandomNext();
+                                }}
+                                style={styles.iconButton}
+                            >
+                                <Ionicons name="dice-outline" size={24} color={THEME.colors.primary} />
+                            </Pressable>
+                        )}
+                        <Pressable testID="modal-close-button" onPress={onClose} style={styles.iconButton}>
                             <Ionicons name="close" size={24} color={THEME.colors.textDim} />
                         </Pressable>
                     </View>
@@ -191,10 +205,16 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
         padding: THEME.spacing.sm,
+        alignItems: 'center',
     },
-    closeButton: {
+    headerSpaceBetween: {
+        justifyContent: 'space-between',
+    },
+    headerRight: {
+        justifyContent: 'flex-end',
+    },
+    iconButton: {
         padding: THEME.spacing.xs,
     },
     scrollContent: {
