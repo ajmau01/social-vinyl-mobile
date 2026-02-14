@@ -23,6 +23,8 @@ interface BackendAlbum {
     tracks?: Track[]; // FIXED: Proper type scoping
     genres?: string[]; // We will inject during flattening
     date_added?: string; // ISO date string from Discogs/Backend
+    addedTimestamp?: number; // Backend timestamp (ms)
+    isNotable?: boolean; // Backend notable flag
 }
 
 interface ScanResponse {
@@ -185,12 +187,13 @@ class CollectionSyncService implements ISyncService {
                 continue;
             }
 
-            // Fix for Issue #119: Use date_added from API if available, otherwise now (in seconds)
-            // Release.added_at expects Unix Timestamp (Seconds), not Milliseconds.
+            // Fix for Issue #119: Use addedTimestamp from API (ms) -> Seconds
+            // Fallback to date_added (ISO) or now
             let addedAtSeconds = Math.floor(Date.now() / 1000);
 
-            if (item.date_added) {
-                // Parse ISO string (e.g. 2024-01-01T12:00:00Z) to timestamp
+            if (item.addedTimestamp && item.addedTimestamp > 0) {
+                addedAtSeconds = Math.floor(item.addedTimestamp / 1000);
+            } else if (item.date_added) {
                 const dateMs = new Date(item.date_added).getTime();
                 if (!isNaN(dateMs)) {
                     addedAtSeconds = Math.floor(dateMs / 1000);
@@ -209,7 +212,8 @@ class CollectionSyncService implements ISyncService {
                 genres: item.genres ? item.genres.join(', ') : undefined,
                 label: item.label,
                 format: item.format,
-                tracks: item.tracks ? JSON.stringify(item.tracks) : undefined
+                tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
+                isSaved: item.isNotable || false // Map Backend Notable -> Mobile Saved
             });
         }
 
