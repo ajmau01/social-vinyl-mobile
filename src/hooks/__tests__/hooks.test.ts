@@ -261,10 +261,10 @@ describe('Phase 2 Hooks', () => {
             const sections = result.current.groupedReleases;
             // Old Album should be filtered out
             expect(sections).toHaveLength(4);
-            expect(sections[0].title).toBe('Today');
-            expect(sections[1].title).toBe('This Week');
-            expect(sections[2].title).toBe('This Month');
-            expect(sections[3].title).toBe('Earlier This Year');
+            expect(sections[0].title).toBe('New: Today');
+            expect(sections[1].title).toBe('New: This Week');
+            expect(sections[2].title).toBe('New: This Month');
+            expect(sections[3].title).toBe('New: Earlier This Year');
         });
 
         it('should group saved items as Notable even if old', () => {
@@ -295,7 +295,7 @@ describe('Phase 2 Hooks', () => {
             expect(sections[0].data[0].title).toBe('Old Saved');
 
             // Today second
-            expect(sections[1].title).toBe('Today');
+            expect(sections[1].title).toBe('New: Today');
             expect(sections[1].data).toHaveLength(1);
             expect(sections[1].data[0].title).toBe('New Unsaved');
         });
@@ -323,8 +323,8 @@ describe('Phase 2 Hooks', () => {
             const sections = result.current.groupedReleases;
             expect(sections.map(s => s.title)).toEqual([
                 'Notable',
-                'Today',
-                'This Week'
+                'New: Today',
+                'New: This Week'
             ]);
         });
 

@@ -151,7 +151,7 @@ export const useGroupedReleases = ({
                     // Filter: Only show items added in the last 6 months
                     if (now - addedMs > sixMonthsMs) return;
 
-                    key = getTimePeriodKey(release.added_at);
+                    key = `New: ${getTimePeriodKey(release.added_at)}`;
                 }
             } else if (groupBy === 'saved') {
                 if (!release.isSaved) return; // Skip unsaved
@@ -175,7 +175,7 @@ export const useGroupedReleases = ({
                 }
 
                 if (groupBy === 'new') {
-                    const order = ['Notable', 'Today', 'This Week', 'This Month', 'Earlier This Year'];
+                    const order = ['Notable', 'New: Today', 'New: This Week', 'New: This Month', 'New: Earlier This Year'];
                     const indexA = order.indexOf(a);
                     const indexB = order.indexOf(b);
 
@@ -184,8 +184,9 @@ export const useGroupedReleases = ({
                     if (indexB !== -1) return 1;
 
                     // Specific years should be sorted descending (newest year first)
-                    const yearA = parseInt(a);
-                    const yearB = parseInt(b);
+                    // Remove "New: " prefix to parse year
+                    const yearA = parseInt(a.replace('New: ', ''));
+                    const yearB = parseInt(b.replace('New: ', ''));
                     if (!isNaN(yearA) && !isNaN(yearB)) return yearB - yearA;
 
                     return 0;
