@@ -1,22 +1,61 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text, Image } from 'react-native';
+import Animated, {
+    FadeIn,
+    FadeOut,
+    LinearTransition,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+    withSequence,
+    ZoomIn,
+    ZoomOut
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
+import { logger } from '@/utils/logger';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
+    const pulse = useSharedValue(1);
 
-    // Design Decision: We show "Connecting..." even if track is null to give feedback.
+    useEffect(() => {
+        if (isConnected) {
+            pulse.value = withRepeat(
+                withSequence(
+                    withTiming(1.5, { duration: 1000 }),
+                    withTiming(1, { duration: 1000 })
+                ),
+                -1,
+                true
+            );
+        } else {
+            pulse.value = 1;
+        }
+    }, [isConnected]);
+
+    const pulseStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulse.value }],
+        opacity: isConnected ? 0.6 : 1
+    }));
+
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
     return (
-        <View style={styles.wrapper}>
-            <View style={styles.container}>
+        <BlurView intensity={80} tint="dark" style={styles.wrapper}>
+            <Animated.View layout={LinearTransition} style={styles.container}>
                 <View style={styles.content}>
-                    {/* Album Art Placeholder or Image */}
-                    <View style={styles.artwork}>
+                    {/* Album Art Container */}
+                    <Animated.View
+                        layout={LinearTransition}
+                        style={styles.artwork}
+                    >
                         {nowPlaying?.albumArt ? (
-                            <Image
+                            <Animated.Image
+                                entering={FadeIn.duration(400)}
+                                key={nowPlaying.albumArt}
                                 source={{ uri: nowPlaying.albumArt }}
                                 style={styles.artworkImage}
                                 resizeMode="cover"
@@ -24,56 +63,76 @@ export const NowPlayingBanner = () => {
                         ) : (
                             <View style={styles.artworkPlaceholder} />
                         )}
-                    </View>
+                    </Animated.View>
 
-                    {/* Info */}
+                    {/* Info Container */}
                     <View style={styles.info}>
-                        <Text style={styles.track} numberOfLines={1}>
-                            {nowPlaying?.track || 'Waiting for Track...'}
-                        </Text>
-                        <Text style={styles.artist} numberOfLines={1}>
-                            {nowPlaying?.artist || (isConnecting ? 'Connecting...' : 'Not Playing')}
-                        </Text>
+                        <Animated.Text
+                            key={nowPlaying?.track || 'empty'}
+                            entering={FadeIn.duration(300)}
+                            style={styles.track}
+                            numberOfLines={1}
+                        >
+                            {nowPlaying?.track || (isConnecting ? 'Connecting...' : 'Waiting for Track...')}
+                        </Animated.Text>
+                        <Animated.Text
+                            key={nowPlaying?.artist || 'empty'}
+                            entering={FadeIn.delay(100).duration(300)}
+                            style={styles.artist}
+                            numberOfLines={1}
+                        >
+                            {nowPlaying?.artist || (isConnecting ? 'Establishing WebSocket...' : 'Not Playing')}
+                        </Animated.Text>
                     </View>
 
-                    {/* Status Indicator */}
-                    <View style={[
-                        styles.statusDot,
-                        isConnected ? styles.statusConnected : styles.statusDisconnected,
-                        isConnecting && styles.statusConnecting
-                    ]} />
+                    {/* Status Indicator Container */}
+                    <View style={styles.statusContainer}>
+                        <Animated.View style={[
+                            styles.statusDot,
+                            isConnected ? styles.statusConnected : styles.statusDisconnected,
+                            isConnecting && styles.statusConnecting,
+                            pulseStyle
+                        ]} />
+                        {isConnected && (
+                            <Animated.View
+                                entering={ZoomIn}
+                                exiting={ZoomOut}
+                                style={[styles.statusPulse, pulseStyle]}
+                            />
+                        )}
+                    </View>
                 </View>
-            </View>
-        </View>
+            </Animated.View>
+        </BlurView>
     );
 };
 
 const styles = StyleSheet.create({
     wrapper: {
         width: '100%',
-        overflow: 'hidden',
         borderTopLeftRadius: THEME.radius.lg,
         borderTopRightRadius: THEME.radius.lg,
         borderTopWidth: 1,
-        borderColor: THEME.colors.glassBorder,
+        borderColor: 'rgba(255, 255, 255, 0.12)',
+        backgroundColor: 'rgba(15, 16, 22, 0.4)', // Base glass tint
     },
     container: {
-        paddingTop: THEME.spacing.md,
-        paddingBottom: THEME.spacing.sm,
-        backgroundColor: THEME.colors.surface, // Solid background for readability
+        paddingVertical: 10, // Tighter padding for space efficiency
     },
     content: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: THEME.spacing.lg,
+        paddingHorizontal: THEME.spacing.md,
         gap: THEME.spacing.md,
     },
     artwork: {
-        width: 42,
-        height: 42,
+        width: 38, // Slightly smaller
+        height: 38,
         borderRadius: THEME.radius.sm,
         backgroundColor: THEME.colors.surfaceLight,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     artworkImage: {
         width: '100%',
@@ -89,25 +148,38 @@ const styles = StyleSheet.create({
     },
     track: {
         color: THEME.colors.white,
-        fontSize: 14,
-        fontWeight: '600',
-        letterSpacing: 0.2,
+        fontSize: 13, // Tighter font
+        fontWeight: 'bold',
+        letterSpacing: 0.1,
     },
     artist: {
         color: THEME.colors.textDim,
-        fontSize: 12,
-        marginTop: 2,
+        fontSize: 11,
+        marginTop: 1,
+    },
+    statusContainer: {
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     statusDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        zIndex: 2,
+    },
+    statusPulse: {
+        position: 'absolute',
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: THEME.colors.status.success,
+        opacity: 0.4,
+        zIndex: 1,
     },
     statusConnected: {
         backgroundColor: THEME.colors.status.success,
-        shadowColor: THEME.colors.status.success,
-        shadowOpacity: 0.5,
-        shadowRadius: 4,
     },
     statusConnecting: {
         backgroundColor: THEME.colors.status.warning,

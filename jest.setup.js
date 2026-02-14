@@ -36,4 +36,20 @@ jest.mock('expo-modules-core', () => ({
     requireNativeModule: jest.fn(() => ({})),
 }));
 
+// Mock Reanimated
+require('react-native-reanimated/mock');
+
+// Mock expo-blur
+jest.mock('expo-blur', () => ({
+    BlurView: ({ children, style }) => <View style={style}>{children}</View>,
+}));
+
+// Mock expo-haptics
+jest.mock('expo-haptics', () => ({
+    impactAsync: jest.fn(),
+    notificationAsync: jest.fn(),
+    ImpactFeedbackStyle: { Medium: 'medium' },
+    NotificationFeedbackType: { Success: 'success' },
+}));
+
 export { };
