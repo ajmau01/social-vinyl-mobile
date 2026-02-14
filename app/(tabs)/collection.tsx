@@ -30,7 +30,7 @@ export default function CollectionScreen() {
     } = useSessionStore();
 
     // Hooks for data and sync
-    const { releases, loading, refresh } = useCollectionData(searchQuery);
+    const { releases, loading, refresh } = useCollectionData();
     const { groupedReleases, isEmpty } = useGroupedReleases({
         releases,
         groupBy: viewMode,

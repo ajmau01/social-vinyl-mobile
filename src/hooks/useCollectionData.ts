@@ -11,7 +11,7 @@ import { CONFIG } from '@/config';
  * Fetches entire collection from local SQLite database.
  * Supports search and auto-refresh on sync completion.
  */
-export const useCollectionData = (searchQuery: string = '') => {
+export const useCollectionData = () => {
     const { username } = useSessionStore();
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export const useCollectionData = (searchQuery: string = '') => {
 
         try {
             // Fetch all releases at once (no pagination)
-            // Search filtering is done client-side by useGroupedReleases hook with diacritic support
+            // Search filtering is done client-side by useGroupedReleases hook
             const items = await dbService.getReleases(username);
             setReleases(items);
 
@@ -42,12 +42,12 @@ export const useCollectionData = (searchQuery: string = '') => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [username, searchQuery, loading]);
+    }, [username, loading]);
 
-    // Initial load and search trigger
+    // Initial load
     useEffect(() => {
-        loadData(true);
-    }, [searchQuery]);
+        loadData();
+    }, [loadData]);
 
     // AUTO-REFRESH: Reload when sync completes (with small delay for DB writes)
     const syncStatus = useSessionStore((s) => s.syncStatus);

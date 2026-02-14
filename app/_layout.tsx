@@ -20,7 +20,9 @@ if (CONFIG.IS_E2E) {
 
 // Initialize Sentry before the component renders
 // Harden check: Only initialize if DSN looks valid (starts with https://)
-if (!CONFIG.IS_E2E && CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string' && CONFIG.SENTRY_DSN.startsWith('https://')) {
+const shouldInitSentry = !CONFIG.IS_E2E && CONFIG.SENTRY_DSN && typeof CONFIG.SENTRY_DSN === 'string' && CONFIG.SENTRY_DSN.startsWith('https://');
+
+if (shouldInitSentry) {
   Sentry.init({
     dsn: CONFIG.SENTRY_DSN,
     debug: __DEV__,
@@ -80,7 +82,7 @@ function RootLayout() {
   );
 }
 
-const ExportedLayout = CONFIG.IS_E2E ? RootLayout : Sentry.wrap(RootLayout);
+const ExportedLayout = shouldInitSentry ? Sentry.wrap(RootLayout) : RootLayout;
 export default ExportedLayout;
 
 const styles = StyleSheet.create({
