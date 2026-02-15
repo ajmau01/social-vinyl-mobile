@@ -66,6 +66,13 @@ export class DatabaseService implements IDatabaseService {
                     await this.db.execAsync('ALTER TABLE releases ADD COLUMN isNotable INTEGER DEFAULT 0');
                 }
 
+                // Ensure 'spinCount' column exists (Migration for Phase 9)
+                const hasSpinCount = columns.some(col => col.name === 'spinCount');
+                if (!hasSpinCount && columns.length > 0) {
+                    logger.log('[DB] Migrating: Adding spinCount column...');
+                    await this.db.execAsync('ALTER TABLE releases ADD COLUMN spinCount INTEGER DEFAULT 0');
+                }
+
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
                         id INTEGER NOT NULL,
@@ -82,6 +89,7 @@ export class DatabaseService implements IDatabaseService {
                         tracks TEXT,
                         isSaved INTEGER DEFAULT 0,
                         isNotable INTEGER DEFAULT 0,
+                        spinCount INTEGER DEFAULT 0,
                         PRIMARY KEY (instanceId)
                     );
 
@@ -106,7 +114,7 @@ export class DatabaseService implements IDatabaseService {
 
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?))',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?))',
                 release.id,
                 release.instanceId,
                 release.userId,
@@ -122,7 +130,9 @@ export class DatabaseService implements IDatabaseService {
                 release.instanceId,
                 release.isSaved ? 1 : 0,
                 release.instanceId,
-                release.isNotable ? 1 : 0
+                release.isNotable ? 1 : 0,
+                release.instanceId,
+                release.spinCount || 0
             );
         } catch (error) {
             logger.error('[DB] Failed to save release', error);
@@ -137,7 +147,7 @@ export class DatabaseService implements IDatabaseService {
             await db.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await db.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?))',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?))',
                         release.id,
                         release.instanceId,
                         release.userId,
@@ -153,7 +163,9 @@ export class DatabaseService implements IDatabaseService {
                         release.instanceId,
                         release.isSaved ? 1 : 0,
                         release.instanceId,
-                        release.isNotable ? 1 : 0
+                        release.isNotable ? 1 : 0,
+                        release.instanceId,
+                        release.spinCount || 0
                     );
                 }
             });

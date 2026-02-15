@@ -42,6 +42,7 @@ export interface Release {
     tracks?: string; // JSON String
     isSaved?: boolean;
     isNotable?: boolean;
+    spinCount?: number;
 }
 
 /**
@@ -87,6 +88,7 @@ export interface BackendAlbum {
     isNotable?: boolean;
     isSaved?: boolean;
     addedTimestamp?: number;
+    spinCount?: number;
 }
 
 export interface LoginResult {

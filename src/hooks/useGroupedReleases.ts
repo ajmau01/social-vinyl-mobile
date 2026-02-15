@@ -159,6 +159,12 @@ export const useGroupedReleases = ({
                 if (release.isSaved) {
                     keys.push('Saved Albums');
                 }
+            } else if (groupBy === 'spin') {
+                const count = release.spinCount || 0;
+                if (count >= 10) keys.push('Heavy Rotation');
+                else if (count >= 3) keys.push('Regular Play');
+                else if (count >= 1) keys.push('Occasional Play');
+                else keys.push('Never Played');
             }
 
             keys.forEach(key => {
@@ -195,6 +201,11 @@ export const useGroupedReleases = ({
                     if (!isNaN(yearA) && !isNaN(yearB)) return yearB - yearA;
 
                     return 0;
+                }
+
+                if (groupBy === 'spin') {
+                    const order = ['Heavy Rotation', 'Regular Play', 'Occasional Play', 'Never Played'];
+                    return order.indexOf(a) - order.indexOf(b);
                 }
 
                 if (a === '#' || a === 'Unknown') return 1;

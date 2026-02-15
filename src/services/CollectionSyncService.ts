@@ -26,6 +26,7 @@ interface BackendAlbum {
     addedTimestamp?: number; // Backend timestamp (ms)
     isNotable?: boolean; // Backend notable flag
     isSaved?: boolean;   // Backend saved flag
+    spinCount?: number;  // Backend play count
 }
 
 interface ScanResponse {
@@ -215,7 +216,8 @@ class CollectionSyncService implements ISyncService {
                 format: item.format,
                 tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
                 isSaved: item.isSaved || false,
-                isNotable: item.isNotable || false
+                isNotable: item.isNotable || false,
+                spinCount: item.spinCount || 0
             });
         }
 
