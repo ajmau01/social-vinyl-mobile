@@ -40,11 +40,22 @@ interface SessionState {
     setSyncProgress: (progress: number | null) => void;
     setLastSyncTime: (time: number) => void;
     setSyncError: (error: string | null) => void;
+
+    // Issue #125: Protocol Features
+    enabledFeatures: string[];
+    setEnabledFeatures: (features: string[]) => void;
+    isFeatureEnabled: (feature: string) => boolean;
+
+    // Issue #126: Session Metadata
+    sessionName: string | null;
+    hostUsername: string | null;
+    setSessionName: (name: string | null) => void;
+    setHostUsername: (username: string | null) => void;
 }
 
 export const useSessionStore = create<SessionState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             connectionState: 'disconnected',
             sessionId: null,
             nowPlaying: null,
@@ -119,6 +130,20 @@ export const useSessionStore = create<SessionState>()(
             setSyncProgress: (progress) => set({ syncProgress: progress }),
             setLastSyncTime: (time) => set({ lastSyncTime: time }),
             setSyncError: (error) => set({ syncError: error }),
+
+            // Issue #125: Protocol Features
+            enabledFeatures: [],
+            setEnabledFeatures: (features) => set({ enabledFeatures: features }),
+            isFeatureEnabled: (feature) => {
+                const { enabledFeatures } = get();
+                return enabledFeatures.includes(feature);
+            },
+
+            // Issue #126: Session Metadata
+            sessionName: null,
+            hostUsername: null,
+            setSessionName: (name) => set({ sessionName: name }),
+            setHostUsername: (username) => set({ hostUsername: username }),
         }),
         {
             name: 'session-storage',
@@ -129,7 +154,8 @@ export const useSessionStore = create<SessionState>()(
                 sessionId: state.sessionId,
                 sessionSecret: state.sessionSecret,
                 lastMode: state.lastMode,
-                lastSyncTime: state.lastSyncTime
+                lastSyncTime: state.lastSyncTime,
+                enabledFeatures: state.enabledFeatures
             }),
         }
     )

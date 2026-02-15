@@ -1,28 +1,35 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Pressable, SafeAreaView, Alert } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, Alert } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
-import { BinItem } from '@/types';
+import { BinItem as BinItemType } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BinItem } from '@/components/BinItem';
+import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export default function BinScreen() {
     const { username } = useSessionStore();
-    const { items, removeItem, clearBin } = useListeningBinStore();
+    const { items, removeItem, clearBin, setBin } = useListeningBinStore();
 
     // SCOPING: Only show items for the current user
-    const userItems = useMemo(() =>
-        items.filter(item => item.userId === username),
-        [items, username]);
+    // FIXED: For Party Mode, we want to see ALL items in the session
+    const userItems = items; // useMemo(() => items.filter(item => item.userId === username), [items, username]);
 
-    const handleRemove = (item: BinItem) => {
+    const handleRemove = (item: BinItemType) => {
         if (!username) return;
         Alert.alert(
             'Remove Album',
             `Are you sure you want to remove "${item.title}" from your Listening Bin?`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Remove', style: 'destructive', onPress: () => removeItem(item.id, username) },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: () => listeningBinSyncService.removeTrack(item.id)
+                },
             ]
         );
     };
@@ -34,33 +41,42 @@ export default function BinScreen() {
             'Are you sure you want to clear all albums from your Listening Bin?',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear All', style: 'destructive', onPress: () => clearBin(username) },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: () => listeningBinSyncService.clearBin()
+                },
             ]
         );
     };
 
-    const renderItem = ({ item }: { item: BinItem }) => (
-        <View testID={`bin-item-${item.id}`} style={styles.card}>
-            <Image source={{ uri: item.thumb_url || '' }} style={styles.thumbnail} />
-            <View style={styles.info}>
-                <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.artist} numberOfLines={1}>{item.artist}</Text>
-                <Text style={styles.meta} numberOfLines={1}>
-                    {item.format} • {item.year}
-                </Text>
-            </View>
-            <Pressable
-                testID={`bin-remove-${item.id}`}
-                onPress={() => handleRemove(item)}
-                style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
-            >
-                <Ionicons name="trash-outline" size={20} color={THEME.colors.status.error} />
-            </Pressable>
-        </View>
-    );
+    const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<BinItemType>) => (
+        <BinItem
+            item={item}
+            isActive={isActive}
+            drag={drag}
+            onRemove={handleRemove}
+            canDelete={item.userId === username || username === useSessionStore.getState().hostUsername}
+        />
+    ), [handleRemove]);
+
+    const onDragEnd = async ({ data }: { data: BinItemType[] }) => {
+        // Optimistic Update: Update store immediately
+        // We need to merge with other users' items if any, but since we scoped
+        // we should handle this carefully.
+        // Actually setBin replaces ALL items.
+        // So we need to take non-user items + new user items order.
+
+        const otherItems = items.filter(item => item.userId !== username);
+        setBin([...otherItems, ...data]);
+
+        // Sync with backend
+        const ids = data.map(item => item.id);
+        await listeningBinSyncService.reorderTracks(ids);
+    };
 
     return (
-        <View style={styles.container}>
+        <GestureHandlerRootView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Listening Bin</Text>
@@ -78,16 +94,18 @@ export default function BinScreen() {
                         <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
                     </View>
                 ) : (
-                    <FlatList
+                    <DraggableFlatList
                         testID="bin-list"
                         data={userItems}
+                        onDragEnd={onDragEnd}
+                        keyExtractor={(item, index) => item.frontendId || `${item.id}-${index}`}
                         renderItem={renderItem}
-                        keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.listContent}
+                        containerStyle={styles.listContent}
+                        activationDistance={20}
                     />
                 )}
             </SafeAreaView>
-        </View>
+        </GestureHandlerRootView>
     );
 }
 
@@ -125,42 +143,6 @@ const styles = StyleSheet.create({
         padding: THEME.spacing.md,
         paddingBottom: THEME.layout.tabBarHeight + 40,
     },
-    card: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: THEME.colors.glass,
-        borderRadius: THEME.radius.md,
-        padding: THEME.spacing.sm,
-        marginBottom: THEME.spacing.sm,
-        borderWidth: 1,
-        borderColor: THEME.colors.glassBorder,
-    },
-    thumbnail: {
-        width: 60,
-        height: 60,
-        borderRadius: THEME.radius.sm,
-    },
-    info: {
-        flex: 1,
-        marginLeft: THEME.spacing.md,
-    },
-    title: {
-        color: THEME.colors.white,
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    artist: {
-        color: THEME.colors.textDim,
-        fontSize: 12,
-    },
-    meta: {
-        color: THEME.colors.textDim,
-        fontSize: 10,
-        marginTop: 2,
-    },
-    removeButton: {
-        padding: THEME.spacing.sm,
-    },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -178,8 +160,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginTop: THEME.spacing.xs,
-    },
-    pressed: {
-        opacity: 0.7,
     },
 });

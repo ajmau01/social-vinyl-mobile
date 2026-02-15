@@ -10,7 +10,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-
+import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { LogBox } from 'react-native';
 
 if (CONFIG.IS_E2E) {
@@ -56,6 +56,8 @@ function RootLayout() {
   // Hydrate token from SecureStore on app start
   useEffect(() => {
     hydrateCredentials();
+    // Issue #126: Initialize Listening Bin Sync Service
+    listeningBinSyncService.init();
   }, []);
 
   // Activate Session Timeout Logic (handles E2E internally)

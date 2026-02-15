@@ -35,6 +35,9 @@ export const WebSocketMessageSchema = z.object({
     action: z.string().optional(),
     message: z.string().optional(),
     error: z.string().optional(),
+    // Issue #125 types
+    actionId: z.string().optional(),
+    status: z.enum(['success', 'error']).optional(),
     sessionId: IdSchema.optional(),
     authToken: z.string().optional(),
     username: z.string().optional(),
@@ -57,3 +60,46 @@ export const AuthResponseSchema = z.object({
     username: z.string().optional(),
     message: z.string().optional(),
 }).passthrough();
+
+/**
+ * Schema for Protocol Handshake (Client -> Server)
+ * Issue #125
+ */
+export const ProtocolHandshakeSchema = z.object({
+    type: z.literal('PROTOCOL_HANDSHAKE'),
+    version: z.string(),
+    capabilities: z.array(z.string()),
+});
+
+/**
+ * Schema for Protocol ACK (Server -> Client)
+ * Issue #125
+ */
+export const ProtocolAckSchema = z.object({
+    type: z.literal('PROTOCOL_ACK'),
+    supported: z.boolean(),
+    enabledFeatures: z.array(z.string()),
+});
+
+/**
+ * Schema for Client Action (Client -> Server)
+ * Issue #125
+ */
+export const ClientActionSchema = z.object({
+    type: z.literal('CLIENT_ACTION'),
+    action: z.string().min(1),
+    actionId: z.string().uuid(),
+    payload: z.any().optional(),
+});
+
+/**
+ * Schema for Action ACK (Server -> Client)
+ * Issue #125
+ */
+export const ActionAckSchema = z.object({
+    type: z.literal('ACTION_ACK'),
+    actionId: z.string().uuid(),
+    status: z.enum(['success', 'error']),
+    error: z.string().optional(),
+    data: z.any().optional(),
+});
