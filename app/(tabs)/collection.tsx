@@ -12,7 +12,7 @@ import { SessionDrawer } from '@/components/SessionDrawer';
 import { CollectionHeader } from '@/components/CollectionHeader';
 import { SearchBar } from '@/components/SearchBar';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
-import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode } from '@/hooks';
+import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode, useDailySpin } from '@/hooks';
 import { DatabaseService } from '@/services/DatabaseService';
 import { syncService } from '@/services/CollectionSyncService';
 
@@ -31,20 +31,41 @@ export default function CollectionScreen() {
     } = useSessionStore();
 
     // Hooks for data and sync
-    const { releases, loading, refresh } = useCollectionData();
-    const { groupedReleases, filteredReleases, isEmpty } = useGroupedReleases({
+    const { releases, loading: loadingCollection, refresh: refreshCollection } = useCollectionData();
+
+    // Inventory Data (Standard Views)
+    const { groupedReleases, filteredReleases, isEmpty: isCollectionEmpty } = useGroupedReleases({
         releases,
-        groupBy: viewMode,
+        groupBy: viewMode === 'spin' ? 'none' : viewMode, // Don't group inventory if in spin mode
         sortBy: 'artist',
         searchQuery
     });
+
+    // History Data (Daily Spin View)
+    const { historySections, loading: loadingHistory, refresh: refreshHistory } = useDailySpin(username);
+
+    // Determine which data to show
+    const isSpinMode = viewMode === 'spin';
+    const activeSections = isSpinMode ? historySections : groupedReleases;
+    const isLoading = isSpinMode ? loadingHistory : loadingCollection;
+
+    // For random pick, use inventory (always pick from full collection, not history)
+    const randomSource = releases;
+
     const { sync } = useSyncCollection();
 
     const handleSync = useCallback(async () => {
         if (!username) return;
-        await sync(username);
-        refresh();
-    }, [username, sync, refresh]);
+
+        if (isSpinMode) {
+            // If in history view, just refresh history
+            await refreshHistory();
+        } else {
+            // standard full sync
+            await sync(username);
+            refreshCollection();
+        }
+    }, [username, sync, refreshCollection, refreshHistory, isSpinMode]);
 
     const handleRandomPress = useCallback(() => {
         const source = filteredReleases.length > 0 ? filteredReleases : releases;
@@ -90,7 +111,7 @@ export default function CollectionScreen() {
                             }
 
                             logger.info(`[CollectionScreen] Release ${release.title} notable state toggled locally: ${newState}`);
-                            refresh();
+                            refreshCollection();
 
                             if (username) {
                                 await syncService.toggleNotable(username, release.id);
@@ -114,7 +135,7 @@ export default function CollectionScreen() {
                             }
 
                             logger.info(`[CollectionScreen] Release ${release.title} saved state toggled locally: ${newState}`);
-                            refresh();
+                            refreshCollection();
 
                             if (username) {
                                 await syncService.toggleSaved(username, release.id);
@@ -130,7 +151,7 @@ export default function CollectionScreen() {
                 }
             ]
         );
-    }, [refresh, username]);
+    }, [refreshCollection, username]);
 
     return (
         <View style={styles.container}>
@@ -144,7 +165,7 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
-                    isRandomDisabled={loading || (searchQuery.trim().length > 0 && filteredReleases.length === 0) || releases.length === 0}
+                    isRandomDisabled={loadingCollection || (searchQuery.trim().length > 0 && filteredReleases.length === 0) || releases.length === 0}
                     onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
@@ -166,13 +187,13 @@ export default function CollectionScreen() {
                 )}
 
                 <CollectionSectionView
-                    sections={groupedReleases}
+                    sections={activeSections}
                     onReleasePress={setSelectedRelease}
                     onReleaseLongPress={handleReleaseLongPress}
                     onRefresh={handleSync}
                     refreshing={syncStatus === 'syncing'}
-                    loading={loading}
-                    isEmpty={isEmpty}
+                    loading={isLoading}
+                    isEmpty={isSpinMode ? historySections.length === 0 : isCollectionEmpty}
                     username={username}
                 />
 

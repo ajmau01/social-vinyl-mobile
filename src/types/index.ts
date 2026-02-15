@@ -43,6 +43,7 @@ export interface Release {
     isSaved?: boolean;
     isNotable?: boolean;
     spinCount?: number;
+    playedAt?: number; // History timestamp (ms)
 }
 
 /**

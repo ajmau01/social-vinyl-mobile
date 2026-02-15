@@ -22,6 +22,7 @@ import {
 export interface IWebSocketService {
     setCallbacks(callbacks: WebSocketCallbacks): void;
     clearCallbacks(): void;
+    addCallback<T>(event: string, callback: (data: T) => void): () => void;
     connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string): void;
     disconnect(): void;
     login(username: string, password: string): AsyncResult<LoginResult>;
