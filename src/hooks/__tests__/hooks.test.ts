@@ -351,5 +351,32 @@ describe('Phase 2 Hooks', () => {
             expect(result.current.groupedReleases[0].data).toHaveLength(2);
             expect(result.current.groupedReleases[0].data.map(r => r.title)).toEqual(['Saved 1', 'Saved 2']);
         });
+
+        it('should group by spinCount', () => {
+            const releasesWithSpins: Release[] = [
+                { id: 1, title: 'Heavy', spinCount: 15, artist: 'A' } as Release,
+                { id: 2, title: 'Regular', spinCount: 5, artist: 'B' } as Release,
+                { id: 3, title: 'Occasional', spinCount: 1, artist: 'C' } as Release,
+                { id: 4, title: 'Never', spinCount: 0, artist: 'D' } as Release,
+                { id: 5, title: 'Undefined', spinCount: undefined, artist: 'E' } as Release
+            ];
+
+            const { result } = renderHook(() => useGroupedReleases({
+                releases: releasesWithSpins,
+                groupBy: 'spin',
+                sortBy: 'artist',
+                searchQuery: ''
+            }));
+
+            const sections = result.current.groupedReleases;
+            expect(sections).toHaveLength(4);
+            expect(sections[0].title).toBe('Heavy Rotation');
+            expect(sections[1].title).toBe('Regular Play');
+            expect(sections[2].title).toBe('Occasional Play');
+            expect(sections[3].title).toBe('Never Played');
+
+            expect(sections[0].data[0].title).toBe('Heavy');
+            expect(sections[3].data).toHaveLength(2); // Never + Undefined
+        });
     });
 });

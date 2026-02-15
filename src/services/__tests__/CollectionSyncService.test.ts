@@ -1,4 +1,5 @@
 import { syncService } from '../CollectionSyncService';
+import { Release } from '@/types';
 import { dbService } from '../DatabaseService';
 import { useSessionStore } from '../../store/useSessionStore';
 import { CONFIG } from '../../config';

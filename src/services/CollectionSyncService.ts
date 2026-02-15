@@ -26,6 +26,7 @@ interface BackendAlbum {
     addedTimestamp?: number; // Backend timestamp (ms)
     isNotable?: boolean; // Backend notable flag
     isSaved?: boolean;   // Backend saved flag
+    spinCount?: number;  // Backend play count
 }
 
 interface ScanResponse {
@@ -215,7 +216,8 @@ class CollectionSyncService implements ISyncService {
                 format: item.format,
                 tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
                 isSaved: item.isSaved || false,
-                isNotable: item.isNotable || false
+                isNotable: item.isNotable || false,
+                spinCount: item.spinCount || 0
             });
         }
 
@@ -243,6 +245,49 @@ class CollectionSyncService implements ISyncService {
             return { success: false, error: new Error('No tracks found') };
         } catch (error) {
             logger.error('[Sync] Failed to fetch tracks:', error);
+            return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+        }
+    }
+
+    /**
+     * Fetches the user's daily spin history (recent plays).
+     * Maps backend PartyHistoryEntry to Release type.
+     */
+    public async fetchDailySpin(userId: string): AsyncResult<Release[]> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=daily-spin&username=${userId}`;
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Fetching daily spin history:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data && data.tracks && Array.isArray(data.tracks)) {
+                // Map history entries to Release objects
+                const historyReleases: Release[] = data.tracks.map((track: any) => ({
+                    id: track.releaseId || 0,
+                    instanceId: track.releaseId || 0, // History might not preserve instanceId
+                    userId: userId,
+                    title: track.title || 'Unknown Title',
+                    artist: track.artist || 'Unknown Artist',
+                    thumb_url: track.coverImage || null,
+                    added_at: 0, // Not relevant
+                    // Ensure playedAt is a number (ms)
+                    playedAt: typeof track.playedAt === 'number' ? track.playedAt : Date.now(),
+                    year: '',
+                    isNotable: false,
+                    isSaved: false,
+                    spinCount: track.likeCount || 0 // Reusing spinCount for like count in history view if desired, or 0
+                }));
+
+                return { success: true, data: historyReleases };
+            }
+
+            return { success: true, data: [] };
+        } catch (error) {
+            logger.error('[Sync] Failed to fetch daily spin history:', error);
             return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
         }
     }

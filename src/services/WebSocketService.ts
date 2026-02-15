@@ -27,6 +27,7 @@ class WebSocketService implements IWebSocketService {
         sessionSecret?: string;
     } | null = null;
     private authTimeout: any = null;
+    private extraOnNowPlaying: ((data: any) => void) | undefined;
 
     private constructor() { }
 
@@ -37,13 +38,6 @@ class WebSocketService implements IWebSocketService {
         return WebSocketService.instance;
     }
 
-    public setCallbacks(callbacks: WebSocketCallbacks) {
-        this.callbacks = callbacks;
-    }
-
-    public clearCallbacks() {
-        this.callbacks = null;
-    }
 
     public connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string) {
         if (this.socket?.readyState === WebSocket.OPEN) return;
@@ -333,6 +327,44 @@ class WebSocketService implements IWebSocketService {
                 );
             }
         }, delay);
+    }
+
+    public setCallbacks(callbacks: WebSocketCallbacks) {
+        // Inject persistent listener if present
+        if (this.extraOnNowPlaying) {
+            const newCallback = callbacks.onNowPlaying;
+            const extra = this.extraOnNowPlaying;
+            callbacks.onNowPlaying = (data) => {
+                // Call original hook's listener (e.g. for banner)
+                if (newCallback) newCallback(data);
+                // Call extra listener (e.g. for Daily Spin)
+                extra(data);
+            };
+        }
+        this.callbacks = callbacks;
+    }
+
+    public clearCallbacks() {
+        this.callbacks = null;
+    }
+
+    public addCallback<T>(event: string, callback: (data: T) => void): () => void {
+        if (event === 'onNowPlaying') {
+            this.extraOnNowPlaying = callback as any;
+
+            // Should also inject into current callbacks if they exist
+            if (this.callbacks) {
+                const currentCallback = this.callbacks.onNowPlaying;
+                this.callbacks.onNowPlaying = (data) => {
+                    if (currentCallback) currentCallback(data);
+                    callback(data as any);
+                };
+            }
+        }
+
+        return () => {
+            this.extraOnNowPlaying = undefined;
+        };
     }
 }
 
