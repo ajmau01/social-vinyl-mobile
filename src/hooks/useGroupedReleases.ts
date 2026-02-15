@@ -115,53 +115,58 @@ export const useGroupedReleases = ({
         }
 
         sorted.forEach(release => {
-            let key = 'Unknown';
+            const keys: string[] = [];
 
             if (groupBy === 'artist') {
                 const sortKey = getArtistSortKey(release.artist);
                 const firstChar = sortKey.charAt(0).toUpperCase();
-                key = /^[A-Z]/.test(firstChar) ? firstChar : '#';
+                keys.push(/^[A-Z]/.test(firstChar) ? firstChar : '#');
             } else if (groupBy === 'genre') {
                 if (release.genres && release.genres.length > 0) {
                     // Use the first genre as per clarification
                     const genres = release.genres.split(',').map(g => g.trim());
-                    key = genres[0] || 'Unknown';
+                    keys.push(genres[0] || 'Unknown');
+                } else {
+                    keys.push('Unknown');
                 }
             } else if (groupBy === 'decade') {
                 if (release.year) {
                     const yearNum = parseInt(release.year);
                     if (!isNaN(yearNum)) {
                         const decade = Math.floor(yearNum / 10) * 10;
-                        key = `${decade}s`;
+                        keys.push(`${decade}s`);
                     } else {
-                        key = 'Unknown';
+                        keys.push('Unknown');
                     }
                 } else {
-                    key = 'Unknown';
+                    keys.push('Unknown');
                 }
             } else if (groupBy === 'new') {
-                // "N&N" Logic: Notable (Saved) + New (Last 6 Months)
-                if (release.isSaved) {
-                    key = 'Notable';
-                } else {
-                    const now = Date.now();
-                    const addedMs = release.added_at * 1000;
-                    const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
+                // "N&N" Logic: Notable (Host-curated) + New (Last 6 Months)
+                if (release.isNotable) {
+                    keys.push('Notable');
+                }
 
-                    // Filter: Only show items added in the last 6 months
-                    if (now - addedMs > sixMonthsMs) return;
+                const now = Date.now();
+                const addedMs = release.added_at * 1000;
+                const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
 
-                    key = `New: ${getTimePeriodKey(release.added_at)}`;
+                // Only show in chronological sections if added in the last 6 months
+                if (now - addedMs <= sixMonthsMs) {
+                    keys.push(`New: ${getTimePeriodKey(release.added_at)}`);
                 }
             } else if (groupBy === 'saved') {
-                if (!release.isSaved) return; // Skip unsaved
-                key = 'Saved Albums';
+                if (release.isSaved) {
+                    keys.push('Saved Albums');
+                }
             }
 
-            if (!groups[key]) {
-                groups[key] = [];
-            }
-            groups[key].push(release);
+            keys.forEach(key => {
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(release);
+            });
         });
 
         // 4. Sort keys and transform to SectionList format

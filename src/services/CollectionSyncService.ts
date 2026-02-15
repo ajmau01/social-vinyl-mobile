@@ -25,6 +25,7 @@ interface BackendAlbum {
     date_added?: string; // ISO date string from Discogs/Backend
     addedTimestamp?: number; // Backend timestamp (ms)
     isNotable?: boolean; // Backend notable flag
+    isSaved?: boolean;   // Backend saved flag
 }
 
 interface ScanResponse {
@@ -213,7 +214,8 @@ class CollectionSyncService implements ISyncService {
                 label: item.label,
                 format: item.format,
                 tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
-                isSaved: item.isNotable || false // Map Backend Notable -> Mobile Saved
+                isSaved: item.isSaved || false,
+                isNotable: item.isNotable || false
             });
         }
 
@@ -269,6 +271,33 @@ class CollectionSyncService implements ISyncService {
             }
         } catch (error) {
             logger.error('[Sync] Error toggling notable status:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Toggles the 'Saved' (Guest) status on the backend.
+     */
+    public async toggleSaved(userId: string, releaseId: number): Promise<boolean> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=toggleSaved&username=${userId}&releaseId=${releaseId}`;
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Toggling saved status:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                logger.log(`[Sync] Successfully toggled saved for release ${releaseId} to ${data.isSaved}`);
+                return true;
+            } else {
+                logger.error('[Sync] Failed to toggle saved:', data.error);
+                return false;
+            }
+        } catch (error) {
+            logger.error('[Sync] Error toggling saved status:', error);
             return false;
         }
     }

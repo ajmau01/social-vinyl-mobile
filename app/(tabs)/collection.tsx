@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
@@ -32,7 +32,7 @@ export default function CollectionScreen() {
 
     // Hooks for data and sync
     const { releases, loading, refresh } = useCollectionData();
-    const { groupedReleases, isEmpty } = useGroupedReleases({
+    const { groupedReleases, filteredReleases, isEmpty } = useGroupedReleases({
         releases,
         groupBy: viewMode,
         sortBy: 'artist',
@@ -47,18 +47,19 @@ export default function CollectionScreen() {
     }, [username, sync, refresh]);
 
     const handleRandomPress = useCallback(() => {
-        if (!releases || releases.length === 0) return;
+        const source = filteredReleases.length > 0 ? filteredReleases : releases;
+        if (!source || source.length === 0) return;
 
-        const randomIndex = Math.floor(Math.random() * releases.length);
-        const randomRelease = releases[randomIndex];
+        const randomIndex = Math.floor(Math.random() * source.length);
+        const randomRelease = source[randomIndex];
 
-        logger.info(`[CollectionScreen] Random album selected: ${randomRelease.title}`);
+        logger.info(`[CollectionScreen] Random album selected: ${randomRelease.title} (from ${source.length} available)`);
 
         // Haptic feedback
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         setSelectedRelease(randomRelease);
-    }, [releases]);
+    }, [filteredReleases, releases]);
 
     const handleSearchToggle = useCallback(() => {
         const nextVisible = !isSearchVisible;
@@ -70,36 +71,65 @@ export default function CollectionScreen() {
         }
     }, [isSearchVisible]);
 
-    const handleReleaseLongPress = useCallback(async (release: Release) => {
-        try {
-            const db = DatabaseService.getInstance();
-            const isSaved = await db.toggleSaved(release.instanceId);
+    const handleReleaseLongPress = useCallback((release: Release) => {
+        Alert.alert(
+            "Highlight Album",
+            "Select an action for this release:",
+            [
+                {
+                    text: release.isNotable ? "Remove from Notable" : "Mark as Notable (Host)",
+                    onPress: async () => {
+                        try {
+                            const db = DatabaseService.getInstance();
+                            const newState = await db.toggleNotable(release.instanceId);
 
-            // Visual/Tactile Feedback
-            if (isSaved) {
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } else {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
+                            if (newState) {
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            } else {
+                                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            }
 
-            logger.info(`[CollectionScreen] Release ${release.title} saved locally: ${isSaved}`);
-            refresh(); // Trigger data refresh to show the indicator
+                            logger.info(`[CollectionScreen] Release ${release.title} notable state toggled locally: ${newState}`);
+                            refresh();
 
-            // Phase 9: Persist to Backend (Fire and Forget)
-            if (username) {
-                syncService.toggleNotable(username, release.id).then(success => {
-                    if (success) {
-                        logger.info(`[CollectionScreen] Release ${release.id} notable status synced to backend`);
-                    } else {
-                        logger.warn(`[CollectionScreen] Failed to sync notable status for release ${release.id}`);
-                        // Optional: Revert local state or show toast? 
-                        // For now, we trust the optimistic update and let next sync fix any drift.
+                            if (username) {
+                                await syncService.toggleNotable(username, release.id);
+                            }
+                        } catch (error) {
+                            logger.error('[CollectionScreen] Failed to toggle notable state', error);
+                        }
                     }
-                });
-            }
-        } catch (error) {
-            logger.error('[CollectionScreen] Failed to toggle saved state', error);
-        }
+                },
+                {
+                    text: release.isSaved ? "Remove from Saved" : "Save for Later (Guest)",
+                    onPress: async () => {
+                        try {
+                            const db = DatabaseService.getInstance();
+                            const newState = await db.toggleSaved(release.instanceId);
+
+                            if (newState) {
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            } else {
+                                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            }
+
+                            logger.info(`[CollectionScreen] Release ${release.title} saved state toggled locally: ${newState}`);
+                            refresh();
+
+                            if (username) {
+                                await syncService.toggleSaved(username, release.id);
+                            }
+                        } catch (error) {
+                            logger.error('[CollectionScreen] Failed to toggle saved state', error);
+                        }
+                    }
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                }
+            ]
+        );
     }, [refresh, username]);
 
     return (
@@ -114,7 +144,7 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
-                    isRandomDisabled={loading || !releases || releases.length === 0}
+                    isRandomDisabled={loading || (searchQuery.trim().length > 0 && filteredReleases.length === 0) || releases.length === 0}
                     onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}

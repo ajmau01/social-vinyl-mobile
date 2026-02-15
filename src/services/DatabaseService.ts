@@ -59,6 +59,13 @@ export class DatabaseService implements IDatabaseService {
                     await this.db.execAsync('ALTER TABLE releases ADD COLUMN isSaved INTEGER DEFAULT 0');
                 }
 
+                // Ensure 'isNotable' column exists (Migration for Phase 9)
+                const hasIsNotable = columns.some(col => col.name === 'isNotable');
+                if (!hasIsNotable && columns.length > 0) {
+                    logger.log('[DB] Migrating: Adding isNotable column...');
+                    await this.db.execAsync('ALTER TABLE releases ADD COLUMN isNotable INTEGER DEFAULT 0');
+                }
+
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
                         id INTEGER NOT NULL,
@@ -74,6 +81,7 @@ export class DatabaseService implements IDatabaseService {
                         format TEXT,
                         tracks TEXT,
                         isSaved INTEGER DEFAULT 0,
+                        isNotable INTEGER DEFAULT 0,
                         PRIMARY KEY (instanceId)
                     );
 
@@ -98,7 +106,7 @@ export class DatabaseService implements IDatabaseService {
 
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?))',
                 release.id,
                 release.instanceId,
                 release.userId,
@@ -111,7 +119,10 @@ export class DatabaseService implements IDatabaseService {
                 release.label || null,
                 release.format || null,
                 release.tracks || null,
-                release.instanceId
+                release.instanceId,
+                release.isSaved ? 1 : 0,
+                release.instanceId,
+                release.isNotable ? 1 : 0
             );
         } catch (error) {
             logger.error('[DB] Failed to save release', error);
@@ -126,7 +137,7 @@ export class DatabaseService implements IDatabaseService {
             await db.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await db.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), 0))',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?))',
                         release.id,
                         release.instanceId,
                         release.userId,
@@ -139,7 +150,10 @@ export class DatabaseService implements IDatabaseService {
                         release.label || null,
                         release.format || null,
                         release.tracks || null,
-                        release.instanceId
+                        release.instanceId,
+                        release.isSaved ? 1 : 0,
+                        release.instanceId,
+                        release.isNotable ? 1 : 0
                     );
                 }
             });
@@ -170,7 +184,8 @@ export class DatabaseService implements IDatabaseService {
             const rows = await db.getAllAsync<any>(query, params);
             return rows.map(row => ({
                 ...row,
-                isSaved: row.isSaved === 1
+                isSaved: row.isSaved === 1,
+                isNotable: row.isNotable === 1
             }));
         } catch (error) {
             logger.error('[DB] Failed to get releases', error);
@@ -191,13 +206,11 @@ export class DatabaseService implements IDatabaseService {
     public async toggleSaved(instanceId: number): Promise<boolean> {
         const db = await this.ensureDb();
         try {
-            // Atomic toggle: 1 -> 0, 0 -> 1
             await db.runAsync(
                 'UPDATE releases SET isSaved = 1 - isSaved WHERE instanceId = ?',
                 [instanceId]
             );
 
-            // Fetch final state to return it correctly
             const rows = await db.getAllAsync<{ isSaved: number }>(
                 'SELECT isSaved FROM releases WHERE instanceId = ?',
                 [instanceId]
@@ -205,6 +218,25 @@ export class DatabaseService implements IDatabaseService {
             return rows[0]?.isSaved === 1;
         } catch (error) {
             logger.error('[DB] Failed to toggle saved state', error);
+            throw error;
+        }
+    }
+
+    public async toggleNotable(instanceId: number): Promise<boolean> {
+        const db = await this.ensureDb();
+        try {
+            await db.runAsync(
+                'UPDATE releases SET isNotable = 1 - isNotable WHERE instanceId = ?',
+                [instanceId]
+            );
+
+            const rows = await db.getAllAsync<{ isNotable: number }>(
+                'SELECT isNotable FROM releases WHERE instanceId = ?',
+                [instanceId]
+            );
+            return rows[0]?.isNotable === 1;
+        } catch (error) {
+            logger.error('[DB] Failed to toggle notable state', error);
             throw error;
         }
     }

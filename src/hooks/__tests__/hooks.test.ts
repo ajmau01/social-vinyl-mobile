@@ -267,16 +267,17 @@ describe('Phase 2 Hooks', () => {
             expect(sections[3].title).toBe('New: Earlier This Year');
         });
 
-        it('should group saved items as Notable even if old', () => {
+        it('should group notable items as Notable even if old', () => {
             // Mock Date.now to June 1, 2026
             const mockNow = 1780228800000;
             jest.spyOn(Date, 'now').mockReturnValue(mockNow);
             const daySeconds = 24 * 60 * 60;
 
             const releases: Release[] = [
-                { id: 1, title: 'Old Saved', isSaved: true, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'A' } as Release,
-                { id: 2, title: 'New Unsaved', isSaved: false, added_at: (mockNow / 1000) - 100, artist: 'B' } as Release,
-                { id: 3, title: 'Old Unsaved', isSaved: false, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'C' } as Release
+                { id: 1, title: 'Old Notable', isNotable: true, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'A' } as Release,
+                { id: 2, title: 'New Notable', isNotable: true, added_at: (mockNow / 1000) - 100, artist: 'B' } as Release,
+                { id: 3, title: 'Old Unnotable', isNotable: false, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'C' } as Release,
+                { id: 4, title: 'Old Saved Only', isSaved: true, isNotable: false, added_at: (mockNow / 1000) - (400 * daySeconds), artist: 'D' } as Release
             ];
 
             const { result } = renderHook(() => useGroupedReleases({
@@ -287,17 +288,20 @@ describe('Phase 2 Hooks', () => {
             }));
 
             const sections = result.current.groupedReleases;
+            // Should contain Notable and New: Today (from 'New Notable')
+            // Old Unnotable and Old Saved Only should be EXCLUDED from N&N view if older than 6 months
             expect(sections).toHaveLength(2);
 
             // Notable should be first
             expect(sections[0].title).toBe('Notable');
-            expect(sections[0].data).toHaveLength(1);
-            expect(sections[0].data[0].title).toBe('Old Saved');
+            expect(sections[0].data).toHaveLength(2);
+            expect(sections[0].data.map(r => r.title)).toContain('Old Notable');
+            expect(sections[0].data.map(r => r.title)).toContain('New Notable');
 
             // Today second
             expect(sections[1].title).toBe('New: Today');
             expect(sections[1].data).toHaveLength(1);
-            expect(sections[1].data[0].title).toBe('New Unsaved');
+            expect(sections[1].data[0].title).toBe('New Notable'); // Included in both if it's new and notable
         });
 
         it('should sort new sections correctly', () => {
@@ -309,7 +313,7 @@ describe('Phase 2 Hooks', () => {
 
             const releasesWithDates: Release[] = [
                 { id: 1, title: 'Today', added_at: (mockNow / 1000) - 100, artist: 'A' } as Release,
-                { id: 2, title: 'Saved', isSaved: true, added_at: 0, artist: 'B' } as Release,
+                { id: 2, title: 'Saved', isNotable: true, added_at: 0, artist: 'B' } as Release,
                 { id: 3, title: 'Week', added_at: (mockNow / 1000) - (2 * daySeconds), artist: 'C' } as Release
             ];
 
