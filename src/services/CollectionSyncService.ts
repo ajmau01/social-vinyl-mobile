@@ -22,6 +22,10 @@ interface BackendAlbum {
     format?: string;
     tracks?: Track[]; // FIXED: Proper type scoping
     genres?: string[]; // We will inject during flattening
+    date_added?: string; // ISO date string from Discogs/Backend
+    addedTimestamp?: number; // Backend timestamp (ms)
+    isNotable?: boolean; // Backend notable flag
+    isSaved?: boolean;   // Backend saved flag
 }
 
 interface ScanResponse {
@@ -169,7 +173,7 @@ class CollectionSyncService implements ISyncService {
 
     private async saveReleases(items: BackendAlbum[], userId: string) {
         if (CONFIG.DEBUG_WS && items.length > 0) {
-            logger.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}`);
+            logger.log(`[Sync] Sample Mapping - ID: ${items[0].releaseId}, Instance: ${items[0].instanceId || items[0].instance_id}, Date: ${items[0].date_added}`);
         }
 
         // Filter and map - skip albums missing instanceId (fail fast approach)
@@ -184,6 +188,19 @@ class CollectionSyncService implements ISyncService {
                 continue;
             }
 
+            // Fix for Issue #119: Use addedTimestamp from API (ms) -> Seconds
+            // Fallback to date_added (ISO) or now
+            let addedAtSeconds = Math.floor(Date.now() / 1000);
+
+            if (item.addedTimestamp && item.addedTimestamp > 0) {
+                addedAtSeconds = Math.floor(item.addedTimestamp / 1000);
+            } else if (item.date_added) {
+                const dateMs = new Date(item.date_added).getTime();
+                if (!isNaN(dateMs)) {
+                    addedAtSeconds = Math.floor(dateMs / 1000);
+                }
+            }
+
             releases.push({
                 id: item.releaseId,
                 instanceId: Number(rawInstanceId),
@@ -191,12 +208,14 @@ class CollectionSyncService implements ISyncService {
                 title: item.title,
                 artist: item.artist,
                 thumb_url: item.coverImage || null,
-                added_at: Date.now(),
+                added_at: addedAtSeconds,
                 year: item.year,
                 genres: item.genres ? item.genres.join(', ') : undefined,
                 label: item.label,
                 format: item.format,
-                tracks: item.tracks ? JSON.stringify(item.tracks) : undefined
+                tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
+                isSaved: item.isSaved || false,
+                isNotable: item.isNotable || false
             });
         }
 
@@ -225,6 +244,61 @@ class CollectionSyncService implements ISyncService {
         } catch (error) {
             logger.error('[Sync] Failed to fetch tracks:', error);
             return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
+        }
+    }
+
+    /**
+     * Toggles the 'Notable' (Saved) status on the backend.
+     * This ensures the status persists across syncs.
+     */
+    public async toggleNotable(userId: string, releaseId: number): Promise<boolean> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=toggleNotable&username=${userId}&releaseId=${releaseId}`;
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Toggling notable status:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                logger.log(`[Sync] Successfully toggled notable for release ${releaseId} to ${data.isNotable}`);
+                return true;
+            } else {
+                logger.error('[Sync] Failed to toggle notable:', data.error);
+                return false;
+            }
+        } catch (error) {
+            logger.error('[Sync] Error toggling notable status:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Toggles the 'Saved' (Guest) status on the backend.
+     */
+    public async toggleSaved(userId: string, releaseId: number): Promise<boolean> {
+        try {
+            const url = `${CONFIG.API_URL}/collection?mode=toggleSaved&username=${userId}&releaseId=${releaseId}`;
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Toggling saved status:', url);
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                logger.log(`[Sync] Successfully toggled saved for release ${releaseId} to ${data.isSaved}`);
+                return true;
+            } else {
+                logger.error('[Sync] Failed to toggle saved:', data.error);
+                return false;
+            }
+        } catch (error) {
+            logger.error('[Sync] Error toggling saved status:', error);
+            return false;
         }
     }
 }

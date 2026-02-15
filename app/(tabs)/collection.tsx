@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
@@ -14,6 +14,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode } from '@/hooks';
 import { DatabaseService } from '@/services/DatabaseService';
+import { syncService } from '@/services/CollectionSyncService';
 
 export default function CollectionScreen() {
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
@@ -31,7 +32,7 @@ export default function CollectionScreen() {
 
     // Hooks for data and sync
     const { releases, loading, refresh } = useCollectionData();
-    const { groupedReleases, isEmpty } = useGroupedReleases({
+    const { groupedReleases, filteredReleases, isEmpty } = useGroupedReleases({
         releases,
         groupBy: viewMode,
         sortBy: 'artist',
@@ -46,9 +47,19 @@ export default function CollectionScreen() {
     }, [username, sync, refresh]);
 
     const handleRandomPress = useCallback(() => {
-        // TODO: Phase 9 logic
-        logger.info('[CollectionScreen] Random album requested');
-    }, []);
+        const source = filteredReleases.length > 0 ? filteredReleases : releases;
+        if (!source || source.length === 0) return;
+
+        const randomIndex = Math.floor(Math.random() * source.length);
+        const randomRelease = source[randomIndex];
+
+        logger.info(`[CollectionScreen] Random album selected: ${randomRelease.title} (from ${source.length} available)`);
+
+        // Haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        setSelectedRelease(randomRelease);
+    }, [filteredReleases, releases]);
 
     const handleSearchToggle = useCallback(() => {
         const nextVisible = !isSearchVisible;
@@ -60,24 +71,66 @@ export default function CollectionScreen() {
         }
     }, [isSearchVisible]);
 
-    const handleReleaseLongPress = useCallback(async (release: Release) => {
-        try {
-            const db = DatabaseService.getInstance();
-            const isSaved = await db.toggleSaved(release.instanceId);
+    const handleReleaseLongPress = useCallback((release: Release) => {
+        Alert.alert(
+            "Highlight Album",
+            "Select an action for this release:",
+            [
+                {
+                    text: release.isNotable ? "Remove from Notable" : "Mark as Notable (Host)",
+                    onPress: async () => {
+                        try {
+                            const db = DatabaseService.getInstance();
+                            const newState = await db.toggleNotable(release.instanceId);
 
-            // Visual/Tactile Feedback
-            if (isSaved) {
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } else {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }
+                            if (newState) {
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            } else {
+                                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            }
 
-            logger.info(`[CollectionScreen] Release ${release.title} saved: ${isSaved}`);
-            refresh(); // Trigger data refresh to show the indicator
-        } catch (error) {
-            logger.error('[CollectionScreen] Failed to toggle saved state', error);
-        }
-    }, [refresh]);
+                            logger.info(`[CollectionScreen] Release ${release.title} notable state toggled locally: ${newState}`);
+                            refresh();
+
+                            if (username) {
+                                await syncService.toggleNotable(username, release.id);
+                            }
+                        } catch (error) {
+                            logger.error('[CollectionScreen] Failed to toggle notable state', error);
+                        }
+                    }
+                },
+                {
+                    text: release.isSaved ? "Remove from Saved" : "Save for Later (Guest)",
+                    onPress: async () => {
+                        try {
+                            const db = DatabaseService.getInstance();
+                            const newState = await db.toggleSaved(release.instanceId);
+
+                            if (newState) {
+                                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            } else {
+                                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            }
+
+                            logger.info(`[CollectionScreen] Release ${release.title} saved state toggled locally: ${newState}`);
+                            refresh();
+
+                            if (username) {
+                                await syncService.toggleSaved(username, release.id);
+                            }
+                        } catch (error) {
+                            logger.error('[CollectionScreen] Failed to toggle saved state', error);
+                        }
+                    }
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                }
+            ]
+        );
+    }, [refresh, username]);
 
     return (
         <View style={styles.container}>
@@ -91,6 +144,7 @@ export default function CollectionScreen() {
                     viewMode={viewMode}
                     lastSyncTime={lastSyncTime}
                     isSearchVisible={isSearchVisible}
+                    isRandomDisabled={loading || (searchQuery.trim().length > 0 && filteredReleases.length === 0) || releases.length === 0}
                     onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
@@ -126,6 +180,7 @@ export default function CollectionScreen() {
                     visible={!!selectedRelease}
                     release={selectedRelease}
                     onClose={() => setSelectedRelease(null)}
+                    onRandomNext={handleRandomPress}
                 />
 
                 <SessionDrawer

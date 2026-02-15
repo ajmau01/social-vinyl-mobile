@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { dbService } from '@/services/DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release } from '@/types';
@@ -16,13 +16,18 @@ export const useCollectionData = () => {
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const loadingRef = useRef(false);
 
     const loadData = useCallback(async (isRefresh: boolean = false) => {
         // GUARD: Don't load while syncing to avoid database inconsistency
         const isSyncing = useSessionStore.getState().syncStatus === 'syncing';
-        if (!username || loading || (!isRefresh && isSyncing)) return;
+
+        // Use ref for guard to avoid dependency loop
+        if (!username || loadingRef.current || (!isRefresh && isSyncing)) return;
 
         setLoading(true);
+        loadingRef.current = true;
+
         if (isRefresh) {
             setRefreshing(true);
         }
@@ -41,8 +46,9 @@ export const useCollectionData = () => {
         } finally {
             setLoading(false);
             setRefreshing(false);
+            loadingRef.current = false;
         }
-    }, [username, loading]);
+    }, [username]);
 
     // Initial load
     useEffect(() => {

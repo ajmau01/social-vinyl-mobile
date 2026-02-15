@@ -41,6 +41,7 @@ export interface Release {
     format?: string;
     tracks?: string; // JSON String
     isSaved?: boolean;
+    isNotable?: boolean;
 }
 
 /**
@@ -83,6 +84,9 @@ export interface BackendAlbum {
     label?: string;
     catno?: string;
     tracks?: Track[];
+    isNotable?: boolean;
+    isSaved?: boolean;
+    addedTimestamp?: number;
 }
 
 export interface LoginResult {

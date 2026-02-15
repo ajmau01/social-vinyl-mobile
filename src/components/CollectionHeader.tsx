@@ -14,6 +14,7 @@ export interface CollectionHeaderProps {
     viewMode: ViewMode;
     lastSyncTime: number | null;
     isSearchVisible: boolean;
+    isRandomDisabled?: boolean;
     onSearchPress: () => void;
     onRandomPress: () => void;
     onMenuPress: () => void;
@@ -24,7 +25,7 @@ const VIEW_MODE_MAP: Record<string, ViewMode> = {
     'Genre': 'genre',
     'A-Z': 'artist',
     'Decade': 'decade',
-    'New': 'new',
+    'N&N': 'new',
     'Spin': 'spin',
     'Saved': 'saved',
 };
@@ -33,7 +34,7 @@ const REVERSE_VIEW_MODE_MAP: Record<string, string> = {
     'genre': 'Genre',
     'artist': 'A-Z',
     'decade': 'Decade',
-    'new': 'New',
+    'new': 'N&N',
     'spin': 'Spin',
     'saved': 'Saved',
 };
@@ -62,6 +63,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     viewMode,
     lastSyncTime,
     isSearchVisible,
+    isRandomDisabled = false,
     onSearchPress,
     onRandomPress,
     onMenuPress,
@@ -113,10 +115,12 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
                     </TouchableOpacity>
                     <TouchableOpacity
                         testID="collection-header-dice-button"
-                        style={styles.iconBtn}
+                        style={[styles.iconBtn, isRandomDisabled && { opacity: 0.5 }]}
                         onPress={onRandomPress}
+                        disabled={isRandomDisabled}
                         accessibilityRole="button"
                         accessibilityLabel="Random album"
+                        accessibilityState={{ disabled: isRandomDisabled }}
                     >
                         <Ionicons name="dice-outline" size={22} color={THEME.colors.white} />
                     </TouchableOpacity>
@@ -134,7 +138,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
 
             <View style={styles.segmentedControlContainer}>
                 <SegmentedControl
-                    options={['Genre', 'A-Z', 'Decade', 'New', 'Spin', 'Saved']}
+                    options={['Genre', 'A-Z', 'Decade', 'N&N', 'Spin', 'Saved']}
                     selected={getSegmentedValue()}
                     onChange={handleSegmentedChange}
                 />
@@ -197,4 +201,3 @@ const styles = StyleSheet.create({
         paddingHorizontal: THEME.spacing.md,
     },
 });
-

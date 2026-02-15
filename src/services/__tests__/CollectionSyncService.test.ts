@@ -111,6 +111,63 @@ describe('CollectionSyncService', () => {
         expect(saveCall[0].genres).toMatch(/Pop/);
     });
 
+    it('should map addedTimestamp and isNotable correctly', async () => {
+        const mockNow = 1700000000000; // Fixed time
+        jest.spyOn(Date, 'now').mockReturnValue(mockNow);
+
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            headers: { get: () => 'application/json' },
+            json: async () => ({
+                albums: {
+                    "Rock": [
+                        {
+                            releaseId: 600,
+                            instance_id: 6,
+                            title: 'Notable Item',
+                            artist: 'Band',
+                            coverImage: 'url',
+                            year: '2020',
+                            addedTimestamp: 1600000000000, // Explicit timestamp (ms)
+                            isNotable: true
+                        },
+                        {
+                            releaseId: 601,
+                            instance_id: 7,
+                            title: 'Standard Item',
+                            artist: 'Band',
+                            coverImage: 'url',
+                            year: '2021',
+                            // No addedTimestamp, should fall back to Date.now()
+                            isNotable: false
+                        }
+                    ],
+                },
+                totalCount: 2,
+                username: mockUserId
+            }),
+        });
+
+        const result = await syncService.syncCollection(mockUserId, callbacks);
+        expect(result.success).toBe(true);
+
+        const saveCall = (dbService.saveReleasesBatch as jest.Mock).mock.calls[0][0];
+        expect(saveCall).toHaveLength(2);
+
+        // Verify Notable Item
+        const notableItem = saveCall.find((r: Release) => r.id === 600);
+        expect(notableItem).toBeDefined();
+        expect(notableItem.added_at).toBe(1600000000); // 1600000000000 / 1000
+        expect(notableItem.isSaved).toBe(true);
+
+        // Verify Standard Item
+        const standardItem = saveCall.find((r: Release) => r.id === 601);
+        expect(standardItem).toBeDefined();
+        // Since no date provided, it uses Date.now()
+        expect(standardItem.added_at).toBe(1700000000); // 1700000000000 / 1000
+        expect(standardItem.isSaved).toBe(false);
+    });
+
     it('should detect "Scan Required" HTML response', async () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,

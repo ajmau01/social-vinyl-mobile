@@ -23,6 +23,24 @@ export interface UseGroupedReleasesResult {
     isEmpty: boolean;
 }
 
+function getTimePeriodKey(addedAt: number): string {
+    const now = Date.now();
+    const addedMs = addedAt * 1000;
+    const diff = now - addedMs;
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (diff < dayMs) return 'Today';
+    if (diff < 7 * dayMs) return 'This Week';
+    if (diff < 30 * dayMs) return 'This Month';
+
+    const addedDate = new Date(addedMs);
+    const addedYear = addedDate.getFullYear();
+    const currentYear = new Date().getFullYear();
+
+    if (addedYear === currentYear) return 'Earlier This Year';
+    return addedYear.toString();
+}
+
 /**
  * useGroupedReleases Hook
  * 
@@ -97,36 +115,58 @@ export const useGroupedReleases = ({
         }
 
         sorted.forEach(release => {
-            let key = 'Unknown';
+            const keys: string[] = [];
 
             if (groupBy === 'artist') {
                 const sortKey = getArtistSortKey(release.artist);
                 const firstChar = sortKey.charAt(0).toUpperCase();
-                key = /^[A-Z]/.test(firstChar) ? firstChar : '#';
+                keys.push(/^[A-Z]/.test(firstChar) ? firstChar : '#');
             } else if (groupBy === 'genre') {
                 if (release.genres && release.genres.length > 0) {
                     // Use the first genre as per clarification
                     const genres = release.genres.split(',').map(g => g.trim());
-                    key = genres[0] || 'Unknown';
+                    keys.push(genres[0] || 'Unknown');
+                } else {
+                    keys.push('Unknown');
                 }
             } else if (groupBy === 'decade') {
                 if (release.year) {
                     const yearNum = parseInt(release.year);
                     if (!isNaN(yearNum)) {
                         const decade = Math.floor(yearNum / 10) * 10;
-                        key = `${decade}s`;
+                        keys.push(`${decade}s`);
                     } else {
-                        key = 'Unknown';
+                        keys.push('Unknown');
                     }
                 } else {
-                    key = 'Unknown';
+                    keys.push('Unknown');
+                }
+            } else if (groupBy === 'new') {
+                // "N&N" Logic: Notable (Host-curated) + New (Last 6 Months)
+                if (release.isNotable) {
+                    keys.push('Notable');
+                }
+
+                const now = Date.now();
+                const addedMs = release.added_at * 1000;
+                const sixMonthsMs = 180 * 24 * 60 * 60 * 1000;
+
+                // Only show in chronological sections if added in the last 6 months
+                if (now - addedMs <= sixMonthsMs) {
+                    keys.push(`New: ${getTimePeriodKey(release.added_at)}`);
+                }
+            } else if (groupBy === 'saved') {
+                if (release.isSaved) {
+                    keys.push('Saved Albums');
                 }
             }
 
-            if (!groups[key]) {
-                groups[key] = [];
-            }
-            groups[key].push(release);
+            keys.forEach(key => {
+                if (!groups[key]) {
+                    groups[key] = [];
+                }
+                groups[key].push(release);
+            });
         });
 
         // 4. Sort keys and transform to SectionList format
@@ -137,6 +177,24 @@ export const useGroupedReleases = ({
                     if (b === 'Unknown') return -1;
                     // Sort decades descending
                     return parseInt(b) - parseInt(a);
+                }
+
+                if (groupBy === 'new') {
+                    const order = ['Notable', 'New: Today', 'New: This Week', 'New: This Month', 'New: Earlier This Year'];
+                    const indexA = order.indexOf(a);
+                    const indexB = order.indexOf(b);
+
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+
+                    // Specific years should be sorted descending (newest year first)
+                    // Remove "New: " prefix to parse year
+                    const yearA = parseInt(a.replace('New: ', ''));
+                    const yearB = parseInt(b.replace('New: ', ''));
+                    if (!isNaN(yearA) && !isNaN(yearB)) return yearB - yearA;
+
+                    return 0;
                 }
 
                 if (a === '#' || a === 'Unknown') return 1;
