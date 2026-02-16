@@ -40,10 +40,16 @@ export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true }: Pr
                             </Text>
                             {/* Sync Status Indicator */}
                             {item.status === 'pending' && (
-                                <Text style={styles.statusPending}>Syncing...</Text>
+                                <View style={styles.statusRow}>
+                                    <Ionicons name="cloud-upload-outline" size={12} color={THEME.colors.status.warning} />
+                                    <Text style={styles.statusPending}>Syncing...</Text>
+                                </View>
                             )}
                             {item.status === 'error' && (
-                                <Text style={styles.statusError}>Sync Failed</Text>
+                                <View style={styles.statusRow}>
+                                    <Ionicons name="alert-circle-outline" size={12} color={THEME.colors.status.error} />
+                                    <Text style={styles.statusError}>Sync Failed</Text>
+                                </View>
                             )}
                         </View>
                     </View>
@@ -117,16 +123,21 @@ const styles = StyleSheet.create({
         color: THEME.colors.textDim,
         fontSize: 10,
     },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 8,
+    },
     statusPending: {
         color: THEME.colors.status.warning,
         fontSize: 10,
-        marginLeft: 8,
+        marginLeft: 4,
         fontStyle: 'italic'
     },
     statusError: {
         color: THEME.colors.status.error,
         fontSize: 10,
-        marginLeft: 8,
+        marginLeft: 4,
         fontStyle: 'italic'
     },
     removeButton: {
