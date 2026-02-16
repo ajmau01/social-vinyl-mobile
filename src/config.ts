@@ -31,7 +31,8 @@ export const CONFIG = {
     DEBUG_WS: Constants.expoConfig?.extra?.debugWs || __DEV__,
 
     // Issue #68: Preparation for message-based authentication
-    USE_MESSAGE_AUTH: Constants.expoConfig?.extra?.useMessageAuth ?? true,
+    // FIXED: Force TRUE to enable token upgrade logic (Issue #125)
+    USE_MESSAGE_AUTH: true,
 
     // Issue #64: Sentry Configuration
     SENTRY_DSN: Constants.expoConfig?.extra?.sentryDsn || null,

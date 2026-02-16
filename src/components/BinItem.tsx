@@ -11,9 +11,11 @@ interface Props {
     drag: () => void;
     onRemove: (item: BinItemType) => void;
     canDelete?: boolean;
+    onPlay?: (item: BinItemType) => void;
+    canPlay?: boolean;
 }
 
-export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true }: Props) => {
+export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true, onPlay, canPlay = false }: Props) => {
     return (
         <ScaleDecorator>
             <Pressable
@@ -53,10 +55,23 @@ export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true }: Pr
                             )}
                         </View>
                     </View>
+
+                    {/* Play Button (Host Only) */}
+                    {canPlay && (
+                        <Pressable
+                            onPress={() => onPlay && onPlay(item)}
+                            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="play-circle" size={32} color={THEME.colors.primary} />
+                        </Pressable>
+                    )}
+
                     {canDelete && (
                         <Pressable
                             onPress={() => onRemove(item)}
-                            style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
+                            style={({ pressed }) => [styles.actionButton, styles.deleteButton, pressed && styles.pressed]}
+                            hitSlop={8}
                         >
                             <Ionicons name="trash-outline" size={20} color={THEME.colors.status.error} />
                         </Pressable>
@@ -140,8 +155,12 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         fontStyle: 'italic'
     },
-    removeButton: {
-        padding: THEME.spacing.sm,
+    actionButton: {
+        padding: THEME.spacing.xs,
+        marginLeft: THEME.spacing.xs,
+    },
+    deleteButton: {
+        marginLeft: 0,
     },
     pressed: {
         opacity: 0.7,

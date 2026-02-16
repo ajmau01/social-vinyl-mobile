@@ -10,6 +10,7 @@ interface UseDailySpinResult {
     loading: boolean;
     refresh: () => Promise<void>;
     error: Error | null;
+    currentPlayedAt: number | null;
 }
 
 export const useDailySpin = (username?: string | null): UseDailySpinResult => {
@@ -48,18 +49,27 @@ export const useDailySpin = (username?: string | null): UseDailySpinResult => {
         }
     }, [username]);
 
+    const [currentPlayedAt, setCurrentPlayedAt] = useState<number | null>(null);
+
     // Initial fetch and WebSocket subscription
     useEffect(() => {
         fetchHistory();
 
-        // Real-time update: Refresh history when a new track starts
-        const unsubscribe = wsService.addCallback('onNowPlaying', (data) => {
-            if (data) {
-                logger.log('[useDailySpin] Now playing event received, refreshing history...');
-                // Small delay to ensure backend has likely processed the history insert
-                setTimeout(() => {
-                    fetchHistory();
-                }, 1000);
+        // Real-time update: Refresh history when a NEW track starts
+        const unsubscribe = wsService.addCallback('onNowPlaying', (data: any) => {
+            if (data && data.playedAt) {
+                // Only refresh if the playedAt timestamp has changed (new playback event)
+                setCurrentPlayedAt(prev => {
+                    if (prev !== data.playedAt) {
+                        logger.log('[useDailySpin] New track started, refreshing history...');
+                        // Small delay to ensure backend has likely processed the history insert
+                        setTimeout(() => {
+                            fetchHistory();
+                        }, 1000);
+                        return data.playedAt;
+                    }
+                    return prev;
+                });
             }
         });
 
@@ -72,7 +82,8 @@ export const useDailySpin = (username?: string | null): UseDailySpinResult => {
         historySections,
         loading,
         refresh: fetchHistory,
-        error
+        error,
+        currentPlayedAt
     };
 };
 

@@ -53,8 +53,9 @@ export const secureStorage = {
      */
     async saveSessionCredentials(sessionId: string, sessionSecret: string): Promise<void> {
         try {
-            await SecureStore.setItemAsync(SESSION_ID_KEY, sessionId);
-            await SecureStore.setItemAsync(SESSION_SECRET_KEY, sessionSecret);
+            // Force string cast to prevent "Invalid value" errors in SecureStore
+            await SecureStore.setItemAsync(SESSION_ID_KEY, String(sessionId));
+            await SecureStore.setItemAsync(SESSION_SECRET_KEY, String(sessionSecret));
         } catch (error) {
             logger.error('[Storage] Failed to save session credentials:', error);
             throw error;

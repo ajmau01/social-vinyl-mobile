@@ -32,8 +32,13 @@ class ListeningBinSyncService {
     /**
      * Handles incoming bin state from server
      */
-    private handleBinState(items: BinItem[]) {
+    private handleBinState({ items, hostUsername }: { items: BinItem[], hostUsername?: string }) {
         logger.log('[BinSync] Received bin state update. Items:', items?.length || 0);
+
+        if (hostUsername) {
+            useSessionStore.getState().setHostUsername(hostUsername);
+        }
+
         if (items && items.length > 0) {
             logger.log('[BinSync] First item:', JSON.stringify(items[0]));
         }
@@ -166,6 +171,74 @@ class ListeningBinSyncService {
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Clear bin failed', error);
+            return { success: false, error: error as Error };
+        }
+    }
+
+    /**
+     * Toggles like state for the currently playing album
+     */
+    public async likeCurrentAlbum(): Promise<Result<void>> {
+        const { nowPlaying, setNowPlaying } = useSessionStore.getState();
+        if (!nowPlaying || !nowPlaying.releaseId) {
+            return { success: false, error: new Error('Nothing playing') };
+        }
+
+        const currentlyLiked = !!nowPlaying.userHasLiked;
+        const newLikeState = !currentlyLiked;
+        const action = newLikeState ? 'like-album' : 'unlike-album';
+
+        // 1. Optimistic Update
+        const originalNP = { ...nowPlaying };
+        setNowPlaying({
+            ...nowPlaying,
+            userHasLiked: newLikeState
+        });
+
+        try {
+            // 2. Send Action
+            await wsService.sendAction(action, {
+                releaseId: parseInt(nowPlaying.releaseId, 10)
+            });
+
+            // 3. Success (Server will broadcast the updated likeCount soon)
+            return { success: true, data: undefined };
+
+        } catch (error) {
+            logger.error(`[BinSync] ${action} failed`, error);
+            setNowPlaying(originalNP);
+            return { success: false, error: error as Error };
+        }
+    }
+
+    /**
+     * Plays an album from the bin (Host only)
+     */
+    public async playAlbum(album: Release | BinItem): Promise<Result<void>> {
+        const { username: userId, hostUsername } = useSessionStore.getState();
+
+        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (userId !== hostUsername) return { success: false, error: new Error('Only the host can play albums') };
+
+        // Ensure we have a valid ID
+        const releaseId = album.id || album.releaseId;
+        if (!releaseId) return { success: false, error: new Error('Invalid album ID') };
+
+        try {
+            await wsService.sendAction('play-album', {
+                album: {
+                    releaseId: releaseId,
+                    title: album.title,
+                    artist: album.artist,
+                    coverImage: album.thumb_url || album.coverImage,
+                    year: album.year,
+                    totalDuration: album.totalDuration || 0
+                    // Add other fields as needed by backend Album.fromJson
+                }
+            });
+            return { success: true, data: undefined };
+        } catch (error) {
+            logger.error('[BinSync] Play album failed', error);
             return { success: false, error: error as Error };
         }
     }

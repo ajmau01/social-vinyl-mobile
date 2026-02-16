@@ -48,6 +48,7 @@ export interface Release {
     isNotable?: boolean;
     spinCount?: number;
     playedAt?: number; // History timestamp (ms)
+    totalDuration?: number; // Total duration in seconds (Added for Progress Ring)
 }
 
 /**
@@ -61,6 +62,12 @@ export interface NowPlaying {
     albumArt?: string;
     timestamp?: number;
     releaseId?: string; // Added for internal linking
+    duration?: number;   // Total duration in ms
+    position?: number;   // Current playback position in ms
+    userHasLiked?: boolean; // If current user has liked this track
+    playedBy?: string;   // Attribution - who added this to the bin
+    likeCount?: number;  // Total thumbs up for this track
+    playedAt?: number;   // Timestamp when playback started (ms)
 }
 
 export interface BinItem extends Release {
@@ -106,6 +113,7 @@ export interface LoginResult {
     sessionId: string;
     token: string;
     userId?: string;
+    sessionSecret?: string;
 }
 
 export interface SyncResult {

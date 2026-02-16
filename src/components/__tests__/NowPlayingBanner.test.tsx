@@ -8,6 +8,26 @@ jest.mock('@/hooks', () => ({
     useWebSocket: jest.fn()
 }));
 
+// Mock Ionicons
+jest.mock('@expo/vector-icons', () => ({
+    Ionicons: 'Ionicons'
+}));
+
+// Mock Haptics
+jest.mock('expo-haptics', () => ({
+    impactAsync: jest.fn(),
+    ImpactFeedbackStyle: {
+        Medium: 'medium'
+    }
+}));
+
+// Mock ListeningBinSyncService
+jest.mock('@/services/ListeningBinSyncService', () => ({
+    listeningBinSyncService: {
+        likeCurrentAlbum: jest.fn()
+    }
+}));
+
 describe('NowPlayingBanner', () => {
     it('returns null when not connected and no track playing', () => {
         (useWebSocket as jest.Mock).mockReturnValue({
@@ -29,15 +49,16 @@ describe('NowPlayingBanner', () => {
 
         const { getByText } = render(<NowPlayingBanner />);
         expect(getByText('Connecting...')).toBeTruthy();
-        expect(getByText('Establishing WebSocket...')).toBeTruthy();
+        expect(getByText('Establishing...')).toBeTruthy();
     });
 
-    it('renders track info when playing', () => {
+    it('renders track info and attribution when playing', () => {
         (useWebSocket as jest.Mock).mockReturnValue({
             nowPlaying: {
                 track: 'Blue Train',
                 artist: 'John Coltrane',
-                albumArt: 'http://example.com/art.jpg'
+                albumArt: 'http://example.com/art.jpg',
+                playedBy: 'Andrew'
             },
             isConnected: true,
             isConnecting: false
@@ -46,5 +67,6 @@ describe('NowPlayingBanner', () => {
         const { getByText } = render(<NowPlayingBanner />);
         expect(getByText('Blue Train')).toBeTruthy();
         expect(getByText('John Coltrane')).toBeTruthy();
+        expect(getByText(/Added by Andrew/)).toBeTruthy();
     });
 });

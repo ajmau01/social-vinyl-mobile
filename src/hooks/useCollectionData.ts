@@ -21,12 +21,17 @@ export const useCollectionData = () => {
     const loadData = useCallback(async (isRefresh: boolean = false) => {
         // GUARD: Don't load while syncing to avoid database inconsistency
         const isSyncing = useSessionStore.getState().syncStatus === 'syncing';
+        logger.log(`[useCollectionData] loadData called. username: ${username}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
 
         // Use ref for guard to avoid dependency loop
-        if (!username || loadingRef.current || (!isRefresh && isSyncing)) return;
+        if (!username || loadingRef.current || (!isRefresh && isSyncing)) {
+            logger.log(`[useCollectionData] loadData guarded. username: ${username}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
+            return;
+        }
 
         setLoading(true);
         loadingRef.current = true;
+        logger.log(`[useCollectionData] Starting data load. isRefresh: ${isRefresh}`);
 
         if (isRefresh) {
             setRefreshing(true);
@@ -38,9 +43,7 @@ export const useCollectionData = () => {
             const items = await dbService.getReleases(username);
             setReleases(items);
 
-            if (CONFIG.DEBUG_WS) {
-                logger.log(`[useCollectionData] Loaded ${items.length} items.`);
-            }
+            logger.log(`[useCollectionData] Successfully loaded ${items.length} items for user: ${username}`);
         } catch (error) {
             logger.error('[useCollectionData] Load failed', error);
         } finally {

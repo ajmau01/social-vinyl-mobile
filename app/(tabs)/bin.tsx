@@ -11,8 +11,17 @@ import { BinItem } from '@/components/BinItem';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export default function BinScreen() {
-    const { username } = useSessionStore();
+    const { username, hostUsername } = useSessionStore();
     const { items, removeItem, clearBin, setBin } = useListeningBinStore();
+
+    // Debug Play Button Logic (Removed noise)
+    /*
+    console.log('[BinScreen] Play Button Check:', {
+        username,
+        hostUsername,
+        match: username === hostUsername && !!username
+    });
+    */
 
     // SCOPING: Only show items for the current user
     // FIXED: For Party Mode, we want to see ALL items in the session
@@ -56,9 +65,11 @@ export default function BinScreen() {
             isActive={isActive}
             drag={drag}
             onRemove={handleRemove}
-            canDelete={item.userId === username || username === useSessionStore.getState().hostUsername}
+            canDelete={item.userId === username || username === hostUsername}
+            canPlay={username === hostUsername}
+            onPlay={(item) => listeningBinSyncService.playAlbum(item)}
         />
-    ), [handleRemove]);
+    ), [handleRemove, username, hostUsername]);
 
     const onDragEnd = async ({ data }: { data: BinItemType[] }) => {
         // Optimistic Update: Update store immediately
@@ -122,7 +133,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: THEME.spacing.lg,
-        paddingVertical: THEME.spacing.md,
+        paddingTop: THEME.spacing.xl, // Increased to avoid status bar
+        paddingBottom: THEME.spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: THEME.colors.glassBorder,
     },

@@ -73,6 +73,13 @@ export class DatabaseService implements IDatabaseService {
                     await this.db.execAsync('ALTER TABLE releases ADD COLUMN spinCount INTEGER DEFAULT 0');
                 }
 
+                // Ensure 'totalDuration' column exists (Migration for Progress Ring)
+                const hasTotalDuration = columns.some(col => col.name === 'totalDuration');
+                if (!hasTotalDuration && columns.length > 0) {
+                    logger.log('[DB] Migrating: Adding totalDuration column...');
+                    await this.db.execAsync('ALTER TABLE releases ADD COLUMN totalDuration INTEGER DEFAULT 0');
+                }
+
                 await this.db.execAsync(`
                     CREATE TABLE IF NOT EXISTS releases (
                         id INTEGER NOT NULL,
@@ -90,6 +97,7 @@ export class DatabaseService implements IDatabaseService {
                         isSaved INTEGER DEFAULT 0,
                         isNotable INTEGER DEFAULT 0,
                         spinCount INTEGER DEFAULT 0,
+                        totalDuration INTEGER DEFAULT 0,
                         PRIMARY KEY (instanceId)
                     );
 
@@ -114,7 +122,7 @@ export class DatabaseService implements IDatabaseService {
 
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?))',
+                'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount, totalDuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?), ?)',
                 release.id,
                 release.instanceId,
                 release.userId,
@@ -132,7 +140,8 @@ export class DatabaseService implements IDatabaseService {
                 release.instanceId,
                 release.isNotable ? 1 : 0,
                 release.instanceId,
-                release.spinCount || 0
+                release.spinCount || 0,
+                release.totalDuration || 0
             );
         } catch (error) {
             logger.error('[DB] Failed to save release', error);
@@ -147,7 +156,7 @@ export class DatabaseService implements IDatabaseService {
             await db.withTransactionAsync(async () => {
                 for (const release of releases) {
                     await db.runAsync(
-                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?))',
+                        'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount, totalDuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?), ?)',
                         release.id,
                         release.instanceId,
                         release.userId,
@@ -165,7 +174,8 @@ export class DatabaseService implements IDatabaseService {
                         release.instanceId,
                         release.isNotable ? 1 : 0,
                         release.instanceId,
-                        release.spinCount || 0
+                        release.spinCount || 0,
+                        release.totalDuration || 0
                     );
                 }
             });

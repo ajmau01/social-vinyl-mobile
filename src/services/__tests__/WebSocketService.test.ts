@@ -62,7 +62,12 @@ describe('WebSocketService', () => {
                         album: rawData.album.title,
                         albumArt: rawData.album.coverImage,
                         releaseId: String(rawData.album.releaseId),
-                        timestamp: Date.now()
+                        timestamp: expect.any(Number),
+                        duration: rawData.duration,
+                        position: rawData.position,
+                        userHasLiked: rawData.userHasLiked,
+                        playedBy: rawData.playedBy,
+                        likeCount: rawData.thumbCount
                     });
                 }
             }),
@@ -114,7 +119,7 @@ describe('WebSocketService', () => {
             album: {
                 title: 'Test Track',
                 artist: 'Test Artist',
-                releaseId: 12345,
+                releaseId: '12345',
                 coverImage: 'http://example.com/cover.jpg'
             }
         };

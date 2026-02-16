@@ -27,6 +27,7 @@ interface BackendAlbum {
     isNotable?: boolean; // Backend notable flag
     isSaved?: boolean;   // Backend saved flag
     spinCount?: number;  // Backend play count
+    totalDuration?: number; // Backend total duration in seconds
 }
 
 interface ScanResponse {
@@ -214,7 +215,8 @@ class CollectionSyncService implements ISyncService {
                 tracks: item.tracks ? JSON.stringify(item.tracks) : undefined,
                 isSaved: item.isSaved || false,
                 isNotable: item.isNotable || false,
-                spinCount: item.spinCount || 0
+                spinCount: item.spinCount || 0,
+                totalDuration: item.totalDuration || 0
             });
         }
 

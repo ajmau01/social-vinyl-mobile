@@ -40,7 +40,7 @@ class WebSocketService implements IWebSocketService {
     }>();
 
     // Issue #126: Dedicated listeners for Bin State to avoid conflicts with useWebSocket
-    private binStateListeners: ((items: any[]) => void)[] = [];
+    private binStateListeners: ((data: { items: any[], hostUsername?: string }) => void)[] = [];
 
     private constructor() { }
 
@@ -53,11 +53,31 @@ class WebSocketService implements IWebSocketService {
 
 
     public connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string) {
-        if (this.socket?.readyState === WebSocket.OPEN) return;
-        if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting...');
-
+        // Issue #126: Handle re-authentication if credentials change while connected
+        const prevConfig = this.currentConfig;
         this.currentConfig = { username, authToken, sessionId, sessionSecret };
         this.shouldReconnect = true;
+
+        if (this.socket?.readyState === WebSocket.OPEN) {
+            // Check if we need to upgrade auth
+            if (CONFIG.USE_MESSAGE_AUTH && (authToken || sessionSecret)) {
+                if (authToken !== prevConfig?.authToken || sessionSecret !== prevConfig?.sessionSecret) {
+                    if (CONFIG.DEBUG_WS) logger.log('[WS] Upgrading connection with new credentials');
+                    this.authenticate();
+                }
+            }
+            return;
+        }
+
+        // Issue: Handling CONNECTING state
+        // If we are already connecting, just update the config. 
+        // handleOpen will use the latest this.currentConfig when it fires.
+        if (this.socket?.readyState === WebSocket.CONNECTING) {
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Connection in progress, updating config for auto-auth');
+            return;
+        }
+
+        if (CONFIG.DEBUG_WS) logger.log('[WS] Connecting...');
 
         if (!username) {
             if (CONFIG.DEBUG_WS) logger.log('[WS] Skip connect: No username');
@@ -80,6 +100,29 @@ class WebSocketService implements IWebSocketService {
         this.socket.onerror = this.handleError;
 
         this.callbacks?.onConnectionStateChange('connecting');
+    }
+
+    private authenticate() {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
+
+        if (CONFIG.USE_MESSAGE_AUTH && (this.currentConfig?.authToken || this.currentConfig?.sessionSecret)) {
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Sending authenticate message');
+            this.socket.send(JSON.stringify({
+                action: 'authenticate',
+                authToken: this.currentConfig.authToken,
+                sessionId: this.currentConfig.sessionId,
+                sessionSecret: this.currentConfig.sessionSecret,
+                username: this.currentConfig.username
+            }));
+
+            // Set a timeout for authentication confirmation
+            if (this.authTimeout) clearTimeout(this.authTimeout);
+            this.authTimeout = setTimeout(() => {
+                logger.error('[WS] Authentication timed out');
+                this.disconnect();
+                this.callbacks?.onError(new Error('Authentication timed out'));
+            }, 10000);
+        }
     }
 
     public disconnect() {
@@ -324,6 +367,9 @@ class WebSocketService implements IWebSocketService {
                     // Implements feature negotiation from Issue #125
                     const { setEnabledFeatures } = require('@/store/useSessionStore').useSessionStore.getState();
                     setEnabledFeatures(ackValidation.data.enabledFeatures);
+
+                    // FIX: Ensure we transition to connected state
+                    this.callbacks?.onConnectionStateChange('connected');
                 }
                 return;
             }
@@ -375,7 +421,13 @@ class WebSocketService implements IWebSocketService {
                             artist: album.artist,
                             album: album.title,
                             albumArt: album.coverImage,
-                            releaseId: String(album.releaseId)
+                            releaseId: String(album.releaseId),
+                            duration: data.duration,
+                            position: data.position,
+                            playedAt: data.playedAt, // Backend unit is ms
+                            userHasLiked: data.userHasLiked,
+                            likeCount: data.likeCount,
+                            playedBy: data.playedBy
                         });
                     }
                     break;
@@ -389,6 +441,8 @@ class WebSocketService implements IWebSocketService {
                         global.clearTimeout(this.authTimeout);
                         this.authTimeout = null;
                     }
+                    // FIX: access-level implies successful connection/auth
+                    this.callbacks?.onConnectionStateChange('connected');
                     if (data.message) {
                         this.callbacks?.onAccessLevel?.(data.message);
                     }
@@ -397,13 +451,19 @@ class WebSocketService implements IWebSocketService {
                 case 'BIN_STATE':
                 case 'bin-state':
                 case 'state':
+                    // FIX: Receiving state implies we are connected
+                    this.callbacks?.onConnectionStateChange('connected');
+
                     if (data.bin || data.payload || data.albums) {
                         const items = (data.bin || data.payload || data.albums) as any[];
+                        // Extract hostUsername if present (crucial for Play button logic)
+                        const hostUsername = data.hostUsername || (data.payload as any)?.hostUsername;
+
                         this.callbacks?.onBinState?.(items);
 
                         // Notify dedicated listeners
                         this.binStateListeners.forEach(listener => {
-                            try { listener(items); } catch (e) { logger.error('[WS] Bin listener error', e); }
+                            try { listener({ items, hostUsername }); } catch (e) { logger.error('[WS] Bin listener error', e); }
                         });
                     }
                     break;
@@ -488,7 +548,7 @@ class WebSocketService implements IWebSocketService {
         };
     }
 
-    public addBinStateListener(listener: (items: any[]) => void): () => void {
+    public addBinStateListener(listener: (data: { items: any[], hostUsername?: string }) => void): () => void {
         this.binStateListeners.push(listener);
         return () => {
             this.binStateListeners = this.binStateListeners.filter(l => l !== listener);

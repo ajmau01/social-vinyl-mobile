@@ -77,12 +77,25 @@ describe('Phase 2 Hooks', () => {
 
             const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
 
-            const nowPlaying = { track: 'Help!', artist: 'The Beatles', album: 'Help!' };
+            const nowPlayingPayload = { track: 'Help!', artist: 'The Beatles', album: 'Help!' };
+            const expected = {
+                track: 'Help!',
+                artist: 'The Beatles',
+                album: 'Help!',
+                albumArt: '',
+                releaseId: undefined,
+                timestamp: undefined,
+                duration: undefined,
+                position: undefined,
+                userHasLiked: undefined,
+                playedBy: undefined,
+                likeCount: undefined
+            };
             act(() => {
-                callback.onMessage({ type: 'now-playing', payload: nowPlaying });
+                callback.onMessage({ type: 'now-playing', payload: nowPlayingPayload });
             });
 
-            expect(result.current.nowPlaying).toEqual(nowPlaying);
+            expect(result.current.nowPlaying).toEqual(expected);
         });
 
         it('should provide connection actions', () => {

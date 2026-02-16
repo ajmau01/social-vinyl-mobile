@@ -47,6 +47,12 @@ export const WebSocketMessageSchema = z.object({
         coverImage: z.string(),
         releaseId: IdSchema,
     }).optional(),
+    playedAt: z.number().optional(),
+    duration: z.number().optional(),
+    position: z.number().optional(),
+    likeCount: z.number().optional(),
+    userHasLiked: z.boolean().optional(),
+    playedBy: z.string().optional(),
 }).passthrough(); // Allow extra fields but ensure base structure
 
 /**

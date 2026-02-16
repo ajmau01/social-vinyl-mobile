@@ -38,6 +38,18 @@ function WebSocketManager() {
   const { username, authToken } = useSessionStore();
   const { connect, disconnect } = useWebSocket();
 
+  // Debug Auth Flow (Removed noise)
+  /*
+  if (username) {
+    console.log('[WebSocketManager] Auth State:', {
+      username,
+      hasToken: !!authToken,
+      tokenLength: authToken?.length,
+      useMessageAuth: CONFIG.USE_MESSAGE_AUTH
+    });
+  }
+  */
+
   useEffect(() => {
     // Manage Connection Lifecycle using the hook's actions
     if (username) {

@@ -183,14 +183,16 @@ export default function HubScreen() {
                 useSessionStore.getState().setUsername(userId);
                 useSessionStore.getState().setLastMode('host');
                 if (data.sessionId) {
-                    useSessionStore.getState().setSessionId(data.sessionId);
+                    await useSessionStore.getState().setSessionId(data.sessionId);
+                }
+                if (data.sessionSecret) {
+                    await useSessionStore.getState().setSessionSecret(data.sessionSecret);
                 }
 
                 useSessionStore.getState().setSyncStatus('syncing');
-                // router.replace('/(tabs)/collection'); // OLD
-                // Force navigation to BIN for verification task
+                router.replace('/(tabs)/collection');
+
                 useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
-                router.replace('/(tabs)/bin');
 
                 syncService.syncCollection(userId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),

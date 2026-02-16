@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, Image } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import Animated, {
     FadeIn,
     FadeOut,
@@ -10,35 +10,46 @@ import Animated, {
     withTiming,
     withSequence,
     ZoomIn,
-    ZoomOut
+    ZoomOut,
+    interpolateColor
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
+import { ProgressRing } from './ProgressRing';
+import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
-    const pulse = useSharedValue(1);
 
-    useEffect(() => {
-        if (isConnected) {
-            pulse.value = withRepeat(
-                withSequence(
-                    withTiming(1.5, { duration: 1000 }),
-                    withTiming(1, { duration: 1000 })
-                ),
-                -1,
-                true
-            );
-        } else {
-            pulse.value = 1;
-        }
-    }, [isConnected]);
+    // Fix Issue #126: Move shared values and styles to top level to avoid conditional hook errors
+    const heartScale = useSharedValue(1);
 
-    const pulseStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: pulse.value }],
-        opacity: isConnected ? 0.6 : 1
+    const heartStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: heartScale.value }]
     }));
+
+    const progress = useMemo(() => {
+        if (!nowPlaying?.duration || !nowPlaying?.position) return 0;
+        return Math.min(nowPlaying.position / nowPlaying.duration, 1);
+    }, [nowPlaying?.position, nowPlaying?.duration]);
+
+    const handleLike = async () => {
+        if (!nowPlaying) return;
+
+        // Haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        // Animate heart
+        heartScale.value = withSequence(
+            withTiming(1.4, { duration: 100 }),
+            withTiming(1, { duration: 100 })
+        );
+
+        await listeningBinSyncService.likeCurrentAlbum();
+    };
 
     if (!nowPlaying && !isConnecting && !isConnected) return null;
 
@@ -51,57 +62,100 @@ export const NowPlayingBanner = () => {
         >
             <Animated.View layout={LinearTransition} style={styles.container}>
                 <View style={styles.content}>
-                    {/* Album Art Container */}
-                    <View
-                        style={styles.artwork}
-                    >
-                        {nowPlaying?.albumArt ? (
-                            <Animated.Image
-                                entering={FadeIn.duration(400)}
-                                key={nowPlaying.albumArt}
-                                source={{ uri: nowPlaying.albumArt }}
-                                style={styles.artworkImage}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={styles.artworkPlaceholder} />
-                        )}
+
+                    {/* Left: Progress + Artwork */}
+                    <View style={styles.artworkContainer}>
+                        <ProgressRing
+                            size={46}
+                            strokeWidth={3}
+                            position={nowPlaying?.position || 0}
+                            duration={nowPlaying?.duration || 0}
+                            playedAt={nowPlaying?.playedAt}
+                            color={THEME.colors.primary}
+                        />
+                        <View style={styles.artworkWrapper}>
+                            {nowPlaying?.albumArt ? (
+                                <Image
+                                    source={{ uri: nowPlaying.albumArt }}
+                                    style={styles.artworkImage}
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <View style={styles.artworkPlaceholder}>
+                                    <Ionicons name="disc-outline" size={20} color={THEME.colors.textMuted} />
+                                </View>
+                            )}
+                        </View>
                     </View>
 
-                    {/* Info Container */}
+                    {/* Center: Info */}
                     <View style={styles.info}>
+                        <Text style={styles.nowPlayingLabel}>Now Playing:</Text>
                         <Animated.Text
                             key={nowPlaying?.track ? `track-${nowPlaying.track}` : 'track-empty'}
                             entering={FadeIn.duration(300)}
                             style={styles.track}
                             numberOfLines={1}
                         >
-                            {nowPlaying?.track || (isConnecting ? 'Connecting...' : 'Waiting for Track...')}
+                            {nowPlaying?.track || (isConnecting ? 'Connecting...' : 'Waiting for Album...')}
                         </Animated.Text>
-                        <Animated.Text
-                            key={nowPlaying?.artist ? `artist-${nowPlaying.artist}` : 'artist-empty'}
-                            entering={FadeIn.delay(100).duration(300)}
-                            style={styles.artist}
-                            numberOfLines={1}
-                        >
-                            {nowPlaying?.artist || (isConnecting ? 'Establishing WebSocket...' : 'Not Playing')}
-                        </Animated.Text>
+
+                        <View style={styles.subInfo}>
+                            <Animated.Text
+                                key={nowPlaying?.artist ? `artist-${nowPlaying.artist}` : 'artist-empty'}
+                                entering={FadeIn.delay(100).duration(300)}
+                                style={styles.artist}
+                                numberOfLines={1}
+                            >
+                                {nowPlaying?.artist || (isConnecting ? 'Establishing...' : 'Not Playing')}
+                            </Animated.Text>
+
+                            {nowPlaying?.playedBy && (
+                                <Animated.Text
+                                    entering={FadeIn.delay(200)}
+                                    style={styles.attribution}
+                                    numberOfLines={1}
+                                >
+                                    • Added by {nowPlaying.playedBy}
+                                </Animated.Text>
+                            )}
+                        </View>
                     </View>
 
-                    {/* Status Indicator Container */}
-                    <View style={styles.statusContainer}>
-                        <Animated.View style={[
-                            styles.statusDot,
-                            isConnected ? styles.statusConnected : styles.statusDisconnected,
-                            isConnecting && styles.statusConnecting,
-                            pulseStyle
-                        ]} />
-                        {isConnected && (
-                            <Animated.View
-                                entering={ZoomIn}
-                                exiting={ZoomOut}
-                                style={[styles.statusPulse, pulseStyle]}
-                            />
+                    {/* Right: Interaction */}
+                    <View style={styles.interaction}>
+                        {nowPlaying && (
+                            <TouchableOpacity
+                                onPress={handleLike}
+                                activeOpacity={0.7}
+                                style={styles.likeButton}
+                            >
+                                <Animated.View style={heartStyle}>
+                                    <Ionicons
+                                        name={nowPlaying.userHasLiked ? "heart" : "heart-outline"}
+                                        size={22}
+                                        color={nowPlaying.userHasLiked ? THEME.colors.secondary : THEME.colors.textDim}
+                                    />
+                                </Animated.View>
+                                {nowPlaying.likeCount !== undefined && nowPlaying.likeCount > 0 && (
+                                    <Text style={[
+                                        styles.likeCount,
+                                        nowPlaying.userHasLiked && { color: THEME.colors.secondary }
+                                    ]}>
+                                        {nowPlaying.likeCount}
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        )}
+
+                        {!nowPlaying && (
+                            <View style={styles.statusDotContainer}>
+                                <View style={[
+                                    styles.statusDot,
+                                    isConnected ? styles.statusConnected : styles.statusDisconnected,
+                                    isConnecting && styles.statusConnecting
+                                ]} />
+                            </View>
                         )}
                     </View>
                 </View>
@@ -117,10 +171,10 @@ const styles = StyleSheet.create({
         borderTopRightRadius: THEME.radius.lg,
         borderTopWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        // backgroundColor removed as LinearGradient handles it
+        paddingBottom: 4, // Leave space for home indicator on some LPs
     },
     container: {
-        paddingVertical: 10, // Tighter padding for space efficiency
+        paddingVertical: 12,
     },
     content: {
         flexDirection: 'row',
@@ -128,14 +182,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: THEME.spacing.md,
         gap: THEME.spacing.md,
     },
-    artwork: {
-        width: 38, // Slightly smaller
-        height: 38,
-        borderRadius: THEME.radius.sm,
-        backgroundColor: THEME.colors.surfaceLight,
+    artworkContainer: {
+        position: 'relative',
+        width: 46,
+        height: 46,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    artworkWrapper: {
+        position: 'absolute',
+        width: 34,
+        height: 34,
+        borderRadius: 17, // Circular
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: THEME.colors.surfaceLight,
     },
     artworkImage: {
         width: '100%',
@@ -143,43 +203,66 @@ const styles = StyleSheet.create({
     },
     artworkPlaceholder: {
         flex: 1,
-        backgroundColor: THEME.colors.surfaceLight,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     info: {
         flex: 1,
         justifyContent: 'center',
     },
+    subInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 2,
+    },
+    nowPlayingLabel: {
+        color: THEME.colors.primary,
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        marginBottom: 2,
+        letterSpacing: 0.5,
+    },
     track: {
         color: THEME.colors.white,
-        fontSize: 13, // Tighter font
-        fontWeight: 'bold',
-        letterSpacing: 0.1,
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: 0.2,
     },
     artist: {
         color: THEME.colors.textDim,
-        fontSize: 11,
-        marginTop: 1,
+        fontSize: 12,
     },
-    statusContainer: {
-        width: 24,
-        height: 24,
+    attribution: {
+        color: THEME.colors.textMuted,
+        fontSize: 11,
+        fontStyle: 'italic',
+    },
+    interaction: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: THEME.spacing.sm,
+        minWidth: 40,
+        justifyContent: 'flex-end',
+    },
+    likeButton: {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    statusDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        zIndex: 2,
+    likeCount: {
+        color: THEME.colors.textDim,
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginTop: -2,
     },
-    statusPulse: {
-        position: 'absolute',
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: THEME.colors.status.success,
-        opacity: 0.4,
-        zIndex: 1,
+    statusDotContainer: {
+        padding: 4,
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
     },
     statusConnected: {
         backgroundColor: THEME.colors.status.success,

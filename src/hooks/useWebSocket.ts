@@ -64,7 +64,22 @@ export const useWebSocket = (): UseWebSocketResult => {
                             : undefined);
                     if (secret) setSessionSecret(secret);
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
-                    setNowPlaying(payload as NowPlaying);
+                    // Normalize backend message to frontend NowPlaying interface
+                    const raw = payload as any;
+                    const normalized: NowPlaying = {
+                        track: raw.album?.title || raw.track || '',
+                        artist: raw.album?.artist || raw.artist || '',
+                        album: raw.album?.title || raw.album || '',
+                        albumArt: raw.album?.coverImage || raw.albumArt || '',
+                        releaseId: raw.album?.releaseId?.toString() || raw.releaseId,
+                        timestamp: raw.playedAt || raw.timestamp,
+                        duration: raw.duration,
+                        position: raw.position,
+                        userHasLiked: raw.userHasLiked,
+                        playedBy: raw.playedBy,
+                        likeCount: raw.thumbCount ?? raw.likeCount
+                    };
+                    setNowPlaying(normalized);
                 }
             },
             onError: (err: Error) => {
