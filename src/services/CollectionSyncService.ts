@@ -165,10 +165,7 @@ class CollectionSyncService implements ISyncService {
             return rawData;
         } catch (error) {
             logger.error(`[Sync] Failed to fetch collection`, error);
-            if (error instanceof Error && error.message.includes('not scanned')) {
-                throw error;
-            }
-            return null;
+            throw error;
         }
     }
 
@@ -259,6 +256,12 @@ class CollectionSyncService implements ISyncService {
             if (CONFIG.DEBUG_WS) logger.log('[Sync] Fetching daily spin history:', url);
 
             const response = await fetch(url);
+
+            // Expected for guests/new users
+            if (response.status === 404) {
+                return { success: true, data: [] };
+            }
+
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status}`);
             }

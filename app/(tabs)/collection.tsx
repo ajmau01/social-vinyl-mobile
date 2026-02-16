@@ -159,7 +159,11 @@ export default function CollectionScreen() {
 
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 <CollectionHeader
-                    title={username ? `${username}'s Crate` : 'The Crate'}
+                    title={
+                        username?.startsWith('Guest-')
+                            ? (useSessionStore.getState().sessionName || (useSessionStore.getState().hostUsername ? `${useSessionStore.getState().hostUsername}'s Party` : 'Party Session'))
+                            : (username ? `${username}'s Crate` : 'The Crate')
+                    }
                     syncStatus={syncStatus}
                     syncProgress={syncProgress}
                     viewMode={viewMode}

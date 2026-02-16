@@ -2,90 +2,196 @@
 
 > **Project**: Social Vinyl Mobile (React Native)
 > **Your Role**: Development & Implementation
-> **Current Assignment**: Phase 9 - Advanced Collection Features
-> **Status**: Ready to Start (Feb 14, 2026)
+> **Current Assignment**: Milestone 13 - Core Feature Parity
+> **Status**: Ready to Start (Feb 15, 2026)
+> **Last Updated**: Feb 15, 2026 - Phase 9 complete, Milestone 13 created
 
-## 🎯 Current Assignment: Phase 9 - Advanced Collection Features
+---
 
-**Milestone**: [Milestone 12: Phase 9](https://github.com/ajmau01/social-vinyl-mobile/milestone/12)
-**Timeline**: 2 weeks (Feb 17 - Mar 3, 2026)
-**Priority**: HIGH
+## 🎉 GREAT NEWS: Phase 9 is COMPLETE!
+
+You crushed Phase 9 ahead of schedule! All 4 issues merged on Feb 15, 2026:
+- ✅ New/Saved view modes
+- ✅ Random LP button
+- ✅ Daily Spin history view
+- ✅ Collection browsing is feature-complete!
+
+---
+
+## 🚀 NEXT UP: Milestone 13 - Core Feature Parity
+
+**This is BIG.** Milestone 13 transforms the app from "solo browsing" to **real multi-client party mode**.
+
+**What changes**:
+- ❌ **Before**: Listening Bin is local-only, no session sharing
+- ✅ **After**: Guests can join sessions and collaborate on the queue in real-time
+
+**Your first task**: [Issue #125](https://github.com/ajmau01/social-vinyl-mobile/issues/125) - WebSocket Protocol Enhancement (CRITICAL)
+
+**Why it's critical**: Every other feature in Milestone 13 depends on this foundation.
+
+**Read first**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Quick-Start-Milestone-13.md`
+
+---
+
+## 🎯 Current Assignment: Milestone 13 - Core Feature Parity
+
+**Milestone**: [Milestone 13: Core Feature Parity](https://github.com/ajmau01/social-vinyl-mobile/milestone/13)
+**Timeline**: 3-4 weeks (Mar 3 - Mar 31, 2026)
+**Priority**: CRITICAL (enables real party functionality)
 **Status**: ✅ Ready to start
+
+---
+
+## ✅ Phase 9 COMPLETE! 🎉
+
+**Completed**: Feb 15, 2026 (2 days ahead of schedule!)
+
+All 4 issues merged:
+- ✅ [#115](https://github.com/ajmau01/social-vinyl-mobile/issues/115) Phase 9.1 Overview
+- ✅ [#119](https://github.com/ajmau01/social-vinyl-mobile/issues/119) New/Saved View Modes (PR #122)
+- ✅ [#120](https://github.com/ajmau01/social-vinyl-mobile/issues/120) Random LP Button (PR #122)
+- ✅ [#121](https://github.com/ajmau01/social-vinyl-mobile/issues/121) Daily Spin History View (PR #124)
+
+**What You Delivered**:
+- 6 working view modes (All, Notable, Recent, Artist, Format, Saved)
+- Daily Spin history view with real-time updates
+- Random LP/Dice button
+- Notable vs Saved feature separation
+
+**User Impact**: Collection browsing is now feature-complete! 🚀
+
+---
+
+## 🚀 What's Next: Milestone 13 - Core Feature Parity
+
+### The Big Picture
+
+**Phase 9 gave users great collection browsing.** ✅
+
+**Milestone 13 enables the core party experience.** 🎯
+
+**What's Missing Right Now**:
+- ❌ Listening Bin is local-only (Guests can't add to Host's queue)
+- ❌ No way to create/join party sessions
+- ❌ Now Playing is static (no progress, likes, attribution)
+- ❌ No bi-directional WebSocket messaging
+
+**Milestone 13 fixes all of this.**
 
 ### What You're Building
 
-Complete the collection browsing experience by implementing the final 3 view modes:
-1. **'New' View** - Group albums by when they were added (Today, This Week, etc.)
-2. **'Saved' View** - Filter to bookmarked albums
-3. **'Spin' View** - Group by play count (BLOCKED on backend)
-4. **Random LP Button** - Dice icon that opens a random album
+Transform the mobile app into a true **multi-client party controller**:
 
-**User Impact**: Users can now discover and explore their collection in 6 different ways (currently only 3 work).
+1. **WebSocket Protocol Enhancement** (Foundation) - Bi-directional messaging
+2. **Listening Bin Real-time Sync** - Guests can add to Host's queue
+3. **Enhanced Now Playing** - Progress ring, likes, attribution
+4. **Session Management** - Create/join sessions with QR codes
+
+**User Impact**:
+- Hosts can share a 4-digit code or QR code to start a party
+- Guests can join and collaboratively build the listening queue
+- Everyone sees real-time updates (bin changes, likes, progress)
+- Full parity with web app for core party features
 
 ### Your Issues (in priority order)
 
-**START HERE** 👇
+**CRITICAL - START HERE** 👇
 
-1. **[Issue #119](https://github.com/ajmau01/social-vinyl-mobile/issues/119) - Implement 'New' and 'Saved' View Modes** ⭐
+1. **[Issue #125](https://github.com/ajmau01/social-vinyl-mobile/issues/125) - WebSocket Protocol Enhancement** 🔴
+   - Priority: CRITICAL (blocks all other Milestone 13 work)
+   - Effort: 3-4 days
+   - Status: ✅ Ready to start (NO blockers)
+   - Files: New UUID utility, WebSocket service, session store
+   - **Backend coordination**: Backend team works on [#245](https://github.com/ajmau01/recordcollection/issues/245) in parallel
+
+2. **[Issue #126](https://github.com/ajmau01/social-vinyl-mobile/issues/126) - Listening Bin Real-time Sync**
    - Priority: HIGH
-   - Effort: 3 days
-   - Status: ✅ Ready to start (NO blockers)
-   - File: `src/hooks/useGroupedReleases.ts`
+   - Effort: 4-5 days
+   - Status: ⏸️ BLOCKED by #125
+   - Files: New bin sync service, enhanced bin store, drag-to-reorder UI
 
-2. **[Issue #120](https://github.com/ajmau01/social-vinyl-mobile/issues/120) - Random LP/Dice Button**
+3. **[Issue #127](https://github.com/ajmau01/social-vinyl-mobile/issues/127) - Enhanced Now Playing**
    - Priority: MEDIUM
-   - Effort: 1 day
-   - Status: ✅ Ready to start (NO blockers)
-   - Files: `app/(tabs)/collection.tsx`, `src/components/collection/CollectionHeader.tsx`
+   - Effort: 3-4 days
+   - Status: ⏸️ BLOCKED by #125
+   - Files: New ProgressRing component, redesigned NowPlayingBanner
 
-3. **[Issue #121](https://github.com/ajmau01/social-vinyl-mobile/issues/121) - 'Spin' View Mode**
-   - Priority: MEDIUM
-   - Effort: 3 days (after backend ready)
-   - Status: 🔴 BLOCKED - Wait for backend [#242](https://github.com/ajmau01/recordcollection/issues/242)
-   - File: `src/hooks/useGroupedReleases.ts`
+4. **[Issue #128](https://github.com/ajmau01/social-vinyl-mobile/issues/128) - Session Management UI**
+   - Priority: CRITICAL (for v1.0)
+   - Effort: 5-6 days
+   - Status: ⏸️ BLOCKED by #125
+   - Files: New session service, create/join screens, QR scanner
 
-### Implementation Plan (Your 2-Week Sprint)
+### Implementation Plan (Your 3-4 Week Sprint)
 
-**Week 1** (Feb 17-21):
-- **Day 1-3**: Implement #119 (New/Saved views)
-  - Add helper function for time period grouping
-  - Update grouping logic
+**Week 1: Protocol Foundation** (CRITICAL - Mar 3-7)
+- **Day 1-4**: Implement #125 (WebSocket Protocol Enhancement)
+  - Create UUID utility
+  - Add new message types
+  - Enhance WebSocket service with `sendAction()` method
+  - Add protocol handshake
+  - Handle ACKs and feature negotiation
   - Write unit tests
-  - Manual testing
-- **Day 4**: Implement #120 (Random LP button)
-  - Add handler in collection screen
-  - Wire up dice icon
-  - Write tests
-- **Day 5**: Testing, PR review, fixes
+- **Backend team works on [#245](https://github.com/ajmau01/recordcollection/issues/245) in parallel**
+- **Day 5**: Testing, PR review, coordinate with backend
 
-**Week 2** (Feb 24-28):
-- **Days 1-2**: Backend coordination for #121
-  - Backend team works on [recordcollection#242](https://github.com/ajmau01/recordcollection/issues/242)
-  - You: Prepare for #121 (review code, read backend specs)
-- **Days 3-5**: If backend ready, implement #121
-  - If backend NOT ready: polish #119/#120, add extra tests, improve UX
+**Week 2: Real-time Bin Sync** (Mar 10-14)
+- **Day 1-5**: Implement #126 (Listening Bin Real-time Sync)
+  - Create bin sync service
+  - Enhanced bin store with optimistic updates
+  - Pending operations queue
+  - Drag-to-reorder UI
+  - Sync status indicators
+  - Write tests
+
+**Week 3: Enhanced Now Playing** (Mar 17-21)
+- **Day 1-4**: Implement #127 (Enhanced Now Playing)
+  - Create ProgressRing SVG component
+  - Redesign NowPlayingBanner
+  - Add like functionality
+  - Add attribution display
+  - Write tests
+
+**Week 4: Session Management** (Mar 24-28)
+- **Day 1-5**: Implement #128 (Session Management UI)
+  - Create session service
+  - Build create session screen
+  - Build join session screen
+  - QR code display/scanner
+  - Write tests
+- **Final day**: Integration testing, deployment coordination
 
 ### Documentation Available
 
 **Your complete implementation guides** (Claude prepared these for you):
 
-1. **Quick Start**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Quick-Start-Phase-9.md`
-   - Read this FIRST before starting
-   - Implementation order, file reference, testing checklist
+1. **Quick Start**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Quick-Start-Milestone-13.md` ⭐
+   - **READ THIS FIRST** before starting
+   - Implementation order, priorities, deployment checklist
+   - Backend coordination requirements
 
-2. **Technical Details**: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Phase-9-Implementation-Plan.md`
-   - Full code examples
-   - Helper functions
-   - Section sorting logic
-   - Testing requirements
+2. **Complete Technical Plan**: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Milestone-13-Implementation-Plan.md`
+   - 400+ lines of detailed specifications
+   - Architecture diagrams
+   - Week-by-week implementation strategy
+   - Complete file lists
+   - Testing strategy
+   - Success metrics
 
-3. **Roadmap Context**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Roadmap-to-v1.0.md`
-   - Why Phase 9 matters
-   - What comes next
-   - Path to v1.0
+3. **Backend Coordination**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Cross-Repo-Dependencies.md`
+   - 5 backend issues (#245-249) created
+   - Breaking changes tracker
+   - Deployment order (backend first, then mobile)
 
-4. **GitHub Issues**: Each issue has 200+ lines of implementation details
-   - Copy-paste ready code
+4. **Roadmap Context**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Roadmap-to-v1.0.md`
+   - Why Milestone 13 matters
+   - Strategic position (2nd of 4 milestones to v1.0)
+   - What comes after
+
+5. **GitHub Issues**: Each issue has 100-150 lines of implementation details
+   - Complete acceptance criteria
+   - Code examples
    - Step-by-step instructions
    - Test cases
 
@@ -350,207 +456,230 @@ Tests: All passing (95% coverage)
 GitHub: Issue #59
 ```
 
-## Phase 9 Implementation Details
+## Milestone 13 Implementation Details
 
-### Issue #119: New & Saved View Modes (START HERE)
+### Issue #125: WebSocket Protocol Enhancement (START HERE - CRITICAL)
 
-**Goal**: Make 'New' and 'Saved' chips functional instead of showing all albums in one carousel.
+**Goal**: Establish reliable bi-directional messaging foundation with protocol versioning and feature negotiation.
 
-**What's Currently Broken**:
-- Tap "New" chip → Shows all albums in single carousel (should group by time periods)
-- Tap "Saved" chip → Shows all albums in single carousel (should filter to saved only)
+**Why This is CRITICAL**:
+- **ALL** other Milestone 13 features depend on this
+- Enables client→server actions (add to bin, like tracks, etc.)
+- Provides feature negotiation (graceful degradation for old servers)
+- Establishes message acknowledgment system
 
-**What You're Fixing**:
-1. Add helper function to group albums by time periods (Today, This Week, etc.)
-2. Update grouping logic in `useGroupedReleases.ts`
-3. Add section sorting for time periods
+**What You're Building**:
+1. UUID generation utility
+2. New WebSocket message types (PROTOCOL_HANDSHAKE, CLIENT_ACTION, ACTION_ACK)
+3. Enhanced WebSocket service with `sendAction()` method
+4. Protocol handshake on connection
+5. Feature flag system (`enabledFeatures` in session store)
 
-**File to Modify**: `src/hooks/useGroupedReleases.ts` (lines 99-145)
-
-**Implementation Steps** (from issue #119):
-
-**Step 1**: Add helper function (top of file, after imports)
-\`\`\`typescript
-function getTimePeriodKey(addedAt: number): string {
-    const now = Date.now();
-    const addedMs = addedAt * 1000;
-    const diff = now - addedMs;
-    const dayMs = 24 * 60 * 60 * 1000;
-
-    if (diff < dayMs) return 'Today';
-    if (diff < 7 * dayMs) return 'This Week';
-    if (diff < 30 * dayMs) return 'This Month';
-
-    const addedDate = new Date(addedMs);
-    const addedYear = addedDate.getFullYear();
-    const currentYear = new Date().getFullYear();
-
-    if (addedYear === currentYear) return 'Earlier This Year';
-    return addedYear.toString();
-}
-\`\`\`
-
-**Step 2**: Update grouping logic (around line 99-130)
-\`\`\`typescript
-// Add these two cases to the existing if/else chain:
-} else if (groupBy === 'new') {
-    key = getTimePeriodKey(release.added_at);
-} else if (groupBy === 'saved') {
-    if (!release.isSaved) return; // Skip unsaved
-    key = 'Saved Albums';
-}
-\`\`\`
-
-**Step 3**: Update section sorting (around line 133-145)
-- Add custom sorting for 'new' mode (time periods in order)
-- See issue #119 for complete code
-
-**Testing**:
-- Unit tests: `src/hooks/__tests__/useGroupedReleases.test.ts`
-- Manual: Switch to "New" chip, verify grouping
-- Manual: Long-press to save albums, switch to "Saved" chip
-- E2E: `e2e/view-modes.test.ts`
-
-**Acceptance Criteria**:
-- [ ] 'New' view groups by time periods (Today, This Week, etc.)
-- [ ] Time periods appear in chronological order
-- [ ] 'Saved' view filters to only saved albums
-- [ ] Empty state works (no saved albums shows empty message)
-- [ ] All tests pass
-- [ ] No performance regressions
-
-**Estimated Time**: 3 days
-- Day 1: Implement 'New' view + unit tests
-- Day 2: Implement 'Saved' view + unit tests
-- Day 3: Manual testing, E2E tests, PR
-
----
-
-### Issue #120: Random LP/Dice Button
-
-**Goal**: Wire up the dice icon (already in UI from Phase 8) to open a random album modal.
-
-**What's Currently Broken**:
-- Dice icon is visible but does nothing when tapped
-
-**What You're Implementing**:
-1. Handler to pick random album
-2. Wire up icon to handler
-3. Open ReleaseDetailsModal with random album
-4. Handle edge cases (empty collection, single album)
+**Files to Create**:
+- `src/utils/uuid.ts` - UUID generation utility
 
 **Files to Modify**:
-1. `app/(tabs)/collection.tsx` - Add handler
-2. `src/components/collection/CollectionHeader.tsx` - Wire up icon
+- `src/types/index.ts` - Add new message types
+- `src/types/schemas.ts` - Add Zod schemas
+- `src/services/WebSocketService.ts` - Protocol handshake + sendAction()
+- `src/store/useSessionStore.ts` - Add enabledFeatures tracking
+- `src/hooks/useWebSocket.ts` - Expose enabledFeatures
 
-**Implementation Steps** (from issue #120):
+**Implementation Steps** (from issue #125):
 
-**Step 1**: Add handler in `collection.tsx`
+**Step 1**: Create UUID utility (`src/utils/uuid.ts`)
 \`\`\`typescript
-const handleRandomLP = useCallback(() => {
-    if (releases.length === 0) return;
-
-    const randomIndex = Math.floor(Math.random() * releases.length);
-    const randomRelease = releases[randomIndex];
-
-    setSelectedRelease(randomRelease);
-    setModalVisible(true);
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-}, [releases]);
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 \`\`\`
 
-**Step 2**: Pass to header
-\`\`\`typescript
-<CollectionHeader
-    // ... existing props
-    onRandomLP={handleRandomLP}
-/>
-\`\`\`
+**Step 2**: Add new message types to `src/types/index.ts`
+- ProtocolHandshakeMessage
+- ProtocolAckMessage
+- ClientActionMessage
+- ActionAckMessage
+- See issue #125 for complete code
 
-**Step 3**: Wire up icon in `CollectionHeader.tsx`
-- Add `onRandomLP` to props interface
-- Wrap dice icon in TouchableOpacity
-- Handle disabled state (no albums)
-- See issue #120 for complete code
+**Step 3**: Add Zod schemas to `src/types/schemas.ts`
+- Validation for all new message types
+
+**Step 4**: Enhance WebSocket service
+- Add `sendAction()` method for client→server messages
+- Add protocol handshake in `handleOpen()`
+- Handle PROTOCOL_ACK and ACTION_ACK messages
+- Track pending actions with timeout handling
+
+**Step 5**: Update session store
+- Add `enabledFeatures: string[]` field
+- Add `setEnabledFeatures()` action
+- Add `isFeatureEnabled()` helper
+
+**Step 6**: Write unit tests
+- UUID generation
+- Protocol handshake message creation
+- sendAction() behavior
+- ACK timeout handling
 
 **Testing**:
-- Unit: Handler selects random album
-- Manual: Tap dice → modal opens
-- Manual: Empty collection → button disabled
-- E2E: `e2e/collection.test.ts`
+- Unit tests for UUID generation
+- Unit tests for protocol negotiation
+- Integration test with mock server
+- Manual test with real backend (after backend #245 merges)
 
 **Acceptance Criteria**:
-- [ ] Dice icon opens random album modal
-- [ ] Haptic feedback on tap
-- [ ] Button disabled when no albums
-- [ ] Random picks from filtered results (after search)
+- [ ] Protocol handshake sent on WebSocket connection
+- [ ] Server responds with enabled features
+- [ ] enabledFeatures stored in session store
+- [ ] sendAction() method works
+- [ ] ACTION_ACK handling works
+- [ ] Timeout triggers error callback
+- [ ] Graceful degradation if server doesn't support protocol
 - [ ] All tests pass
+- [ ] Backward compatible with old servers
 
-**Estimated Time**: 1 day
+**Estimated Time**: 3-4 days
+- Day 1-2: Implement core protocol infrastructure
+- Day 3: Write tests, handle edge cases
+- Day 4: Integration testing, PR
+
+**Backend Coordination**:
+- Backend team works on [#245](https://github.com/ajmau01/recordcollection/issues/245) in parallel
+- Coordinate merge timing (backend deploys first, then mobile)
+- Test with backend dev environment before production
 
 ---
 
-### Issue #121: Spin View Mode (BLOCKED)
+### Issue #126: Listening Bin Real-time Sync
 
-**Goal**: Group albums by play count (how often they've been played)
+**Goal**: Replace local-only bin with WebSocket-synced bin supporting multi-client collaboration.
 
-**Status**: 🔴 BLOCKED on backend [recordcollection#242](https://github.com/ajmau01/recordcollection/issues/242)
+**Status**: ⏸️ BLOCKED by #125 (Protocol Enhancement)
 
-**What's Blocking**:
-- Backend needs to add `spin_count` column to database
-- Backend needs to track play events via WebSocket
-- Backend needs to include `spinCount` in collection sync
+**What You're Building**:
+1. Enhanced bin store with sync tracking
+2. Optimistic UI updates (instant feedback)
+3. Pending operations queue (offline resilience)
+4. Bin sync service for WebSocket actions
+5. Drag-to-reorder functionality
+6. Sync status indicators
+7. Attribution labels ("Added by [Name]")
 
-**Backend Timeline**: 3-4 days (being worked on in parallel)
+**Files to Create**:
+- `src/services/ListeningBinSyncService.ts` - Bin sync service
+- `src/hooks/useListeningBin.ts` - Bin hook
+- `src/components/BinItem.tsx` - Individual bin item component
 
-**Your Timeline**: 2-3 days (after backend deploys to dev)
+**Files to Modify**:
+- `src/store/useListeningBinStore.ts` - Add sync tracking, optimistic updates
+- `app/(tabs)/bin.tsx` - Add drag-to-reorder, sync status
 
-**What You'll Implement** (when unblocked):
-1. Add `spinCount` field to Release type
-2. Add database migration for mobile SQLite
-3. Add helper function to group by play frequency
-4. Update grouping logic
-5. Test with dev backend
+**Key Concepts**:
+- **Optimistic updates**: UI updates immediately, then syncs with server
+- **Pending operations**: Queue actions when offline, replay when reconnected
+- **Server authority**: Server state always wins in conflicts
 
-**Implementation Steps** (from issue #121):
-- Step 1: Update `src/types/index.ts` - Add `spinCount?: number`
-- Step 2: Update database schema in `DatabaseService.ts`
-- Step 3: Add `getSpinGroupKey()` helper function
-- Step 4: Add grouping logic for 'spin' mode
-- Step 5: Test with dev backend
-- See issue #121 for complete code
+**Dependencies**:
+- `react-native-draggable-flatlist` - For drag-to-reorder
+- `react-native-gesture-handler` - Peer dependency
+- `react-native-reanimated` - Already installed
 
-**Coordination**:
-1. Backend team completes [#242](https://github.com/ajmau01/recordcollection/issues/242)
-2. Backend deploys to dev environment
-3. **You get notified** via vault `Current-Sprint.md` or GitHub comment
-4. You connect mobile to dev backend and test
-5. You implement mobile grouping logic
-6. Coordinate production deployment
+**Estimated Time**: 4-5 days
 
-**What to Do While Blocked**:
-- Focus on #119 and #120
-- Review backend issue #242 to understand the data format
-- Prepare test cases for when backend is ready
-- Polish #119/#120 implementation
+**Backend Coordination**:
+- Backend [#246](https://github.com/ajmau01/recordcollection/issues/246) must complete first
+- Deploy backend before mobile
+- Test with 2+ devices
+
+---
+
+### Issue #127: Enhanced Now Playing
+
+**Goal**: Transform static banner into interactive component with progress, likes, and attribution.
+
+**Status**: ⏸️ BLOCKED by #125 (Protocol Enhancement)
+
+**What You're Building**:
+1. Circular progress ring (SVG component)
+2. Heart/like button with real-time counter
+3. Attribution display ("Added by [Name]")
+4. Tap to view full release details
+
+**Files to Create**:
+- `src/components/ProgressRing.tsx` - SVG progress ring component
+
+**Files to Modify**:
+- `src/components/NowPlayingBanner.tsx` - Complete redesign
+- `src/store/useSessionStore.ts` - Add enhanced now playing fields
+- `src/services/ListeningBinSyncService.ts` - Add likeCurrentTrack() method
+
+**Dependencies**:
+- `react-native-svg` - May already be installed
+
+**Estimated Time**: 3-4 days
+
+**Backend Coordination**:
+- Backend [#247](https://github.com/ajmau01/recordcollection/issues/247) (Like system)
+- Backend [#249](https://github.com/ajmau01/recordcollection/issues/249) (Enhanced now playing)
+
+---
+
+### Issue #128: Session Management UI
+
+**Goal**: Enable Host session creation and Guest joining via 4-digit code or QR scan.
+
+**Status**: ⏸️ BLOCKED by #125 (Protocol Enhancement)
+
+**What You're Building**:
+1. Create session screen (Host) with 4-digit code generation
+2. Join session screen (Guest) with code entry and QR scan
+3. QR code display/sharing
+4. Session validation API integration
+5. Session info in drawer
+
+**Files to Create**:
+- `src/services/SessionService.ts` - Session API service
+- `app/create-session.tsx` - Session creation screen
+- `app/join-session.tsx` - Session join screen
+- `src/components/SessionCodeDisplay.tsx` - Display code + QR
+- `src/components/QRScanner.tsx` - QR code scanner
+
+**Dependencies**:
+- `expo-barcode-scanner` - For QR scanning
+- `expo-camera` - For camera access
+
+**Estimated Time**: 5-6 days
+
+**Backend Coordination**:
+- Backend [#248](https://github.com/ajmau01/recordcollection/issues/248) (Session creation API)
+- QR code format must match backend expectation
 
 ---
 
 ## Current Sprint Focus
 
-**Active Sprint**: Phase 9 - Advanced Collection Features
+**Active Sprint**: Milestone 13 - Core Feature Parity
 **Check**: `ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md`
 
 **Your Tasks** (in order):
-1. ✅ **Issue #119**: New/Saved view modes (3 days) - START HERE
-2. ✅ **Issue #120**: Random LP button (1 day) - NEXT
-3. ⏸️ **Issue #121**: Spin view mode (BLOCKED on backend)
-
-**Reference Issues**:
-- **#115**: Phase 9.1 overview (parent issue with full context)
+1. 🔴 **Issue #125**: WebSocket Protocol Enhancement (3-4 days) - **START HERE CRITICAL**
+2. ⏸️ **Issue #126**: Listening Bin Real-time Sync (4-5 days) - BLOCKED by #125
+3. ⏸️ **Issue #127**: Enhanced Now Playing (3-4 days) - BLOCKED by #125
+4. ⏸️ **Issue #128**: Session Management UI (5-6 days) - BLOCKED by #125
 
 **Completed Recently** (for context):
+- ✅ **Phase 9**: Advanced Collection Features (all 4 issues merged Feb 15) 🎉
+  - New/Saved view modes (#119)
+  - Random LP button (#120)
+  - Daily Spin history view (#121)
 - ✅ Phase 8: Visual Design Parity (all issues #100-107 merged Feb 13-14)
 - ✅ Security hardening (8 of 9 complete)
 - ✅ WebSocket authentication (#68 merged)
@@ -634,47 +763,60 @@ npx eslint src/
 npm test -- ErrorBoundary
 ```
 
-## Phase 9 Success Criteria
+## Milestone 13 Success Criteria
 
-**Phase 9 is complete when**:
-- [ ] All 6 view modes are functional (A-Z, Genre, Decade, New, Spin, Saved)
-- [ ] 'New' view groups by time periods correctly
-- [ ] 'Saved' view filters to bookmarked albums
-- [ ] Random LP button opens random album modal
-- [ ] 'Spin' view groups by play count (or documented as v1.1 if backend delayed)
-- [ ] All tests passing (unit + E2E)
-- [ ] No performance regressions with 3000+ albums
-- [ ] PRs merged and deployed
+**Milestone 13 is complete when**:
+- [ ] Protocol enhancement (#125) complete and merged
+- [ ] Backend protocol (#245) complete and deployed
+- [ ] Listening Bin syncs in real-time across multiple clients
+- [ ] Optimistic UI updates work (instant feedback)
+- [ ] Offline bin actions queue and sync on reconnect
+- [ ] Host can create session with 4-digit code
+- [ ] Guest can join via code or QR scan
+- [ ] Now Playing shows progress ring, like counter, attribution
+- [ ] All tests passing (unit + integration + E2E)
+- [ ] Multi-client testing verified (2+ devices)
+- [ ] PRs merged and deployed (backend first, then mobile)
 
 ---
 
-## Backend Coordination (Important!)
+## Backend Coordination (CRITICAL!)
 
-**Backend Issue**: [recordcollection#242 - Track Play Count](https://github.com/ajmau01/recordcollection/issues/242)
+**5 Backend Issues Created**: [#245-249](https://github.com/ajmau01/recordcollection/issues?q=is%3Aissue+is%3Aopen+245..249)
 
 **Why This Matters**:
-Issue #121 (Spin view) depends on backend implementing play count tracking. The backend team is working on this in parallel.
+ALL Milestone 13 features require backend support. Backend team works in parallel with you.
 
 **Timeline**:
-- Backend work: 3-4 days
-- Your work: 2-3 days (after backend ready)
+- **Week 1**: Backend #245 (2-3 days) + Mobile #125 (3-4 days) - **FOUNDATION**
+- **Week 2-3**: Backend #246-249 + Mobile #126-128 - **FEATURES** (parallel work)
 
 **How You'll Know Backend is Ready**:
 1. Check `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Cross-Repo-Dependencies.md`
-2. Look for status change: 🔴 BLOCKED → 🟢 READY
-3. Or: GitHub comment on issue #121
+2. Look for status changes (🔴 BLOCKED → 🟢 READY)
+3. GitHub comments on your mobile issues
+4. Claude may notify you in vault notes
 
-**What to Do When Backend is Ready**:
-1. Connect mobile to dev backend
-2. Test `spinCount` data is received
-3. Implement grouping logic from issue #121
-4. Run tests with real data
-5. Coordinate production deployment timing
+**CRITICAL Deployment Order**:
+- **ALWAYS**: Backend deploys FIRST, then mobile
+- **Week 1**: Backend #245 → Mobile #125
+- **Week 2**: Backend #246 → Mobile #126
+- **Week 3**: Backend #247 + #249 → Mobile #127
+- **Week 4**: Backend #248 → Mobile #128
 
-**Deployment Coordination**:
-- Backend deploys FIRST to production
-- Then mobile deploys (same day or next day)
-- Document in vault when deployed
+**Why Backend First?**:
+- Backend supports both old and new clients
+- Mobile gracefully degrades if backend not ready
+- Prevents breaking existing clients
+
+**Coordination Steps**:
+1. Backend team completes their issue
+2. Backend deploys to dev environment
+3. You test mobile with dev backend
+4. Backend deploys to production
+5. You deploy mobile to production
+6. Multi-client testing
+7. Update vault documentation
 
 ---
 
@@ -693,9 +835,9 @@ Issue #121 (Spin view) depends on backend implementing play count tracking. The 
 
 **Vault location**: `~/ObsidianVaults/SocialVinyl-Dev/`
 
-**Phase 9 Quick Start**: `_Dashboard/Quick-Start-Phase-9.md` ⭐ READ THIS FIRST
+**Milestone 13 Quick Start**: `_Dashboard/Quick-Start-Milestone-13.md` ⭐ **READ THIS FIRST**
 
-**Implementation Plan**: `Projects/Mobile-App/Phase-9-Implementation-Plan.md`
+**Implementation Plan**: `Projects/Mobile-App/Milestone-13-Implementation-Plan.md`
 
 **Before work**: Read `_Dashboard/Current-Sprint.md`
 
@@ -705,20 +847,23 @@ Issue #121 (Spin view) depends on backend implementing play count tracking. The 
 
 **Repo**: https://github.com/ajmau01/social-vinyl-mobile
 
-**Milestone**: https://github.com/ajmau01/social-vinyl-mobile/milestone/12
+**Milestone**: https://github.com/ajmau01/social-vinyl-mobile/milestone/13
 
 ---
 
 ## Your First Steps (When You Start)
 
-1. **Read Quick Start**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Quick-Start-Phase-9.md`
-2. **Read Issue #119**: https://github.com/ajmau01/social-vinyl-mobile/issues/119
-3. **Read Implementation Plan**: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Phase-9-Implementation-Plan.md`
-4. **Open file**: `src/hooks/useGroupedReleases.ts`
-5. **Start coding**: Add `getTimePeriodKey()` helper function
-6. **Run tests**: `npm test useGroupedReleases`
-7. **Manual test**: Switch to "New" chip in app
-8. **Document**: Create implementation note when done
+1. **Read Quick Start**: `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Quick-Start-Milestone-13.md` ⭐
+2. **Read Issue #125**: https://github.com/ajmau01/social-vinyl-mobile/issues/125
+3. **Read Implementation Plan**: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Milestone-13-Implementation-Plan.md`
+4. **Create UUID utility**: `src/utils/uuid.ts`
+5. **Start coding**: Add new message types to `src/types/index.ts`
+6. **Enhance WebSocket service**: Add `sendAction()` method
+7. **Run tests**: `npm test` (write tests as you go!)
+8. **Coordinate with backend**: Check that backend #245 is progressing
+9. **Document**: Create implementation note when done
+
+**Remember**: Issue #125 is the **foundation** for all other Milestone 13 features. Take your time to get it right!
 
 ---
 

@@ -18,6 +18,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
+import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
 import { CONFIG } from '@/config';
@@ -101,6 +102,7 @@ export default function HubScreen() {
                     useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
                 }
                 useSessionStore.getState().setLastSyncTime(result.data.syncTime);
+                useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
                 router.replace('/(tabs)/collection');
             } else {
                 setError(result.error.message || 'Failed to sync collection');
@@ -117,7 +119,49 @@ export default function HubScreen() {
             setError('Please enter a valid 5-character alphanumeric code');
             return;
         }
-        setError('Guest mode coming soon in Phase 4');
+
+        setLoading(true);
+        setError(null);
+
+        const guestUsername = `Guest-${Math.floor(Math.random() * 1000)}`;
+
+        // Temporarily register callbacks to capture connection state for joinSession
+        // In a real app, this should be handled by a global listener or context
+        wsService.setCallbacks({
+            onConnectionStateChange: (state) => {
+                if (state === 'connected') {
+                    // Connection handled by joinSession promise
+                }
+            },
+            onAccessLevel: () => { },
+            onError: (err) => setError(err.message),
+            onMessage: () => { }
+        });
+
+        wsService.joinSession(inputValue, guestUsername)
+            .then(result => {
+                if (result.success) {
+                    useSessionStore.getState().setUsername(guestUsername);
+                    useSessionStore.getState().setLastMode('guest');
+                    // Session ID and Name should be returned in result.data from join-session payload
+                    if (result.data) {
+                        if (result.data.sessionId) useSessionStore.getState().setSessionId(result.data.sessionId);
+                        if (result.data.name) useSessionStore.getState().setSessionName(result.data.name);
+                        if (result.data.hostUsername) useSessionStore.getState().setHostUsername(result.data.hostUsername);
+                    }
+
+                    useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
+                    router.replace('/(tabs)/bin');
+                } else {
+                    setError(result.error.message || 'Failed to join session');
+                }
+            })
+            .catch(err => {
+                setError(err.message || 'Join failed');
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     };
 
     const handleHostLogin = async () => {
@@ -143,7 +187,10 @@ export default function HubScreen() {
                 }
 
                 useSessionStore.getState().setSyncStatus('syncing');
-                router.replace('/(tabs)/collection');
+                // router.replace('/(tabs)/collection'); // OLD
+                // Force navigation to BIN for verification task
+                useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
+                router.replace('/(tabs)/bin');
 
                 syncService.syncCollection(userId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),

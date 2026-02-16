@@ -8,9 +8,12 @@ import {
 } from '@/types';
 import { IWebSocketService } from './interfaces';
 import { logger } from '@/utils/logger';
-import { AuthResponseSchema, WebSocketMessageSchema } from '@/types/schemas';
-
+import { ActionAckSchema, AuthResponseSchema, ProtocolAckSchema, WebSocketMessageSchema } from '@/types/schemas';
+import { generateUUID } from '@/utils/uuid';
 import { networkSecurity } from '@/utils/network';
+
+// Issue #125: Protocol Versioning
+const PROTOCOL_VERSION = '1.0';
 
 class WebSocketService implements IWebSocketService {
     private static instance: WebSocketService;
@@ -28,6 +31,16 @@ class WebSocketService implements IWebSocketService {
     } | null = null;
     private authTimeout: any = null;
     private extraOnNowPlaying: ((data: any) => void) | undefined;
+
+    // Issue #125: Pending Actions Map
+    private pendingActions = new Map<string, {
+        resolve: (value: any) => void;
+        reject: (reason?: any) => void;
+        timeout: any;
+    }>();
+
+    // Issue #126: Dedicated listeners for Bin State to avoid conflicts with useWebSocket
+    private binStateListeners: ((items: any[]) => void)[] = [];
 
     private constructor() { }
 
@@ -83,11 +96,50 @@ class WebSocketService implements IWebSocketService {
             this.authTimeout = null;
         }
 
+        // Reject all pending actions
+        this.pendingActions.forEach((action) => {
+            clearTimeout(action.timeout);
+            action.reject(new Error('WebSocket disconnected'));
+        });
+        this.pendingActions.clear();
+
         if (this.socket) {
             this.socket.close();
             this.socket = null;
         }
         this.callbacks?.onConnectionStateChange('disconnected');
+    }
+
+    /**
+     * Issue #125: Send an action to the server and wait for ACK
+     */
+    public async sendAction<T = any>(action: string, payload: any = {}): Promise<T> {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+            throw new Error('WebSocket is not connected');
+        }
+
+        const actionId = generateUUID();
+        const message = {
+            type: 'CLIENT_ACTION',
+            action,
+            actionId,
+            payload
+        };
+
+        return new Promise<T>((resolve, reject) => {
+            // Set timeout for 5 seconds
+            const timeout = setTimeout(() => {
+                if (this.pendingActions.has(actionId)) {
+                    this.pendingActions.delete(actionId);
+                    reject(new Error(`Action ${action} timed out`));
+                }
+            }, 5000);
+
+            this.pendingActions.set(actionId, { resolve, reject, timeout });
+
+            if (CONFIG.DEBUG_WS) logger.log('[WS] Sending Action:', action, actionId);
+            this.socket?.send(JSON.stringify(message));
+        });
     }
 
     /**
@@ -101,76 +153,96 @@ class WebSocketService implements IWebSocketService {
      */
     public async login(username: string, password: string): AsyncResult<LoginResult> {
         return new Promise((resolve) => {
-            let tempSocket: WebSocket | null = null;
-            const loginTimeout = setTimeout(() => {
-                tempSocket?.close();
-                resolve({ success: false, error: new Error('Login timed out. Check connection.') });
+            const tempSocket = new WebSocket(CONFIG.WS_URL + `?username=${username}&admin=true`);
+            const timeout = setTimeout(() => {
+                tempSocket.close();
+                resolve({ success: false, error: new Error('Login timed out') });
             }, 10000);
 
-            const wsUrl = `${CONFIG.WS_URL}?username=default`;
-            if (CONFIG.DEBUG_WS) logger.log('[WS] Login connecting to:', wsUrl);
-
-            tempSocket = new WebSocket(wsUrl);
-
             tempSocket.onopen = () => {
-                tempSocket?.send(JSON.stringify({
+                tempSocket.send(JSON.stringify({
                     action: 'admin-login',
                     username,
                     password
                 }));
             };
 
-            tempSocket.onerror = (e) => {
-                logger.error('[WS] Login socket error:', e);
-            };
-
             tempSocket.onmessage = (event) => {
                 try {
-                    const rawData = JSON.parse(event.data);
-                    const validation = AuthResponseSchema.safeParse(rawData);
-
-                    if (!validation.success) {
-                        if (CONFIG.DEBUG_WS) logger.log('[WS] Login validation failed:', validation.error);
-                        return; // Ignore malformed auth messages
-                    }
-
-                    const data = validation.data;
-                    const type = data.type || (data as any).messageType; // messageType fallback for back compat
-
-                    if (CONFIG.DEBUG_WS) logger.log('[WS] Login received:', type, data);
-
-                    // Support both admin-login-success and Atomic Login (session-joined with authToken)
-                    if (type === 'admin-login-success' || (type === 'session-joined' && data.authToken)) {
-                        clearTimeout(loginTimeout);
-                        tempSocket?.close(); // Close immediately on success
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'admin-login-success' || data.type === 'session-joined') {
+                        clearTimeout(timeout);
+                        tempSocket.close();
                         resolve({
                             success: true,
                             data: {
-                                sessionId: data.sessionId || '',
-                                token: data.authToken as string,
-                                userId: data.username || username
+                                sessionId: data.sessionId,
+                                token: data.authToken,
+                                userId: data.username
                             }
                         });
-                    } else if (type === 'error') {
-                        clearTimeout(loginTimeout);
-                        tempSocket?.close();
+                    } else if (data.type === 'error') {
+                        clearTimeout(timeout);
+                        tempSocket.close();
                         resolve({ success: false, error: new Error(data.message || 'Login failed') });
                     }
                 } catch (e) {
-                    // Ignore parse errors for non-JSON heartbeat
+                    clearTimeout(timeout);
+                    tempSocket.close();
+                    resolve({ success: false, error: e as Error });
                 }
             };
 
-            tempSocket.onerror = (e) => {
-                clearTimeout(loginTimeout);
-                tempSocket?.close();
-                resolve({ success: false, error: new Error('Connection failed') });
+            tempSocket.onerror = (err) => {
+                clearTimeout(timeout);
+                tempSocket.close();
+                resolve({ success: false, error: new Error('Network error during login') });
+            };
+        });
+    }
+    /**
+     * Joins a session as a guest.
+     * Establishes a persistent connection and sends the join-session action.
+     */
+    public async joinSession(joinCode: string, username: string): AsyncResult<any> {
+        return new Promise((resolve) => {
+            // 1. Connect
+            this.disconnect(); // Ensure clean slate
+            this.connect(username);
+
+            // 2. Wait for connection and join
+            const timeout = setTimeout(() => {
+                resolve({ success: false, error: new Error('Connection timed out') });
+            }, 10000);
+
+            const onConnect = (state: string) => {
+                if (state === 'connected') {
+                    // Connection successful, now send join action
+                    this.sendAction('join-session', { joinCode })
+                        .then((response: any) => {
+                            clearTimeout(timeout);
+                            resolve({ success: true, data: response });
+                        })
+                        .catch((err) => {
+                            clearTimeout(timeout);
+                            this.disconnect();
+                            resolve({ success: false, error: err });
+                        });
+                }
             };
 
-            tempSocket.onclose = () => {
-                // If this happens unexpectedly before resolve
-                if (CONFIG.DEBUG_WS) logger.log('[WS] Login socket closed');
-            };
+            // Temporary callback interception to detect connection
+            // In a real app, we might use a purely event-driven approach or a dedicated promise-based connect()
+            const originalCallback = this.callbacks?.onConnectionStateChange;
+            if (this.callbacks) {
+                this.callbacks.onConnectionStateChange = (state) => {
+                    originalCallback?.(state);
+                    onConnect(state);
+                };
+            } else {
+                // Should link callbacks before calling joinSession in the UI
+                logger.warn('[WS] joinSession called without callbacks registered');
+            }
         });
     }
 
@@ -202,6 +274,13 @@ class WebSocketService implements IWebSocketService {
             // Legacy mode or guest connection
             this.callbacks?.onConnectionStateChange('connected');
         }
+
+        // Issue #125: Send Protocol Handshake (Graceful Degradation: Old servers will ignore this)
+        this.socket?.send(JSON.stringify({
+            type: 'PROTOCOL_HANDSHAKE',
+            version: PROTOCOL_VERSION,
+            capabilities: ['bin_sync', 'session_mgmt']
+        }));
     };
 
     private handleMessage = (event: MessageEvent) => {
@@ -216,10 +295,38 @@ class WebSocketService implements IWebSocketService {
 
             const data = validation.data;
             const type = data.type || (data as any).messageType;
-            if (CONFIG.DEBUG_WS) logger.log('[WS] Raw:', type, data);
+            if (CONFIG.DEBUG_WS && type !== 'now-playing') logger.log('[WS] Raw:', type, data);
 
             // Always emit raw message for flexible consumption
             this.callbacks?.onMessage(data as unknown as WebSocketMessage);
+
+            // Issue #125: Handle Action ACKs
+            if (type === 'ACTION_ACK' && data.actionId) {
+                const pending = this.pendingActions.get(data.actionId);
+                if (pending) {
+                    clearTimeout(pending.timeout);
+                    this.pendingActions.delete(data.actionId);
+                    if (data.status === 'success') {
+                        pending.resolve(data.data);
+                    } else {
+                        pending.reject(new Error(data.error || 'Action failed'));
+                    }
+                }
+                return;
+            }
+
+            // Issue #125: Handle Protocol ACK
+            if (type === 'PROTOCOL_ACK') {
+                const ackValidation = ProtocolAckSchema.safeParse(data);
+                if (ackValidation.success) {
+                    if (CONFIG.DEBUG_WS) logger.log('[WS] Protocol Handshake ACK:', ackValidation.data.enabledFeatures);
+                    // Store enabledFeatures in SessionStore
+                    // Implements feature negotiation from Issue #125
+                    const { setEnabledFeatures } = require('@/store/useSessionStore').useSessionStore.getState();
+                    setEnabledFeatures(ackValidation.data.enabledFeatures);
+                }
+                return;
+            }
 
             // Semantic Event Emission (Architectural Cleanup)
             switch (type) {
@@ -284,6 +391,20 @@ class WebSocketService implements IWebSocketService {
                     }
                     if (data.message) {
                         this.callbacks?.onAccessLevel?.(data.message);
+                    }
+                    break;
+                // Issue #126: Handle both mobile-specific BIN_STATE and generic state messages
+                case 'BIN_STATE':
+                case 'bin-state':
+                case 'state':
+                    if (data.bin || data.payload || data.albums) {
+                        const items = (data.bin || data.payload || data.albums) as any[];
+                        this.callbacks?.onBinState?.(items);
+
+                        // Notify dedicated listeners
+                        this.binStateListeners.forEach(listener => {
+                            try { listener(items); } catch (e) { logger.error('[WS] Bin listener error', e); }
+                        });
                     }
                     break;
             }
@@ -364,6 +485,13 @@ class WebSocketService implements IWebSocketService {
 
         return () => {
             this.extraOnNowPlaying = undefined;
+        };
+    }
+
+    public addBinStateListener(listener: (items: any[]) => void): () => void {
+        this.binStateListeners.push(listener);
+        return () => {
+            this.binStateListeners = this.binStateListeners.filter(l => l !== listener);
         };
     }
 }

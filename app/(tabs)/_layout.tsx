@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -5,12 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { NowPlayingBanner } from '@/components/NowPlayingBanner';
+import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export default function TabLayout() {
     const insets = useSafeAreaInsets();
     // Add extra padding for bottom safe area, or default to 10 if none (non-X iPhones/Android)
     const bottomPadding = Math.max(insets.bottom, 10);
     const tabBarHeight = THEME.layout.tabBarHeight + bottomPadding;
+    // Issue #126: Initialize Bin Sync Service
+    useEffect(() => {
+        listeningBinSyncService.init();
+    }, []);
+
     const binItems = useListeningBinStore((state) => state.items);
     const binCount = binItems.length;
 
