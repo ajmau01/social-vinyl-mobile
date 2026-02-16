@@ -45,10 +45,10 @@ describe('ListeningBinSyncService', () => {
     };
 
     const mockActions = {
-        addTrackOptimistic: jest.fn(),
+        addAlbumOptimistic: jest.fn(),
         confirmAdd: jest.fn(),
         revertAdd: jest.fn(),
-        removeTrackOptimistic: jest.fn(),
+        removeAlbumOptimistic: jest.fn(),
         confirmRemove: jest.fn(),
         revertRemove: jest.fn(),
         setBin: jest.fn(),
@@ -61,35 +61,35 @@ describe('ListeningBinSyncService', () => {
         (useSessionStore.getState as jest.Mock).mockReturnValue({ username: 'testuser' });
     });
 
-    it('should add track successfully', async () => {
+    it('should add album successfully', async () => {
         (wsService.sendAction as jest.Mock).mockResolvedValue({
             success: true,
             releaseId: 1,
             addedTimestamp: 1234567890
         });
 
-        const result = await listeningBinSyncService.addTrack(mockRelease);
+        const result = await listeningBinSyncService.addAlbum(mockRelease);
 
         expect(result.success).toBe(true);
-        expect(mockActions.addTrackOptimistic).toHaveBeenCalledWith(mockRelease, 'testuser', expect.any(String));
-        expect(wsService.sendAction).toHaveBeenCalledWith('add-track', expect.objectContaining({
+        expect(mockActions.addAlbumOptimistic).toHaveBeenCalledWith(mockRelease, 'testuser', expect.any(String));
+        expect(wsService.sendAction).toHaveBeenCalledWith('add', expect.objectContaining({
             releaseId: 1,
             instanceId: 101
         }));
         expect(mockActions.confirmAdd).toHaveBeenCalledWith(expect.any(String), 1, 1234567890);
     });
 
-    it('should revert add track on failure', async () => {
+    it('should revert add album on failure', async () => {
         (wsService.sendAction as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-        const result = await listeningBinSyncService.addTrack(mockRelease);
+        const result = await listeningBinSyncService.addAlbum(mockRelease);
 
         expect(result.success).toBe(false);
-        expect(mockActions.addTrackOptimistic).toHaveBeenCalled();
+        expect(mockActions.addAlbumOptimistic).toHaveBeenCalled();
         expect(mockActions.revertAdd).toHaveBeenCalledWith(expect.any(String));
     });
 
-    it('should remove track successfully', async () => {
+    it('should remove album successfully', async () => {
         const mockItem: BinItem = {
             ...mockRelease,
             userId: 'testuser',
@@ -103,10 +103,42 @@ describe('ListeningBinSyncService', () => {
         });
         (wsService.sendAction as jest.Mock).mockResolvedValue({});
 
-        const result = await listeningBinSyncService.removeTrack(1);
+        const result = await listeningBinSyncService.removeAlbum(1);
 
         expect(result.success).toBe(true);
-        expect(mockActions.removeTrackOptimistic).toHaveBeenCalledWith(1, 'testuser');
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove-track', { releaseId: 1 });
+        expect(mockActions.removeAlbumOptimistic).toHaveBeenCalledWith(1, 'testuser');
+        expect(wsService.sendAction).toHaveBeenCalledWith('remove', { releaseId: 1 });
+    });
+
+    it('should revert remove album on failure', async () => {
+        const mockItem: BinItem = {
+            ...mockRelease,
+            userId: 'testuser',
+            addedTimestamp: 1000,
+            status: 'synced'
+        };
+
+        (useListeningBinStore.getState as jest.Mock).mockReturnValue({
+            ...mockActions,
+            items: [mockItem]
+        });
+        (wsService.sendAction as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+        const result = await listeningBinSyncService.removeAlbum(1);
+
+        expect(result.success).toBe(false);
+        expect(mockActions.removeAlbumOptimistic).toHaveBeenCalled();
+        expect(mockActions.revertRemove).toHaveBeenCalledWith(mockItem, 'testuser', 1000);
+    });
+
+    it('should reorder albums successfully', async () => {
+        (wsService.sendAction as jest.Mock).mockResolvedValue({});
+
+        const result = await listeningBinSyncService.reorderAlbums([1, 2, 3]);
+
+        expect(result.success).toBe(true);
+        expect(wsService.sendAction).toHaveBeenCalledWith('reorder', {
+            releaseIds: [1, 2, 3]
+        });
     });
 });

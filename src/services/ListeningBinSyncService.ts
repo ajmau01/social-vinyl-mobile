@@ -67,23 +67,23 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Adds a track to the bin with optimistic update
+     * Adds an album to the bin with optimistic update
      */
-    public async addTrack(release: Release): Promise<Result<void>> {
+    public async addAlbum(release: Release): Promise<Result<void>> {
         const { username: userId } = useSessionStore.getState();
-        const { addTrackOptimistic, confirmAdd, revertAdd } = useListeningBinStore.getState();
+        const { addAlbumOptimistic, confirmAdd, revertAdd } = useListeningBinStore.getState();
 
         if (!userId) return { success: false, error: new Error('User not logged in') };
 
         const tempId = generateUUID();
 
         // 1. Optimistic Update
-        addTrackOptimistic(release, userId, tempId);
+        addAlbumOptimistic(release, userId, tempId);
 
         try {
             // 2. Send Action
-            // Payload should match what backend expects for 'add-track' action
-            const result = await wsService.sendAction<{ success: boolean, releaseId: number, addedTimestamp: number }>('add-track', {
+            // Payload should match what backend expects for 'add' action
+            const result = await wsService.sendAction<{ success: boolean, releaseId: number, addedTimestamp: number }>('add', {
                 releaseId: release.id,
                 instanceId: release.instanceId
             });
@@ -93,7 +93,7 @@ class ListeningBinSyncService {
             return { success: true, data: undefined };
 
         } catch (error) {
-            logger.error('[BinSync] Add track failed', error);
+            logger.error('[BinSync] Add album failed', error);
             // 4. Revert on failure
             revertAdd(tempId);
             return { success: false, error: error as Error };
@@ -101,11 +101,11 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Removes a track from the bin with optimistic update
+     * Removes an album from the bin with optimistic update
      */
-    public async removeTrack(releaseId: number): Promise<Result<void>> {
+    public async removeAlbum(releaseId: number): Promise<Result<void>> {
         const { username: userId } = useSessionStore.getState();
-        const { removeTrackOptimistic, items, revertRemove } = useListeningBinStore.getState();
+        const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
 
         if (!userId) return { success: false, error: new Error('User not logged in') };
 
@@ -114,11 +114,11 @@ class ListeningBinSyncService {
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
         // 1. Optimistic Update
-        removeTrackOptimistic(releaseId, userId);
+        removeAlbumOptimistic(releaseId, userId);
 
         try {
             // 2. Send Action
-            await wsService.sendAction('remove-track', {
+            await wsService.sendAction('remove', {
                 releaseId: releaseId
             });
 
@@ -126,7 +126,7 @@ class ListeningBinSyncService {
             return { success: true, data: undefined };
 
         } catch (error) {
-            logger.error('[BinSync] Remove track failed', error);
+            logger.error('[BinSync] Remove album failed', error);
             // 4. Revert on failure
             revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
             return { success: false, error: error as Error };
@@ -134,14 +134,14 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Reorders tracks in the bin
+     * Reorders albums in the bin
      */
-    public async reorderTracks(releaseIds: number[]): Promise<Result<void>> {
+    public async reorderAlbums(releaseIds: number[]): Promise<Result<void>> {
         // Optimistic reorder is handled by UI/Store directly before calling this
         // So we just send the new order
 
         try {
-            await wsService.sendAction('reorder-tracks', {
+            await wsService.sendAction('reorder', {
                 releaseIds
             });
             return { success: true, data: undefined };
@@ -152,7 +152,7 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Clears all tracks from the bin
+     * Clears all albums from the bin
      */
     public async clearBin(): Promise<Result<void>> {
         const { username: userId } = useSessionStore.getState();

@@ -32,7 +32,7 @@ describe('useListeningBinStore', () => {
         const { result } = renderHook(() => useListeningBinStore());
 
         act(() => {
-            result.current.addTrackOptimistic(mockRelease, 'user1', 'temp-123');
+            result.current.addAlbumOptimistic(mockRelease, 'user1', 'temp-123');
         });
 
         expect(result.current.items).toHaveLength(1);
@@ -48,7 +48,7 @@ describe('useListeningBinStore', () => {
         const { result } = renderHook(() => useListeningBinStore());
 
         act(() => {
-            result.current.addTrackOptimistic(mockRelease, 'user1', 'temp-123');
+            result.current.addAlbumOptimistic(mockRelease, 'user1', 'temp-123');
         });
 
         const realTimestamp = Date.now();
@@ -69,7 +69,7 @@ describe('useListeningBinStore', () => {
         const { result } = renderHook(() => useListeningBinStore());
 
         act(() => {
-            result.current.addTrackOptimistic(mockRelease, 'user1', 'temp-123');
+            result.current.addAlbumOptimistic(mockRelease, 'user1', 'temp-123');
             result.current.revertAdd('temp-123');
         });
 
@@ -86,7 +86,7 @@ describe('useListeningBinStore', () => {
 
         // Try to add same item optimistically
         act(() => {
-            result.current.addTrackOptimistic(mockRelease, 'user1', 'temp-456');
+            result.current.addAlbumOptimistic(mockRelease, 'user1', 'temp-456');
         });
 
         expect(result.current.items).toHaveLength(1);
@@ -104,7 +104,7 @@ describe('useListeningBinStore', () => {
 
         // Remove optimistically
         act(() => {
-            result.current.removeTrackOptimistic(1, 'user1');
+            result.current.removeAlbumOptimistic(1, 'user1');
         });
 
         expect(result.current.items).toHaveLength(0);

@@ -28,7 +28,7 @@ export default function BinScreen() {
                 {
                     text: 'Remove',
                     style: 'destructive',
-                    onPress: () => listeningBinSyncService.removeTrack(item.id)
+                    onPress: () => listeningBinSyncService.removeAlbum(item.id)
                 },
             ]
         );
@@ -72,7 +72,7 @@ export default function BinScreen() {
 
         // Sync with backend
         const ids = data.map(item => item.id);
-        await listeningBinSyncService.reorderTracks(ids);
+        await listeningBinSyncService.reorderAlbums(ids);
     };
 
     return (

@@ -13,8 +13,8 @@ interface ListeningBinState {
     isInBin: (releaseId: number, userId: string) => boolean;
 
     // Issue #126: Optimistic Updates & Sync
-    addTrackOptimistic: (release: Release, userId: string, tempId: string) => void;
-    removeTrackOptimistic: (releaseId: number, userId: string) => void;
+    addAlbumOptimistic: (release: Release, userId: string, tempId: string) => void;
+    removeAlbumOptimistic: (releaseId: number, userId: string) => void;
     confirmAdd: (tempId: string, realId: number, timestamp: number) => void;
     revertAdd: (tempId: string) => void;
     confirmRemove: (releaseId: number) => void;
@@ -64,7 +64,7 @@ export const useListeningBinStore = create<ListeningBinState>()(
         // Issue #126: Implementation
         setBin: (items) => set({ items }),
 
-        addTrackOptimistic: (release, userId, tempId) => {
+        addAlbumOptimistic: (release, userId, tempId) => {
             const { items } = get();
             // Avoid duplicates even in optimistic state
             if (items.some(item => item.id === release.id && item.userId === userId)) return;
@@ -79,7 +79,7 @@ export const useListeningBinStore = create<ListeningBinState>()(
             set({ items: [...items, newItem] });
         },
 
-        removeTrackOptimistic: (releaseId, userId) => {
+        removeAlbumOptimistic: (releaseId, userId) => {
             set((state) => ({
                 items: state.items.filter(item => !(item.id === releaseId && item.userId === userId))
             }));
