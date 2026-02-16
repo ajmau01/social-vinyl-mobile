@@ -40,24 +40,35 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     const animatedProgress = useSharedValue(0);
     const lastPlayedAt = useSharedValue(playedAt || 0);
 
+    const BROADCAST_INTERVAL_MS = 5000;
+
     useEffect(() => {
         if (!duration) return;
 
-        // If playedAt changed, it's a new album. Reset progress immediately.
-        if (playedAt && playedAt !== lastPlayedAt.value) {
+        const currentProgress = Math.min(position / duration, 1);
+        const delta = Math.abs(currentProgress - (animatedProgress.value || 0));
+
+        // Issue #4: Progress Ring Reconnection Snap
+        // If off by more than 5%, instant reset (no animation) to avoid catching up lag
+        if (delta > 0.05) {
+            animatedProgress.value = currentProgress;
+            lastPlayedAt.value = playedAt || 0;
+        } else if (playedAt && playedAt !== lastPlayedAt.value) {
+            // New album detected
             animatedProgress.value = 0;
             lastPlayedAt.value = playedAt;
         }
 
-        // Calculate current progress based on the position reported by server
-        const currentProgress = Math.min(position / duration, 1);
+        // Issue #3: Progress Ring Track End Overshoot prevention
+        const timeRemaining = duration - position;
+        const projectionWindow = Math.min(timeRemaining, BROADCAST_INTERVAL_MS);
 
-        // Project where we SHOULD be in 5 seconds (next broadcast) to eliminate lag
-        const projectedProgress = Math.min((position + 5000) / duration, 1);
+        // Project where we SHOULD be in the next window to eliminate lag
+        const projectedProgress = Math.min((position + projectionWindow) / duration, 1);
 
-        // Animate towards that projection over the 5s window
+        // Animate towards that projection over the interval window
         animatedProgress.value = withTiming(projectedProgress, {
-            duration: 5000,
+            duration: BROADCAST_INTERVAL_MS,
             easing: Easing.linear,
         });
     }, [position, duration, playedAt]);

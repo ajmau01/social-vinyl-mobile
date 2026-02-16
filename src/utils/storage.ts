@@ -53,6 +53,16 @@ export const secureStorage = {
      */
     async saveSessionCredentials(sessionId: string, sessionSecret: string): Promise<void> {
         try {
+            // Issue #8: Defensive validation to prevent storing "undefined" strings
+            if (!sessionId || sessionId === 'undefined') {
+                logger.warn('[Storage] Attempted to save invalid sessionId');
+                return;
+            }
+            if (!sessionSecret || sessionSecret === 'undefined') {
+                logger.warn('[Storage] Attempted to save invalid sessionSecret');
+                return;
+            }
+
             // Force string cast to prevent "Invalid value" errors in SecureStore
             await SecureStore.setItemAsync(SESSION_ID_KEY, String(sessionId));
             await SecureStore.setItemAsync(SESSION_SECRET_KEY, String(sessionSecret));
