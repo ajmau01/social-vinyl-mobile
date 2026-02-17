@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
+import { normalizeDuration } from '@/utils/normalization';
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -39,14 +40,6 @@ export const useWebSocket = (): UseWebSocketResult => {
     } = useSessionStore();
 
     useEffect(() => {
-        // Helper to handle mixed units (ms vs seconds) for duration
-        const normalizeDuration = (duration: number | undefined): number => {
-            if (!duration) return 0;
-            // If duration is suspiciously small (e.g. < 10000), it's likely seconds not ms
-            // 10000ms = 10s. Shortest punk song is > 10s usually.
-            return duration < 10000 ? duration * 1000 : duration;
-        };
-
         const callbacks = {
             onConnectionStateChange: (state: ConnectionState) => {
                 setConnectionState(state);
@@ -111,10 +104,9 @@ export const useWebSocket = (): UseWebSocketResult => {
                             likeCount: raw.thumbCount ?? raw.likeCount
                         };
                         setNowPlaying(normalized);
-                    } else {
-                        // If state has no nowPlaying, clear it
-                        setNowPlaying(null);
                     }
+                    // REGRESSION FIX: Do NOT clear nowPlaying if state doesn't have it.
+                    // State messages (bin updates) often omit nowPlaying.
                 }
             },
             onError: (err: Error) => {
