@@ -39,7 +39,7 @@ export const useWebSocket = (): UseWebSocketResult => {
         setError
     } = useSessionStore();
 
-    import { normalizeNowPlayingPayload } from '@/utils/normalization';
+
 
     useEffect(() => {
         const callbacks = {
