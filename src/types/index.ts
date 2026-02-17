@@ -153,7 +153,8 @@ export type WebSocketMessageType =
     | 'CLIENT_ACTION'
     | 'ACTION_ACK'
     // Issue #126
-    | 'BIN_STATE' | 'bin-state';
+    | 'BIN_STATE' | 'bin-state'
+    | 'STATE' | 'state';
 
 export interface WebSocketMessage {
     type?: WebSocketMessageType;

@@ -39,6 +39,14 @@ export const useWebSocket = (): UseWebSocketResult => {
     } = useSessionStore();
 
     useEffect(() => {
+        // Helper to handle mixed units (ms vs seconds) for duration
+        const normalizeDuration = (duration: number | undefined): number => {
+            if (!duration) return 0;
+            // If duration is suspiciously small (e.g. < 10000), it's likely seconds not ms
+            // 10000ms = 10s. Shortest punk song is > 10s usually.
+            return duration < 10000 ? duration * 1000 : duration;
+        };
+
         const callbacks = {
             onConnectionStateChange: (state: ConnectionState) => {
                 setConnectionState(state);
@@ -66,6 +74,8 @@ export const useWebSocket = (): UseWebSocketResult => {
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     // Normalize backend message to frontend NowPlaying interface
                     const raw = payload as any;
+                    const duration = normalizeDuration(raw.duration || raw.album?.totalDuration);
+
                     const normalized: NowPlaying = {
                         track: raw.album?.title || raw.track || '',
                         artist: raw.album?.artist || raw.artist || '',
@@ -73,13 +83,38 @@ export const useWebSocket = (): UseWebSocketResult => {
                         albumArt: raw.album?.coverImage || raw.albumArt || '',
                         releaseId: raw.album?.releaseId?.toString() || raw.releaseId,
                         timestamp: raw.playedAt || raw.timestamp,
-                        duration: raw.duration,
+                        duration: duration,
                         position: raw.position,
                         userHasLiked: raw.userHasLiked,
                         playedBy: raw.playedBy,
                         likeCount: raw.thumbCount ?? raw.likeCount
                     };
                     setNowPlaying(normalized);
+                } else if (type === 'STATE' || type === 'state') {
+                    // Handle state message which contains nowPlaying
+                    const rawState = payload as any;
+                    if (rawState.nowPlaying) {
+                        const raw = rawState.nowPlaying;
+                        const duration = normalizeDuration(raw.duration || raw.album?.totalDuration);
+
+                        const normalized: NowPlaying = {
+                            track: raw.album?.title || raw.track || '',
+                            artist: raw.album?.artist || raw.artist || '',
+                            album: raw.album?.title || raw.album || '',
+                            albumArt: raw.album?.coverImage || raw.albumArt || '',
+                            releaseId: raw.album?.releaseId?.toString() || raw.releaseId,
+                            timestamp: raw.playedAt || raw.timestamp,
+                            duration: duration,
+                            position: raw.position,
+                            userHasLiked: raw.userHasLiked,
+                            playedBy: raw.playedBy,
+                            likeCount: raw.thumbCount ?? raw.likeCount
+                        };
+                        setNowPlaying(normalized);
+                    } else {
+                        // If state has no nowPlaying, clear it
+                        setNowPlaying(null);
+                    }
                 }
             },
             onError: (err: Error) => {
