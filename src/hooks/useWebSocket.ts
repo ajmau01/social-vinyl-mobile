@@ -2,7 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
-import { normalizeDuration } from '@/utils/normalization';
+import { normalizeNowPlayingPayload } from '@/utils/normalization';
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -39,6 +39,8 @@ export const useWebSocket = (): UseWebSocketResult => {
         setError
     } = useSessionStore();
 
+    import { normalizeNowPlayingPayload } from '@/utils/normalization';
+
     useEffect(() => {
         const callbacks = {
             onConnectionStateChange: (state: ConnectionState) => {
@@ -66,43 +68,13 @@ export const useWebSocket = (): UseWebSocketResult => {
                     if (secret) setSessionSecret(secret);
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     // Normalize backend message to frontend NowPlaying interface
-                    const raw = payload as any;
-                    const duration = normalizeDuration(raw.duration || raw.album?.totalDuration);
-
-                    const normalized: NowPlaying = {
-                        track: raw.album?.title || raw.track || '',
-                        artist: raw.album?.artist || raw.artist || '',
-                        album: raw.album?.title || raw.album || '',
-                        albumArt: raw.album?.coverImage || raw.albumArt || '',
-                        releaseId: raw.album?.releaseId?.toString() || raw.releaseId,
-                        timestamp: raw.playedAt || raw.timestamp,
-                        duration: duration,
-                        position: raw.position,
-                        userHasLiked: raw.userHasLiked,
-                        playedBy: raw.playedBy,
-                        likeCount: raw.thumbCount ?? raw.likeCount
-                    };
+                    const normalized = normalizeNowPlayingPayload(payload);
                     setNowPlaying(normalized);
                 } else if (type === 'STATE' || type === 'state') {
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
                     if (rawState.nowPlaying) {
-                        const raw = rawState.nowPlaying;
-                        const duration = normalizeDuration(raw.duration || raw.album?.totalDuration);
-
-                        const normalized: NowPlaying = {
-                            track: raw.album?.title || raw.track || '',
-                            artist: raw.album?.artist || raw.artist || '',
-                            album: raw.album?.title || raw.album || '',
-                            albumArt: raw.album?.coverImage || raw.albumArt || '',
-                            releaseId: raw.album?.releaseId?.toString() || raw.releaseId,
-                            timestamp: raw.playedAt || raw.timestamp,
-                            duration: duration,
-                            position: raw.position,
-                            userHasLiked: raw.userHasLiked,
-                            playedBy: raw.playedBy,
-                            likeCount: raw.thumbCount ?? raw.likeCount
-                        };
+                        const normalized = normalizeNowPlayingPayload(rawState.nowPlaying);
                         setNowPlaying(normalized);
                     }
                     // REGRESSION FIX: Do NOT clear nowPlaying if state doesn't have it.

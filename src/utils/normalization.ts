@@ -1,3 +1,5 @@
+import { NowPlaying } from '@/types';
+
 /**
  * Normalizes a duration value to milliseconds.
  * 
@@ -15,4 +17,29 @@ export const normalizeDuration = (duration: number | undefined | null): number =
     // If duration is suspiciously small (e.g. < 10000), it's likely seconds not ms.
     // 10000ms = 10s. We assume valid tracks are > 10s.
     return duration < 10000 ? duration * 1000 : duration;
+};
+
+/**
+ * Normalizes the raw payload from WebSocket into a consistent NowPlaying object.
+ * Handles variations in field names (e.g. album.title vs album, thumbCount vs likeCount).
+ * 
+ * @param raw - The raw payload from the WebSocket message
+ * @returns A normalized NowPlaying object
+ */
+export const normalizeNowPlayingPayload = (raw: any): NowPlaying => {
+    const duration = normalizeDuration(raw.duration || raw.album?.totalDuration);
+
+    return {
+        track: raw.album?.title || raw.track || '',
+        artist: raw.album?.artist || raw.artist || '',
+        album: raw.album?.title || raw.album || '',
+        albumArt: raw.album?.coverImage || raw.albumArt || '',
+        releaseId: (raw.album?.releaseId || raw.releaseId)?.toString() || '',
+        timestamp: raw.playedAt || raw.timestamp,
+        duration: duration,
+        position: raw.position,
+        userHasLiked: raw.userHasLiked,
+        playedBy: raw.playedBy,
+        likeCount: raw.thumbCount ?? raw.likeCount
+    };
 };
