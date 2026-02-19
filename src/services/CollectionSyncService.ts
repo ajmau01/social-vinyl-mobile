@@ -94,7 +94,7 @@ class CollectionSyncService implements ISyncService {
             let consecutiveFailures = 0;
             const MAX_POLLS = 300; // 5 minutes
             const MAX_CONSECUTIVE_FAILURES = 5;
-
+            let lastUiProgress = 0;
             while (!isComplete && pollingAttempts < MAX_POLLS) {
                 // Check cancellation
                 if (controller.signal.aborted) throw new Error('Sync cancelled');
@@ -118,11 +118,14 @@ class CollectionSyncService implements ISyncService {
                     consecutiveFailures = 0; // Reset on success
                     const statusData = await statusRes.json();
 
-                    // Update progress
+                    // Update progress (0-85% range for scan phase)
                     if (callbacks?.onProgress) {
                         const backendProgress = statusData.progress || 0;
-                        const uiProgress = Math.floor(backendProgress * 0.9);
-                        callbacks.onProgress(uiProgress);
+                        const uiProgress = Math.floor(backendProgress * 0.85);
+                        if (uiProgress > lastUiProgress) {
+                            lastUiProgress = uiProgress;
+                            callbacks.onProgress(uiProgress);
+                        }
                     }
 
                     if (statusData.status === 'FAILED') {
@@ -137,7 +140,6 @@ class CollectionSyncService implements ISyncService {
                     // Re-throw if it's an abort or if we hit max failures
                     if (pollError.name === 'AbortError' || pollError.message === 'Sync cancelled') throw pollError;
 
-                    // Otherwise count as failure (e.g. network glitch)
                     consecutiveFailures++;
                     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) throw pollError;
 
@@ -150,8 +152,9 @@ class CollectionSyncService implements ISyncService {
             }
 
             // 3. Fetch Resulting Data
-            callbacks?.onProgress(90); // Saving...
+            callbacks?.onProgress(85);
             const data = await this.fetchScan(userId);
+            callbacks?.onProgress(90); // Data fetched
 
             if (!data || !data.albums || data.albums.length === 0) {
                 throw new Error('Discogs collection empty or user not found');
@@ -159,8 +162,10 @@ class CollectionSyncService implements ISyncService {
 
             // 4. Save to Local DB
             if (CONFIG.DEBUG_WS) logger.log('[Sync] Clearing old data for user:', userId);
+            callbacks?.onProgress(92);
             await dbService.clearUserCollection(userId);
 
+            callbacks?.onProgress(95); // Saving releases
             await this.saveReleases(data.albums, userId);
 
             if (CONFIG.DEBUG_WS) logger.log('[Sync] Complete. Items:', data.albums.length);
