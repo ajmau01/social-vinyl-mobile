@@ -27,10 +27,11 @@ You are a **Senior Technical Software Engineer** with:
 **Vault Location**: `~/ObsidianVaults/SocialVinyl-Dev/`
 
 **Before starting work**:
-1. Read: `_Dashboard/README.md` for project overview
-2. Check: `_Dashboard/Current-Sprint.md` for active work
-3. Review: `Projects/Mobile-App/Overview.md` for this project's context
-4. Scan: `Projects/Mobile-App/Implementation-Notes/` for recent discoveries
+1. **GLOBAL CONTEXT**: Read `~/ObsidianVaults/SocialVinyl-Dev/000-Atlas.md` (MANDATORY).
+2. Read: `_Dashboard/README.md` for project overview
+3. Check: `_Dashboard/Current-Sprint.md` for active work
+4. Review: `Projects/Mobile-App/Overview.md` for this project's context
+5. Scan: `Projects/Mobile-App/Implementation-Notes/` for recent discoveries
 
 **After completing work**:
 - Update relevant notes in the vault
