@@ -39,6 +39,16 @@ interface ScanResponse {
 
 class CollectionSyncService implements ISyncService {
     private activeSyncs = new Set<string>();
+    private abortControllers = new Map<string, AbortController>();
+
+    public cancelSync(userId: string) {
+        if (this.abortControllers.has(userId)) {
+            logger.log('[Sync] Cancelling sync for user:', userId);
+            this.abortControllers.get(userId)?.abort();
+            this.abortControllers.delete(userId);
+            this.activeSyncs.delete(userId);
+        }
+    }
 
     public async syncCollection(userId: string, callbacks?: SyncCallbacks): AsyncResult<SyncResult> {
         if (this.activeSyncs.has(userId)) {
@@ -46,15 +56,24 @@ class CollectionSyncService implements ISyncService {
         }
 
         this.activeSyncs.add(userId);
+        const controller = new AbortController();
+        this.abortControllers.set(userId, controller);
+
         callbacks?.onStatusChange('syncing');
         callbacks?.onProgress(0);
 
         try {
             if (CONFIG.DEBUG_WS) logger.log('[Sync] Starting async sync for user:', userId);
 
+            // Check for cancellation
+            if (controller.signal.aborted) throw new Error('Sync cancelled');
+
             // 1. Start Async Job
             const startUrl = `${CONFIG.API_URL}/collection?mode=startScan&username=${userId}`;
-            const startRes = await fetch(startUrl, { method: 'POST' });
+            const startRes = await fetch(startUrl, {
+                method: 'POST',
+                signal: controller.signal
+            });
 
             if (!startRes.ok) {
                 const errorText = await startRes.text();
@@ -63,9 +82,6 @@ class CollectionSyncService implements ISyncService {
 
             const startData = await startRes.json();
             if (!startData.success) {
-                // If scan already in progress, we might get a jobId to attach to?
-                // The servlet returns success=true even if "Scan already in progress" with the existing jobId.
-                // So checking !success covers actual errors.
                 throw new Error(startData.error || 'Failed to start scan');
             }
 
@@ -75,38 +91,57 @@ class CollectionSyncService implements ISyncService {
             // 2. Poll for Status
             let isComplete = false;
             let pollingAttempts = 0;
-            const MAX_POLLS = 600; // 10 minutes timeout (aggressive but safe for large collections)
+            let consecutiveFailures = 0;
+            const MAX_POLLS = 300; // 5 minutes
+            const MAX_CONSECUTIVE_FAILURES = 5;
 
             while (!isComplete && pollingAttempts < MAX_POLLS) {
+                // Check cancellation
+                if (controller.signal.aborted) throw new Error('Sync cancelled');
+
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every 1s
                 pollingAttempts++;
 
                 const statusUrl = `${CONFIG.API_URL}/collection?mode=scanStatus&jobId=${jobId}`;
-                const statusRes = await fetch(statusUrl);
+                try {
+                    const statusRes = await fetch(statusUrl, { signal: controller.signal });
 
-                if (!statusRes.ok) {
-                    logger.warn('[Sync] Status poll failed, retrying...', statusRes.status);
-                    continue;
-                }
+                    if (!statusRes.ok) {
+                        consecutiveFailures++;
+                        logger.warn(`[Sync] Status poll failed (${statusRes.status}). Failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
+                        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                            throw new Error(`Sync failed: Too many consecutive errors (${statusRes.status})`);
+                        }
+                        continue;
+                    }
 
-                const statusData = await statusRes.json();
+                    consecutiveFailures = 0; // Reset on success
+                    const statusData = await statusRes.json();
 
-                // Update progress
-                if (callbacks?.onProgress) {
-                    // Map backend progress (0-100) to UI progress
-                    // We'll use 0-90 for the scan, 90-100 for the download/save
-                    const backendProgress = statusData.progress || 0;
-                    const uiProgress = Math.floor(backendProgress * 0.9);
-                    callbacks.onProgress(uiProgress);
-                }
+                    // Update progress
+                    if (callbacks?.onProgress) {
+                        const backendProgress = statusData.progress || 0;
+                        const uiProgress = Math.floor(backendProgress * 0.9);
+                        callbacks.onProgress(uiProgress);
+                    }
 
-                if (statusData.status === 'FAILED') {
-                    throw new Error(statusData.error || statusData.message || 'Scan job failed');
-                }
+                    if (statusData.status === 'FAILED') {
+                        throw new Error(statusData.error || statusData.message || 'Scan job failed');
+                    }
 
-                if (statusData.status === 'COMPLETED') {
-                    isComplete = true;
-                    if (CONFIG.DEBUG_WS) logger.log('[Sync] Remote scan complete.');
+                    if (statusData.status === 'COMPLETED') {
+                        isComplete = true;
+                        if (CONFIG.DEBUG_WS) logger.log('[Sync] Remote scan complete.');
+                    }
+                } catch (pollError: any) {
+                    // Re-throw if it's an abort or if we hit max failures
+                    if (pollError.name === 'AbortError' || pollError.message === 'Sync cancelled') throw pollError;
+
+                    // Otherwise count as failure (e.g. network glitch)
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) throw pollError;
+
+                    logger.warn(`[Sync] Poll error: ${pollError.message}`);
                 }
             }
 
@@ -119,7 +154,7 @@ class CollectionSyncService implements ISyncService {
             const data = await this.fetchScan(userId);
 
             if (!data || !data.albums || data.albums.length === 0) {
-                throw new Error('Discogs collection is empty or user not found');
+                throw new Error('Discogs collection empty or user not found');
             }
 
             // 4. Save to Local DB
@@ -141,12 +176,17 @@ class CollectionSyncService implements ISyncService {
                 }
             };
 
-        } catch (error) {
+        } catch (error: any) {
+            if (error.name === 'AbortError' || error.message === 'Sync cancelled') {
+                logger.log('[Sync] Operation cancelled by user');
+                return { success: false, error: new Error('Sync cancelled') };
+            }
             logger.error('[Sync] Error:', error);
             callbacks?.onStatusChange('error');
             return { success: false, error: error instanceof Error ? error : new Error('Unknown sync error') };
         } finally {
             this.activeSyncs.delete(userId);
+            this.abortControllers.delete(userId);
         }
     }
 
