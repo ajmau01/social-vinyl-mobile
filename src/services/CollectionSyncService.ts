@@ -47,22 +47,82 @@ class CollectionSyncService implements ISyncService {
 
         this.activeSyncs.add(userId);
         callbacks?.onStatusChange('syncing');
-        callbacks?.onProgress(10); // Started
+        callbacks?.onProgress(0);
 
         try {
-            if (CONFIG.DEBUG_WS) logger.log('[Sync] Starting sync for user:', userId);
+            if (CONFIG.DEBUG_WS) logger.log('[Sync] Starting async sync for user:', userId);
 
-            // Fetch cached data (Read-Only)
+            // 1. Start Async Job
+            const startUrl = `${CONFIG.API_URL}/collection?mode=startScan&username=${userId}`;
+            const startRes = await fetch(startUrl, { method: 'POST' });
+
+            if (!startRes.ok) {
+                const errorText = await startRes.text();
+                throw new Error(`Failed to start scan: ${startRes.status} ${errorText}`);
+            }
+
+            const startData = await startRes.json();
+            if (!startData.success) {
+                // If scan already in progress, we might get a jobId to attach to?
+                // The servlet returns success=true even if "Scan already in progress" with the existing jobId.
+                // So checking !success covers actual errors.
+                throw new Error(startData.error || 'Failed to start scan');
+            }
+
+            const jobId = startData.jobId;
+            logger.log('[Sync] Job started:', jobId);
+
+            // 2. Poll for Status
+            let isComplete = false;
+            let pollingAttempts = 0;
+            const MAX_POLLS = 600; // 10 minutes timeout (aggressive but safe for large collections)
+
+            while (!isComplete && pollingAttempts < MAX_POLLS) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every 1s
+                pollingAttempts++;
+
+                const statusUrl = `${CONFIG.API_URL}/collection?mode=scanStatus&jobId=${jobId}`;
+                const statusRes = await fetch(statusUrl);
+
+                if (!statusRes.ok) {
+                    logger.warn('[Sync] Status poll failed, retrying...', statusRes.status);
+                    continue;
+                }
+
+                const statusData = await statusRes.json();
+
+                // Update progress
+                if (callbacks?.onProgress) {
+                    // Map backend progress (0-100) to UI progress
+                    // We'll use 0-90 for the scan, 90-100 for the download/save
+                    const backendProgress = statusData.progress || 0;
+                    const uiProgress = Math.floor(backendProgress * 0.9);
+                    callbacks.onProgress(uiProgress);
+                }
+
+                if (statusData.status === 'FAILED') {
+                    throw new Error(statusData.error || statusData.message || 'Scan job failed');
+                }
+
+                if (statusData.status === 'COMPLETED') {
+                    isComplete = true;
+                    if (CONFIG.DEBUG_WS) logger.log('[Sync] Remote scan complete.');
+                }
+            }
+
+            if (!isComplete) {
+                throw new Error('Sync timed out waiting for backend job');
+            }
+
+            // 3. Fetch Resulting Data
+            callbacks?.onProgress(90); // Saving...
             const data = await this.fetchScan(userId);
 
             if (!data || !data.albums || data.albums.length === 0) {
                 throw new Error('Discogs collection is empty or user not found');
             }
 
-            callbacks?.onProgress(50); // Downloaded
-
-            // DESTRUCTIVE SYNC: Clear old data for this user to prevent accumulation
-            // and ensure a "mirror" of the Discogs collection.
+            // 4. Save to Local DB
             if (CONFIG.DEBUG_WS) logger.log('[Sync] Clearing old data for user:', userId);
             await dbService.clearUserCollection(userId);
 

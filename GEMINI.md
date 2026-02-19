@@ -216,11 +216,10 @@ You are the **hands-on developer** for this project. Your focus is:
 
 **Vault Location**: `~/ObsidianVaults/SocialVinyl-Dev/`
 
-### Before Starting Work
-
-**Read these files**:
-1. `_Dashboard/README.md` - Vault overview
-2. `_Dashboard/Current-Sprint.md` - Active tasks (check what's assigned to you!)
+### 1. Before Starting Work
+- **GLOBAL CONTEXT**: Read `~/ObsidianVaults/SocialVinyl-Dev/000-Atlas.md` (MANDATORY).
+- Read `_Dashboard/README.md` for ecosystem overview.
+- Check `_Dashboard/Current-Sprint.md` for active tasks.
 3. `Projects/Mobile-App/Overview.md` - Project context
 4. `Projects/Mobile-App/Implementation-Notes/` - Recent work by Claude or previous sessions
 
@@ -255,6 +254,10 @@ The mobile app is the "Remote Control" for Social Vinyl parties. It's a satellit
 **GitHub Issues are Your Source of Truth**
 
 Claude creates detailed GitHub issues that form a **logical path** for you to follow. Each issue tells you exactly what to do and points to the next one.
+
+### 0. CRITICAL WORKFLOW RULES (NON-NEGOTIABLE)
+- **NEVER commit directly to `main`**. ALWAYS work in a `feature/...` or `fix/...` branch.
+- **ALWAYS create a Pull Request** to merge changes. Never merge locally without a PR.
 
 ### 1. Check Your Tasks
 
