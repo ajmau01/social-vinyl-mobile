@@ -8,12 +8,14 @@ export interface UseWebSocketResult {
     connectionState: ConnectionState;
     isConnected: boolean;
     isConnecting: boolean;
-    sessionId: string | null;
+    sessionId: string | number | null;
     nowPlaying: NowPlaying | null;
     error: string | null;
     connect: () => void;
     disconnect: () => void;
     login: (username: string, password: string) => Promise<Result<LoginResult>>;
+    enabledFeatures: string[];
+    isFeatureEnabled: (feature: string) => boolean;
 }
 
 /**
@@ -32,6 +34,8 @@ export const useWebSocket = (): UseWebSocketResult => {
         username,
         authToken,
         sessionSecret,
+        enabledFeatures,
+        isFeatureEnabled,
         setConnectionState,
         setSessionId,
         setSessionSecret,
@@ -100,7 +104,7 @@ export const useWebSocket = (): UseWebSocketResult => {
             webSocketService.connect(
                 username,
                 authToken || undefined,
-                sessionId || undefined,
+                sessionId ? sessionId.toString() : undefined,
                 sessionSecret || undefined
             );
         }
@@ -127,6 +131,8 @@ export const useWebSocket = (): UseWebSocketResult => {
         error,
         connect,
         disconnect,
-        login
+        login,
+        enabledFeatures,
+        isFeatureEnabled
     };
 };

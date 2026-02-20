@@ -10,6 +10,8 @@ import { IWebSocketService, ISyncService, IDatabaseService } from '@/services/in
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
 import { dbService } from '@/services/DatabaseService';
+import { ISessionService } from '@/services/interfaces';
+import { sessionService } from '@/services/SessionService';
 
 /**
  * Service Context Value
@@ -19,6 +21,7 @@ export interface ServiceContextValue {
     webSocketService: IWebSocketService;
     syncService: ISyncService;
     databaseService: IDatabaseService;
+    sessionService: ISessionService;
 }
 
 /**
@@ -30,12 +33,9 @@ export interface ServiceProviderProps {
     webSocketService?: IWebSocketService;
     collectionSyncService?: ISyncService;
     databaseService?: IDatabaseService;
+    sessionService?: ISessionService;
 }
 
-/**
- * Service Context
- * Provides services to the component tree
- */
 export const ServiceContext = createContext<ServiceContextValue | null>(null);
 
 ServiceContext.displayName = 'ServiceContext';
@@ -64,12 +64,14 @@ export const ServiceProvider: React.FC<ServiceProviderProps> = ({
     webSocketService = wsService,
     collectionSyncService = syncService,
     databaseService = dbService,
+    sessionService: providedSessionService = sessionService,
 }) => {
     const value = useMemo<ServiceContextValue>(() => ({
         webSocketService,
         syncService: collectionSyncService,
         databaseService,
-    }), [webSocketService, collectionSyncService, databaseService]);
+        sessionService: providedSessionService,
+    }), [webSocketService, collectionSyncService, databaseService, providedSessionService]);
 
     return (
         <ServiceContext.Provider value={value}>

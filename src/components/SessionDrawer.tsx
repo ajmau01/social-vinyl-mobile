@@ -31,7 +31,11 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
         avatarUrl,
         setUsername,
         setLastMode,
-        setAuthToken
+        setAuthToken,
+        sessionId,
+        sessionName,
+        isBroadcast,
+        setDisplayName
     } = useSessionStore();
 
     const { sync, syncStatus, syncProgress } = useSyncCollection();
@@ -123,13 +127,28 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                 <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.optionItem} disabled>
-                                <View style={[styles.iconBox, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
-                                    <Ionicons name="people-outline" size={20} color="#06b6d4" />
-                                </View>
-                                <Text style={[styles.optionLabel, { opacity: 0.5 }]}>Session Manager (Phase 4)</Text>
-                                <Ionicons name="lock-closed" size={16} color={THEME.colors.textMuted} />
-                            </TouchableOpacity>
+                            {sessionId ? (
+                                <TouchableOpacity testID="drawer-manage-sessions" style={styles.optionItem} onPress={() => { onClose(); router.push('/session-list'); }}>
+                                    <View style={[styles.iconBox, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
+                                        <Ionicons name="people-outline" size={20} color="#06b6d4" />
+                                    </View>
+                                    <View style={styles.optionLabelContainer}>
+                                        <Text style={styles.optionLabel}>{sessionName || 'Active Session'}</Text>
+                                        <Text style={styles.optionSublabel}>{isBroadcast ? 'ON AIR' : 'Host'}</Text>
+                                    </View>
+                                    <Ionicons name="settings-outline" size={18} color={THEME.colors.textMuted} />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity testID="drawer-manage-sessions" style={styles.optionItem} onPress={() => { onClose(); router.push('/session-list'); }}>
+                                    <View style={[styles.iconBox, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
+                                        <Ionicons name="people-outline" size={20} color="#06b6d4" />
+                                    </View>
+                                    <View style={styles.optionLabelContainer}>
+                                        <Text style={styles.optionLabel}>Manage Sessions</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
+                                </TouchableOpacity>
+                            )}
 
                             <View style={styles.divider} />
 

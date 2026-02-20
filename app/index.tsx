@@ -21,6 +21,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { wsService } from '@/services/WebSocketService';
 import { syncService } from '@/services/CollectionSyncService';
+import { useServices } from '@/contexts/ServiceContext';
 import { CONFIG } from '@/config';
 import { StatusBar } from 'expo-status-bar';
 
@@ -37,14 +38,46 @@ export default function HubScreen() {
         syncProgress,
         lastMode,
         setLastMode,
-        authToken
+        authToken,
+        familyPassCode,
+        displayName
     } = useSessionStore();
+
+    const { sessionService } = useServices();
 
     const [mode, setMode] = useState<PersonaMode>('none');
     const [inputValue, setInputValue] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [autoRejoined, setAutoRejoined] = useState(false);
+
+    // Auto-rejoin Family Pass Logic
+    useEffect(() => {
+        if (CONFIG.IS_E2E) return;
+
+        if (familyPassCode && displayName && mode === 'none' && !autoRejoined) {
+            const tryAutoRejoin = async () => {
+                setLoading(true);
+                setAutoRejoined(true);
+                try {
+                    const result = await sessionService.joinSession(familyPassCode, displayName);
+                    if (result.success) {
+                        useListeningBinStore.getState().clearBin();
+                        router.replace('/(tabs)/bin');
+                    } else {
+                        // Failed to rejoin (maybe session ended), clear the family pass
+                        useSessionStore.getState().setFamilyPassCode(null);
+                    }
+                } catch (e) {
+                    console.error('Auto-rejoin failed', e);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            tryAutoRejoin();
+        }
+    }, [familyPassCode, displayName, mode, autoRejoined, sessionService, router]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -124,19 +157,6 @@ export default function HubScreen() {
         setError(null);
 
         const guestUsername = `Guest-${Math.floor(Math.random() * 1000)}`;
-
-        // Temporarily register callbacks to capture connection state for joinSession
-        // In a real app, this should be handled by a global listener or context
-        wsService.setCallbacks({
-            onConnectionStateChange: (state) => {
-                if (state === 'connected') {
-                    // Connection handled by joinSession promise
-                }
-            },
-            onAccessLevel: () => { },
-            onError: (err) => setError(err.message),
-            onMessage: () => { }
-        });
 
         wsService.joinSession(inputValue, guestUsername)
             .then(result => {

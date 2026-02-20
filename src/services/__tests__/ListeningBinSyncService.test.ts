@@ -38,9 +38,8 @@ describe('ListeningBinSyncService', () => {
         userId: 'testuser',
         title: 'Test Album',
         artist: 'Test Artist',
-        year: 2024,
+        year: '2024',
         thumb_url: '',
-        folder_id: 1,
         added_at: 12345
     };
 

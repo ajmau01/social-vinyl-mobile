@@ -103,6 +103,7 @@ class CollectionSyncService implements ISyncService {
                 pollingAttempts++;
 
                 const statusUrl = `${CONFIG.API_URL}/collection?mode=scanStatus&jobId=${jobId}`;
+                let statusData: any;
                 try {
                     const statusRes = await fetch(statusUrl, { signal: controller.signal });
 
@@ -116,7 +117,7 @@ class CollectionSyncService implements ISyncService {
                     }
 
                     consecutiveFailures = 0; // Reset on success
-                    const statusData = await statusRes.json();
+                    statusData = await statusRes.json();
 
                     // Update progress (0-85% range for scan phase)
                     if (callbacks?.onProgress) {
@@ -137,8 +138,13 @@ class CollectionSyncService implements ISyncService {
                         if (CONFIG.DEBUG_WS) logger.log('[Sync] Remote scan complete.');
                     }
                 } catch (pollError: any) {
-                    // Re-throw if it's an abort or if we hit max failures
-                    if (pollError.name === 'AbortError' || pollError.message === 'Sync cancelled') throw pollError;
+                    // Re-throw if it's an abort, a direct scan failure, or if we hit max failures
+                    if (pollError.name === 'AbortError' ||
+                        pollError.message === 'Sync cancelled' ||
+                        pollError.message.includes('Scan job failed') ||
+                        pollError.message === (statusData?.error || statusData?.message)) {
+                        throw pollError;
+                    }
 
                     consecutiveFailures++;
                     if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) throw pollError;

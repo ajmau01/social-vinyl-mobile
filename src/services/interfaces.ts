@@ -12,7 +12,11 @@ import {
     SyncCallbacks,
     SyncResult,
     Track,
-    Release
+    Release,
+    SessionCreatedMessage,
+    SessionJoinedMessage,
+    SessionListMessage,
+    SessionCard
 } from '@/types';
 
 /**
@@ -26,6 +30,7 @@ export interface IWebSocketService {
     connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string): void;
     disconnect(): void;
     login(username: string, password: string): AsyncResult<LoginResult>;
+    sendAction<T = any>(action: string, payload?: any): Promise<T>;
 }
 
 /**
@@ -51,4 +56,18 @@ export interface IDatabaseService {
     toggleSaved(instanceId: number): Promise<boolean>;
     clearUserCollection(userId: string): Promise<void>;
     clearAll(): Promise<void>;
+}
+
+/**
+ * Session Service Interface
+ * Coordinates session lifecycles for Issue #128 parity.
+ */
+export interface ISessionService {
+    createSession(name: string, permanent: boolean): Promise<AsyncResult<SessionCreatedMessage>>;
+    joinSession(code: string, username: string): Promise<AsyncResult<SessionJoinedMessage>>;
+    leaveSession(): Promise<AsyncResult<void>>;
+    archiveSession(sessionId: number): Promise<AsyncResult<void>>;
+    getSessions(): Promise<SessionCard[]>;
+    setBroadcast(sessionId: number): Promise<AsyncResult<void>>;
+    setDisplayName(name: string): void;
 }

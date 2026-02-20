@@ -109,6 +109,50 @@ export interface BackendAlbum {
     spinCount?: number;
 }
 
+/**
+ * Session Management Types (Issue #128)
+ */
+export type SessionRole = 'host' | 'guest' | 'voyeur' | null;
+
+export interface SessionCard {
+    id: number;
+    name: string;
+    code: string;        // 5-char alphanumeric
+    active: boolean;
+    permanent: boolean;
+    isBroadcast: boolean;
+    createdAt: string;   // ISO date string
+}
+
+export interface SessionCreatedMessage {
+    type: 'session-created';
+    sessionId: number;
+    joinCode: string;
+    sessionSecret: string;
+    name: string;
+    publicUrl: string;
+}
+
+export interface SessionJoinedMessage {
+    type: 'session-joined';
+    sessionId: number;
+    name: string;
+    joinCode: string;
+    sessionSecret: string;
+    publicUrl: string;
+    hostUsername: string;
+    isPermanent: boolean;
+}
+
+export interface SessionLeftMessage {
+    type: 'session-left';
+}
+
+export interface SessionListMessage {
+    type: 'session-list';
+    sessions: SessionCard[];
+}
+
 export interface LoginResult {
     sessionId: string;
     token: string;
@@ -152,6 +196,10 @@ export type WebSocketMessageType =
     | 'PROTOCOL_ACK'
     | 'CLIENT_ACTION'
     | 'ACTION_ACK'
+    // Session Management (Issue #128)
+    | 'session-created'
+    | 'session-left'
+    | 'session-list'
     // Issue #126
     | 'BIN_STATE' | 'bin-state'
     | 'STATE' | 'state';
@@ -160,9 +208,15 @@ export interface WebSocketMessage {
     type?: WebSocketMessageType;
     messageType?: WebSocketMessageType;
     payload?: LoginResult | SyncResult | NowPlaying | { message: string } | Record<string, unknown>;
-    sessionId?: string;
+    sessionId?: string | number;
     authToken?: string;
     sessionSecret?: string;
+    joinCode?: string;
+    name?: string;
+    publicUrl?: string;
+    hostUsername?: string;
+    isPermanent?: boolean;
+    sessions?: SessionCard[];
     username?: string;
     // Issue #125: Add actionId and status for ACK correlation
     actionId?: string;
