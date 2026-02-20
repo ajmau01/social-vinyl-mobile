@@ -4,7 +4,21 @@
 > **Your Role**: Development & Implementation
 > **Current Assignment**: Milestone 13 - Core Feature Parity
 > **Status**: Ready to Start (Feb 15, 2026)
-> **Last Updated**: Feb 15, 2026 - Phase 9 complete, Milestone 13 created
+> **Last Updated**: Feb 20, 2026 - Issue #128 revised after webapp parity audit
+
+## ⚠️ IMPORTANT UPDATE — Issue #128 Revised (Feb 20, 2026)
+
+**Issue #128 (Session Management UI) has been significantly expanded** after a 3-agent parity audit against the live webapp.
+
+Key corrections you MUST know before implementing #128:
+1. **Join codes are 5 characters** (not 4-digit) — e.g. `RQLA4`, `MVN75`
+2. **File paths use Expo Router** — `app/` not `src/screens/`, no `AppNavigator.tsx`
+3. **No new backend work needed** — all handlers exist (`create-session`, `join-session`, `leave-session`, `get-sessions`, `set-broadcast`, `archive-session`)
+4. **Scope is full webapp parity** — session list, ON AIR/Go Live broadcast, Family Pass, display name lobby, native Share Sheet, deep links, Session Info modal
+5. **Do issue #136 first** — 0.5-day refactor of `WebSocketService.joinSession()`, unblocked right now
+6. **Revised estimate**: 10-12 days (was 5-6)
+
+Read [Issue #128](https://github.com/ajmau01/social-vinyl-mobile/issues/128) for the full updated spec before starting.
 
 ---
 
@@ -258,6 +272,7 @@ Claude creates detailed GitHub issues that form a **logical path** for you to fo
 ### 0. CRITICAL WORKFLOW RULES (NON-NEGOTIABLE)
 - **NEVER commit directly to `main`**. ALWAYS work in a `feature/...` or `fix/...` branch.
 - **ALWAYS create a Pull Request** to merge changes. Never merge locally without a PR.
+- **ALWAYS use "Andrew Mauer" (<ajmauer@gmail.com>)** for all commits and PRs. (Local git config has been verified).
 
 ### 1. Check Your Tasks
 
@@ -635,35 +650,73 @@ export function generateUUID(): string {
 
 ---
 
-### Issue #128: Session Management UI
+### Issue #128: Session Management UI — FULL WEBAPP PARITY
 
-**Goal**: Enable Host session creation and Guest joining via 4-digit code or QR scan.
+> ⚠️ **ISSUE REVISED 2026-02-20** — Read the updated GitHub issue before starting. Original scope was ~40% of the full feature. This note reflects the corrected, full-parity scope.
 
-**Status**: ⏸️ BLOCKED by #125 (Protocol Enhancement)
+**Goal**: Build the complete Session Management UI to full parity with the live webapp, plus mobile-native enhancements.
 
-**What You're Building**:
-1. Create session screen (Host) with 4-digit code generation
-2. Join session screen (Guest) with code entry and QR scan
-3. QR code display/sharing
-4. Session validation API integration
-5. Session info in drawer
+**Reference**: The webapp Session Manager (see screenshot in issue) is the design spec. Match it exactly.
+
+**Status**: ⏸️ BLOCKED by #125 (Protocol Enhancement) + pre-req #136
+
+**Pre-req first**: [Issue #136](https://github.com/ajmau01/social-vinyl-mobile/issues/136) — Refactor `WebSocketService.joinSession()` (0.5 days, unblocked, do this before #128 branch)
+
+**CRITICAL CORRECTIONS from original issue**:
+- ❌ "4-digit code" → ✅ **5-character alphanumeric** (e.g. `RQLA4`, `MVN75`)
+- ❌ `src/screens/` path → ✅ `app/` (Expo Router)
+- ❌ `src/navigation/AppNavigator.tsx` → ✅ `app/_layout.tsx`
+- ❌ No backend work needed for #248 → ✅ All backend handlers already exist
+
+**What You're Building** (full parity with webapp):
+1. Session Manager screen (`app/session-list.tsx`) — session cards with Go Live / ON AIR / Share / End / Family Pass
+2. Create session screen (`app/create-session.tsx`) — name + permanent toggle
+3. Join session screen (`app/join-session.tsx`) — 5-char code entry + native QR scanner
+4. Lobby modal — display name prompt on first guest join
+5. Share flow — QR code + native Share Sheet + magic link (NOT just QR)
+6. Session Info modal — ⓘ button in header with large code + ON AIR badge
+7. Family Pass — permanent session auto-rejoin on session-left
+8. SessionDrawer overhaul — replace disabled placeholder with live session controls
+9. "Go Live" / "ON AIR" broadcast toggle — one session is THE broadcast
+10. Deep links — `socialvinyl://join?code=XXXXX` via Expo Linking
 
 **Files to Create**:
-- `src/services/SessionService.ts` - Session API service
-- `app/create-session.tsx` - Session creation screen
-- `app/join-session.tsx` - Session join screen
-- `src/components/SessionCodeDisplay.tsx` - Display code + QR
-- `src/components/QRScanner.tsx` - QR code scanner
+- `app/session-list.tsx` — Session Manager (list all sessions)
+- `app/create-session.tsx` — Host creates session
+- `app/join-session.tsx` — Guest joins via code or QR
+- `src/services/SessionService.ts` — Session lifecycle service
+- `src/services/interfaces.ts` — Add `ISessionService`
+- `src/components/session/SessionCodeDisplay.tsx` — QR + Share Sheet + copy
+- `src/components/session/QRScanner.tsx` — Native camera QR scanner
+- `src/components/session/SessionCard.tsx` — Session list card
+- `src/components/session/LobbyModal.tsx` — Display name on first join
+- `src/components/session/SessionInfoModal.tsx` — ⓘ info overlay
+
+**Files to Modify**:
+- `app/_layout.tsx` — Add Stack screens (not AppNavigator.tsx)
+- `src/contexts/ServiceContext.tsx` — Register SessionService
+- `src/stores/useSessionStore.ts` — Add: joinCode, sessionRole, isPermanent, isBroadcast, displayName; update partialize
+- `src/types/schemas.ts` — Zod schemas for session-created, session-joined, session-left, session-list
+- `src/components/SessionDrawer.tsx` — Replace disabled placeholder with live controls
+
+**Backend Actions** (all exist, zero new backend work needed):
+- `create-session` → `session-created`
+- `join-session` → `session-joined` (SessionJoinedMessage DTO)
+- `leave-session` → `session-left`
+- `get-sessions` → `session-list`
+- `set-broadcast` → updates broadcast
+- `archive-session` → session archived
 
 **Dependencies**:
-- `expo-barcode-scanner` - For QR scanning
-- `expo-camera` - For camera access
+- `react-native-qrcode-svg` — QR code generation (client-side, same as webapp's qrcode.min.js)
+- `expo-barcode-scanner` — QR scanning
+- `expo-camera` — Camera access
 
-**Estimated Time**: 5-6 days
+**Estimated Time**: **10-12 days** (revised from 5-6 to reflect full parity scope)
 
 **Backend Coordination**:
-- Backend [#248](https://github.com/ajmau01/recordcollection/issues/248) (Session creation API)
-- QR code format must match backend expectation
+- No new backend issues needed for parity
+- Future enhancement: backend [#266](https://github.com/ajmau01/recordcollection/issues/266) (end-session broadcast) — NOT blocking
 
 ---
 
@@ -774,8 +827,8 @@ npm test -- ErrorBoundary
 - [ ] Listening Bin syncs in real-time across multiple clients
 - [ ] Optimistic UI updates work (instant feedback)
 - [ ] Offline bin actions queue and sync on reconnect
-- [ ] Host can create session with 4-digit code
-- [ ] Guest can join via code or QR scan
+- [ ] Host can create session with 5-character code (Go Live, ON AIR, Share, Family Pass)
+- [ ] Guest can join via 5-char code or QR scan (lobby for display name on first join)
 - [ ] Now Playing shows progress ring, like counter, attribution
 - [ ] All tests passing (unit + integration + E2E)
 - [ ] Multi-client testing verified (2+ devices)
@@ -805,7 +858,7 @@ ALL Milestone 13 features require backend support. Backend team works in paralle
 - **Week 1**: Backend #245 → Mobile #125
 - **Week 2**: Backend #246 → Mobile #126
 - **Week 3**: Backend #247 + #249 → Mobile #127
-- **Week 4**: Backend #248 → Mobile #128
+- **Week 4**: Mobile #136 (pre-req refactor, 0.5d) → Mobile #128 (10-12d, no backend needed)
 
 **Why Backend First?**:
 - Backend supports both old and new clients
