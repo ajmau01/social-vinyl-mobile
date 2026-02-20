@@ -13,45 +13,69 @@ import { logger } from '@/utils/logger';
 export class SessionService implements ISessionService {
 
     public async createSession(name: string, permanent: boolean): Promise<AsyncResult<SessionCreatedMessage>> {
-        try {
-            const response = await wsService.sendAction<SessionCreatedMessage>('create-session', { name, permanent });
+        return new Promise((resolve) => {
+            const listener = (response: SessionCreatedMessage) => {
+                wsService.removeListener('session-created', listener);
 
-            // Store session context
-            const store = useSessionStore.getState();
-            store.setSessionId(response.sessionId);
-            store.setSessionName(response.name);
-            store.setJoinCode(response.joinCode);
-            store.setSessionSecret(response.sessionSecret);
-            store.setIsPermanent(permanent);
-            store.setSessionRole('host');
+                // Store session context
+                const store = useSessionStore.getState();
+                store.setSessionId(response.sessionId);
+                store.setSessionName(response.name);
+                store.setJoinCode(response.joinCode);
+                store.setSessionSecret(response.sessionSecret);
+                store.setIsPermanent(permanent);
+                store.setSessionRole('host');
 
-            return { success: true, data: response };
-        } catch (error: any) {
-            logger.error('[SessionService] createSession failed:', error);
-            return { success: false, error };
-        }
+                resolve({ success: true, data: response });
+            };
+
+            wsService.addListener('session-created', listener);
+
+            setTimeout(() => {
+                wsService.removeListener('session-created', listener);
+                resolve({ success: false, error: new Error('create-session timed out') });
+            }, 5000);
+
+            wsService.sendAction('create-session', { name, permanent }).catch(error => {
+                logger.error('[SessionService] createSession failed:', error.message || error);
+                wsService.removeListener('session-created', listener);
+                resolve({ success: false, error });
+            });
+        });
     }
 
     public async joinSession(code: string, name: string): Promise<AsyncResult<SessionJoinedMessage>> {
-        try {
-            const response = await wsService.sendAction<SessionJoinedMessage>('join-session', { joinCode: code, username: name });
+        return new Promise((resolve) => {
+            const listener = (response: SessionJoinedMessage) => {
+                wsService.removeListener('session-joined', listener);
 
-            // Store session context
-            const store = useSessionStore.getState();
-            store.setSessionId(response.sessionId);
-            store.setSessionName(response.name);
-            store.setJoinCode(response.joinCode);
-            store.setSessionSecret(response.sessionSecret);
-            store.setHostUsername(response.hostUsername);
-            store.setIsPermanent(response.isPermanent);
-            store.setSessionRole('guest'); // Could be voyeur depending on logic, but default to guest
-            store.setDisplayName(name); // Ensure display name is saved
+                // Store session context
+                const store = useSessionStore.getState();
+                store.setSessionId(response.sessionId);
+                store.setSessionName(response.name);
+                store.setJoinCode(response.joinCode);
+                store.setSessionSecret(response.sessionSecret);
+                store.setHostUsername(response.hostUsername);
+                store.setIsPermanent(response.isPermanent);
+                store.setSessionRole('guest'); // Could be voyeur depending on logic, but default to guest
+                store.setDisplayName(name); // Ensure display name is saved
 
-            return { success: true, data: response };
-        } catch (error: any) {
-            logger.error('[SessionService] joinSession failed:', error);
-            return { success: false, error };
-        }
+                resolve({ success: true, data: response });
+            };
+
+            wsService.addListener('session-joined', listener);
+
+            setTimeout(() => {
+                wsService.removeListener('session-joined', listener);
+                resolve({ success: false, error: new Error('join-session timed out') });
+            }, 5000);
+
+            wsService.sendAction('join-session', { joinCode: code, username: name }).catch(error => {
+                logger.error('[SessionService] joinSession failed:', error.message || error);
+                wsService.removeListener('session-joined', listener);
+                resolve({ success: false, error });
+            });
+        });
     }
 
     public async leaveSession(): Promise<AsyncResult<void>> {
@@ -100,13 +124,24 @@ export class SessionService implements ISessionService {
     }
 
     public async getSessions(): Promise<ISessionCard[]> {
-        try {
-            const response = await wsService.sendAction<SessionListMessage>('get-sessions');
-            return response.sessions || [];
-        } catch (error: any) {
-            logger.error('[SessionService] getSessions failed:', error);
-            return [];
-        }
+        return new Promise((resolve) => {
+            const listener = (data: any) => {
+                wsService.removeListener('session-list', listener);
+                resolve(data.sessions || []);
+            };
+
+            wsService.addListener('session-list', listener);
+
+            // Set a fallback timeout in case the server never responds
+            setTimeout(() => {
+                wsService.removeListener('session-list', listener);
+                resolve([]);
+            }, 5000);
+
+            wsService.sendAction('get-sessions').catch(error => {
+                logger.error('[SessionService] sendAction(get-sessions) failed:', error.message || error);
+            });
+        });
     }
 
     public async setBroadcast(sessionId: number): Promise<AsyncResult<void>> {
