@@ -18,6 +18,7 @@ export interface CollectionHeaderProps {
     onSearchPress: () => void;
     onRandomPress: () => void;
     onMenuPress: () => void;
+    onInfoPress?: () => void;
     onViewModeChange: (mode: ViewMode) => void;
 }
 
@@ -67,6 +68,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     onSearchPress,
     onRandomPress,
     onMenuPress,
+    onInfoPress,
     onViewModeChange
 }) => {
     const getSegmentedValue = useCallback(() => {
@@ -100,6 +102,15 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
                     </View>
                 </View>
                 <View style={styles.headerRight}>
+                    {onInfoPress && (
+                        <TouchableOpacity
+                            testID="collection-header-info-button"
+                            style={styles.iconBtn}
+                            onPress={onInfoPress}
+                        >
+                            <Ionicons name="information-circle-outline" size={24} color={THEME.colors.primary} />
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         testID="collection-header-search-button"
                         style={styles.iconBtn}
