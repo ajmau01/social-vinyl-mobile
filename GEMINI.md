@@ -278,6 +278,44 @@ The mobile app is the "Remote Control" for Social Vinyl parties. It's a satellit
 - **Atomic State Updates**: Replace entire state, don't patch
 - **Offline-First**: Cache local, sync with server
 
+### Standing Coding Conventions (Non-Negotiable)
+
+#### WebSocket Actions in Effects
+**NEVER** fire WebSocket actions in `useEffect([], [])`. The WebSocket may not be connected yet, especially on remote tunnels with higher handshake latency.
+
+**Always gate on `isConnected` with a `hasLoaded` ref:**
+```tsx
+const hasLoaded = useRef(false);
+const { isConnected } = useWebSocket();
+
+useEffect(() => {
+    if (isConnected && !hasLoaded.current) {
+        hasLoaded.current = true;
+        loadData(); // safe to call sendAction() here
+    }
+}, [isConnected]);
+```
+The `hasLoaded` ref prevents re-fetching on every reconnect cycle. Without it, data reloads on every WebSocket reconnect — including background reconnects.
+
+#### Conditional UI with Voyeur Guard
+When gating UI elements on session state, always apply the **same condition to both the trigger and the mounted component**:
+```tsx
+// Button:
+{sessionId && sessionRole !== 'voyeur' && <InfoButton />}
+
+// Modal must match — never just sessionId alone:
+{sessionId && sessionRole !== 'voyeur' && <InfoModal />}
+```
+
+#### Zustand Store Selectors
+Use `useShallow` for any component that reads multiple fields from a store to prevent unnecessary re-renders:
+```tsx
+const { fieldA, fieldB } = useStore(useShallow(state => ({
+    fieldA: state.fieldA,
+    fieldB: state.fieldB,
+})));
+```
+
 ## Your Workflow
 
 **GitHub Issues are Your Source of Truth**
