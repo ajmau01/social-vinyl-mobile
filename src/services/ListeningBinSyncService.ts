@@ -242,6 +242,24 @@ class ListeningBinSyncService {
             return { success: false, error: error as Error };
         }
     }
+
+    /**
+     * Stops current playback (Host only)
+     */
+    public async stopPlayback(): Promise<Result<void>> {
+        const { username: userId, hostUsername } = useSessionStore.getState();
+
+        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (userId !== hostUsername) return { success: false, error: new Error('Only the host can stop playback') };
+
+        try {
+            await wsService.sendAction('stop-playback', {});
+            return { success: true, data: undefined };
+        } catch (error) {
+            logger.error('[BinSync] Stop playback failed', error);
+            return { success: false, error: error as Error };
+        }
+    }
 }
 
 export const listeningBinSyncService = ListeningBinSyncService.getInstance();

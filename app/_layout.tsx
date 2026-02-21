@@ -1,9 +1,10 @@
 import * as Sentry from '@sentry/react-native';
 import { CONFIG } from '@/config';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, UIManager } from 'react-native';
+import * as Linking from 'expo-linking';
 
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
@@ -64,6 +65,8 @@ function WebSocketManager() {
 
 function RootLayout() {
   const { hydrateCredentials, updateLastInteraction } = useSessionStore();
+  const router = useRouter();
+  const url = Linking.useURL();
 
   // Hydrate token from SecureStore on app start
   useEffect(() => {
@@ -71,6 +74,22 @@ function RootLayout() {
     // Issue #126: Initialize Listening Bin Sync Service
     listeningBinSyncService.init();
   }, []);
+
+  // Issue #128: Process Deep Links (socialvinyl://join?code=XXXXX)
+  useEffect(() => {
+    if (url) {
+      const parsed = Linking.parse(url);
+      if (parsed.path === 'join' || parsed.path === 'join-session') {
+        const joinCode = parsed.queryParams?.code;
+        if (joinCode && typeof joinCode === 'string') {
+          // Slight delay to ensure router navigation hierarchy is completely mounted
+          setTimeout(() => {
+            router.push(`/join-session?code=${joinCode}`);
+          }, 300);
+        }
+      }
+    }
+  }, [url, router]);
 
   // Activate Session Timeout Logic (handles E2E internally)
   useSessionTimeout();
@@ -89,6 +108,9 @@ function RootLayout() {
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="session-list" />
+            <Stack.Screen name="create-session" />
+            <Stack.Screen name="join-session" />
           </Stack>
         </View>
       </ServiceProvider>

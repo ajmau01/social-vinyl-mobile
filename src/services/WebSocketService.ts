@@ -42,6 +42,9 @@ class WebSocketService implements IWebSocketService {
     // Issue #126: Dedicated listeners for Bin State to avoid conflicts with useWebSocket
     private binStateListeners: ((data: { items: any[], hostUsername?: string }) => void)[] = [];
 
+    // Temporary Message Listeners
+    private messageListeners: Map<string, Array<(data: any) => void>> = new Map();
+
     private constructor() { }
 
     public static getInstance(): WebSocketService {
@@ -244,49 +247,67 @@ class WebSocketService implements IWebSocketService {
         });
     }
     /**
+     * Listen for a specific message type
+     */
+    public addListener(type: string, callback: (data: any) => void) {
+        if (!this.messageListeners.has(type)) {
+            this.messageListeners.set(type, []);
+        }
+        this.messageListeners.get(type)!.push(callback);
+    }
+
+    public removeListener(type: string, callback: (data: any) => void) {
+        if (this.messageListeners.has(type)) {
+            const listeners = this.messageListeners.get(type)!;
+            const index = listeners.indexOf(callback);
+            if (index !== -1) {
+                listeners.splice(index, 1);
+            }
+        }
+    }
+
+    /**
      * Joins a session as a guest.
      * Establishes a persistent connection and sends the join-session action.
      */
     public async joinSession(joinCode: string, username: string): AsyncResult<any> {
-        return new Promise((resolve) => {
-            // 1. Connect
-            this.disconnect(); // Ensure clean slate
+        try {
+            this.disconnect();
             this.connect(username);
 
-            // 2. Wait for connection and join
-            const timeout = setTimeout(() => {
-                resolve({ success: false, error: new Error('Connection timed out') });
-            }, 10000);
+            await new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    clearInterval(interval);
+                    reject(new Error('Connection timed out'));
+                }, 10000);
 
-            const onConnect = (state: string) => {
-                if (state === 'connected') {
-                    // Connection successful, now send join action
-                    this.sendAction('join-session', { joinCode })
-                        .then((response: any) => {
+                const interval = setInterval(() => {
+                    if (this.socket?.readyState === WebSocket.OPEN) {
+                        // Ensure PROTOCOL_ACK or basic connection flag is ready.
+                        // We check if connectionState is 'connected' to ensure handleOpen finished
+                        const { useSessionStore } = require('@/store/useSessionStore');
+                        const state = useSessionStore.getState().connectionState;
+                        if (state === 'connected') {
+                            clearInterval(interval);
                             clearTimeout(timeout);
-                            resolve({ success: true, data: response });
-                        })
-                        .catch((err) => {
-                            clearTimeout(timeout);
-                            this.disconnect();
-                            resolve({ success: false, error: err });
-                        });
-                }
-            };
+                            resolve();
+                        }
+                    } else if (this.socket?.readyState === WebSocket.CLOSED) {
+                        clearInterval(interval);
+                        clearTimeout(timeout);
+                        reject(new Error('WebSocket closed during connection'));
+                    }
+                }, 100);
+            });
 
-            // Temporary callback interception to detect connection
-            // In a real app, we might use a purely event-driven approach or a dedicated promise-based connect()
-            const originalCallback = this.callbacks?.onConnectionStateChange;
-            if (this.callbacks) {
-                this.callbacks.onConnectionStateChange = (state) => {
-                    originalCallback?.(state);
-                    onConnect(state);
-                };
-            } else {
-                // Should link callbacks before calling joinSession in the UI
-                logger.warn('[WS] joinSession called without callbacks registered');
-            }
-        });
+            // Connection successful, now send join action
+            const response = await this.sendAction('join-session', { joinCode });
+            return { success: true, data: response };
+
+        } catch (err: any) {
+            this.disconnect();
+            return { success: false, error: err };
+        }
     }
 
     private handleOpen = () => {

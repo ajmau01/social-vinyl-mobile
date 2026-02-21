@@ -106,6 +106,47 @@ export const ActionAckSchema = z.object({
     type: z.literal('ACTION_ACK'),
     actionId: z.string().uuid(),
     status: z.enum(['success', 'error']),
-    error: z.string().optional(),
     data: z.any().optional(),
+});
+
+/**
+ * Session Management Schemas (Issue #128)
+ */
+export const SessionCardSchema = z.object({
+    id: z.number(),
+    name: z.string(),
+    code: z.string().length(5),
+    active: z.boolean(),
+    permanent: z.boolean(),
+    isBroadcast: z.boolean(),
+    createdAt: z.string()
+});
+
+export const SessionCreatedSchema = z.object({
+    type: z.literal('session-created'),
+    sessionId: z.number(),
+    joinCode: z.string().length(5),
+    sessionSecret: z.string(),
+    name: z.string(),
+    publicUrl: z.string()
+});
+
+export const SessionJoinedSchema = z.object({
+    type: z.literal('session-joined'),
+    sessionId: z.number(),
+    name: z.string(),
+    joinCode: z.string().length(5),
+    sessionSecret: z.string(),
+    publicUrl: z.string(),
+    hostUsername: z.string(),
+    isPermanent: z.boolean()
+});
+
+export const SessionLeftSchema = z.object({
+    type: z.literal('session-left')
+});
+
+export const SessionListSchema = z.object({
+    type: z.literal('session-list'),
+    sessions: z.array(SessionCardSchema)
 });

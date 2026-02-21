@@ -8,12 +8,14 @@ export interface UseWebSocketResult {
     connectionState: ConnectionState;
     isConnected: boolean;
     isConnecting: boolean;
-    sessionId: string | null;
+    sessionId: string | number | null;
     nowPlaying: NowPlaying | null;
     error: string | null;
     connect: () => void;
     disconnect: () => void;
     login: (username: string, password: string) => Promise<Result<LoginResult>>;
+    enabledFeatures: string[];
+    isFeatureEnabled: (feature: string) => boolean;
 }
 
 /**
@@ -32,10 +34,13 @@ export const useWebSocket = (): UseWebSocketResult => {
         username,
         authToken,
         sessionSecret,
+        enabledFeatures,
+        isFeatureEnabled,
         setConnectionState,
         setSessionId,
         setSessionSecret,
         setNowPlaying,
+        setSessionRole,
         setError
     } = useSessionStore();
 
@@ -70,6 +75,9 @@ export const useWebSocket = (): UseWebSocketResult => {
                     // Normalize backend message to frontend NowPlaying interface
                     const normalized = normalizeNowPlayingPayload(payload);
                     setNowPlaying(normalized);
+                } else if (type === 'now-playing-cleared') {
+                    // Host explicitly stopped playback
+                    setNowPlaying(null);
                 } else if (type === 'STATE' || type === 'state') {
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
@@ -84,6 +92,16 @@ export const useWebSocket = (): UseWebSocketResult => {
             onError: (err: Error) => {
                 setError(err.message);
                 setConnectionState('disconnected');
+            },
+            onAccessLevel: (level: string) => {
+                // Map access levels to session roles
+                if (level === 'admin') {
+                    setSessionRole('host');
+                } else if (level === 'party') {
+                    setSessionRole('guest');
+                } else {
+                    setSessionRole('voyeur');
+                }
             }
         };
 
@@ -93,14 +111,14 @@ export const useWebSocket = (): UseWebSocketResult => {
             // Fix memory leak by clearing callbacks on unmount
             webSocketService.clearCallbacks();
         };
-    }, [webSocketService, setConnectionState, setSessionId, setSessionSecret, setNowPlaying, setError]);
+    }, [webSocketService, setConnectionState, setSessionId, setSessionSecret, setNowPlaying, setSessionRole, setError]);
 
     const connect = useCallback(() => {
         if (username) {
             webSocketService.connect(
                 username,
                 authToken || undefined,
-                sessionId || undefined,
+                sessionId ? sessionId.toString() : undefined,
                 sessionSecret || undefined
             );
         }
@@ -127,6 +145,8 @@ export const useWebSocket = (): UseWebSocketResult => {
         error,
         connect,
         disconnect,
-        login
+        login,
+        enabledFeatures,
+        isFeatureEnabled
     };
 };

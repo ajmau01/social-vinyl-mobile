@@ -20,6 +20,21 @@ Key corrections you MUST know before implementing #128:
 
 Read [Issue #128](https://github.com/ajmau01/social-vinyl-mobile/issues/128) for the full updated spec before starting.
 
+## 📋 DESIGN NOTE — Terminology & UX Pass Coming After #128 (Feb 21, 2026)
+
+**Complete #128 as scoped — do not block or restart it.** However, be aware that a UX design pass is planned after #128 ships. To make that pass as painless as possible, follow this one rule while implementing:
+
+**Keep all user-facing UI copy loosely coupled.**
+
+Specifically:
+- Do **not** hardcode the word "Session" scattered throughout JSX strings. Use a constant or keep it in one obvious place per screen so it can be swapped to "Listening Party" later with minimal effort.
+- Same applies to any label that refers to the host role ("Host"), the queue ("Listening Bin" is fine — that one is staying), or action labels like "Go Live" / "End" / "Share".
+- The underlying plumbing, screens, and WebSocket logic you build in #128 are all keepers — the rework will be at the copy and flow layer, not the architecture layer.
+
+**Why**: A product design brainstorm (Feb 21) identified that "Session" should become "Listening Party" in user-facing copy, and several guest flow improvements are planned (bookmark-to-buy, onboarding redesign, Notable as default guest view). These are scoped as a follow-on issue after #128 — your implementation will not be wasted.
+
+See vault for full context: `~/ObsidianVaults/SocialVinyl-Dev/Design/Product-Vision.md`
+
 ---
 
 ## 🎉 GREAT NEWS: Phase 9 is COMPLETE!

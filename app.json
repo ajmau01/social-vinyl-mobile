@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "socialvinyl",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -13,13 +14,19 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan party QR codes to quickly join sessions."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -28,7 +35,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan party QR codes to quickly join sessions."
+        }
+      ]
     ]
   }
 }

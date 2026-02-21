@@ -3,11 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { secureStorage } from '@/utils/storage';
 
-import { NowPlaying, SyncStatus, ConnectionState } from '@/types';
+import { NowPlaying, SyncStatus, ConnectionState, SessionRole } from '@/types';
 
 interface SessionState {
     connectionState: ConnectionState;
-    sessionId: string | null;
+    sessionId: string | number | null;
     nowPlaying: NowPlaying | null;
     username: string | null;
     avatarUrl: string | null;
@@ -19,7 +19,7 @@ interface SessionState {
 
     // Actions
     setConnectionState: (state: ConnectionState) => void;
-    setSessionId: (id: string | null) => void;
+    setSessionId: (id: string | number | null) => void;
     setNowPlaying: (track: NowPlaying | null) => void;
     setUsername: (username: string | null) => void;
     setAvatarUrl: (url: string | null) => void;
@@ -46,11 +46,24 @@ interface SessionState {
     setEnabledFeatures: (features: string[]) => void;
     isFeatureEnabled: (feature: string) => boolean;
 
-    // Issue #126: Session Metadata
+    // Issue #126 / #128: Session Metadata & Management
     sessionName: string | null;
     hostUsername: string | null;
+    joinCode: string | null;
+    sessionRole: SessionRole | null;
+    isPermanent: boolean;
+    isBroadcast: boolean;
+    displayName: string | null;
+    familyPassCode: string | null;
+
     setSessionName: (name: string | null) => void;
     setHostUsername: (username: string | null) => void;
+    setJoinCode: (code: string | null) => void;
+    setSessionRole: (role: SessionRole | null) => void;
+    setIsPermanent: (isPermanent: boolean) => void;
+    setIsBroadcast: (isBroadcast: boolean) => void;
+    setDisplayName: (name: string | null) => void;
+    setFamilyPassCode: (code: string | null) => void;
 }
 
 export const useSessionStore = create<SessionState>()(
@@ -66,6 +79,12 @@ export const useSessionStore = create<SessionState>()(
             lastMode: null,
             error: null,
             lastInteractionTime: Date.now(),
+            joinCode: null,
+            sessionRole: null,
+            isPermanent: false,
+            isBroadcast: false,
+            displayName: null,
+            familyPassCode: null,
 
             setConnectionState: (state) => set({ connectionState: state }),
             setSessionId: async (id) => {
@@ -73,7 +92,7 @@ export const useSessionStore = create<SessionState>()(
                 // If we have both id and secret, save them securely
                 const { sessionSecret } = useSessionStore.getState();
                 if (id && sessionSecret) {
-                    await secureStorage.saveSessionCredentials(id, sessionSecret);
+                    await secureStorage.saveSessionCredentials(id.toString(), sessionSecret);
                 }
             },
             setNowPlaying: (track) => set({ nowPlaying: track }),
@@ -91,7 +110,7 @@ export const useSessionStore = create<SessionState>()(
                 set({ sessionSecret: secret });
                 const { sessionId } = useSessionStore.getState();
                 if (sessionId && secret) {
-                    await secureStorage.saveSessionCredentials(sessionId, secret);
+                    await secureStorage.saveSessionCredentials(sessionId.toString(), secret);
                 }
             },
             hydrateCredentials: async () => {
@@ -114,6 +133,14 @@ export const useSessionStore = create<SessionState>()(
                     username: null,
                     avatarUrl: null,
                     nowPlaying: null,
+                    error: null,
+                    joinCode: null,
+                    sessionRole: null,
+                    isPermanent: false,
+                    isBroadcast: false,
+                    sessionName: null,
+                    hostUsername: null,
+                    familyPassCode: null,
                     lastInteractionTime: Date.now()
                 });
             },
@@ -139,11 +166,17 @@ export const useSessionStore = create<SessionState>()(
                 return enabledFeatures.includes(feature);
             },
 
-            // Issue #126: Session Metadata
+            // Issue #126 / #128: Session Metadata
             sessionName: null,
             hostUsername: null,
             setSessionName: (name) => set({ sessionName: name }),
             setHostUsername: (username) => set({ hostUsername: username }),
+            setJoinCode: (code) => set({ joinCode: code }),
+            setSessionRole: (role) => set({ sessionRole: role }),
+            setIsPermanent: (isPerm) => set({ isPermanent: isPerm }),
+            setIsBroadcast: (isBroad) => set({ isBroadcast: isBroad }),
+            setDisplayName: (name) => set({ displayName: name }),
+            setFamilyPassCode: (code) => set({ familyPassCode: code }),
         }),
         {
             name: 'session-storage',
@@ -155,7 +188,13 @@ export const useSessionStore = create<SessionState>()(
                 sessionSecret: state.sessionSecret,
                 lastMode: state.lastMode,
                 lastSyncTime: state.lastSyncTime,
-                enabledFeatures: state.enabledFeatures
+                enabledFeatures: state.enabledFeatures,
+                sessionName: state.sessionName,
+                hostUsername: state.hostUsername,
+                joinCode: state.joinCode,
+                isPermanent: state.isPermanent,
+                displayName: state.displayName,
+                familyPassCode: state.familyPassCode
             }),
         }
     )
