@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { THEME } from '@/constants/theme';
@@ -7,6 +7,7 @@ import { useServices } from '@/contexts/ServiceContext';
 import { SessionCard as ISessionCard } from '@/types';
 import { SessionCard } from '@/components/session/SessionCard';
 import { useSessionStore } from '@/store/useSessionStore';
+import { useWebSocket } from '@/hooks';
 
 export default function SessionListScreen() {
     const router = useRouter();
@@ -16,6 +17,8 @@ export default function SessionListScreen() {
     const [sessions, setSessions] = useState<ISessionCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const hasLoaded = useRef(false);
+    const { isConnected } = useWebSocket();
 
     const loadSessions = async () => {
         try {
@@ -30,8 +33,11 @@ export default function SessionListScreen() {
     };
 
     useEffect(() => {
-        loadSessions();
-    }, []);
+        if (isConnected && !hasLoaded.current) {
+            hasLoaded.current = true;
+            loadSessions();
+        }
+    }, [isConnected]);
 
     const onRefresh = () => {
         setRefreshing(true);

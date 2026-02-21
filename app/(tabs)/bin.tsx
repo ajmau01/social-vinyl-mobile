@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, SafeAreaView, Alert } from 'react-native';
+import { useShallow } from 'zustand/shallow';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
@@ -9,10 +10,30 @@ import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flat
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BinItem } from '@/components/BinItem';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
+import { SessionInfoModal } from '@/components/session/SessionInfoModal';
 
 export default function BinScreen() {
-    const { username, hostUsername } = useSessionStore();
+    const {
+        username,
+        hostUsername,
+        sessionId,
+        sessionName,
+        joinCode,
+        sessionRole,
+        isBroadcast,
+        isPermanent
+    } = useSessionStore(useShallow(state => ({
+        username: state.username,
+        hostUsername: state.hostUsername,
+        sessionId: state.sessionId,
+        sessionName: state.sessionName,
+        joinCode: state.joinCode,
+        sessionRole: state.sessionRole,
+        isBroadcast: state.isBroadcast,
+        isPermanent: state.isPermanent
+    })));
     const { items, removeItem, clearBin, setBin } = useListeningBinStore();
+    const [infoVisible, setInfoVisible] = React.useState(false);
 
     // Debug Play Button Logic (Removed noise)
     /*
@@ -91,11 +112,22 @@ export default function BinScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Listening Bin</Text>
-                    {userItems.length > 0 && (
-                        <Pressable testID="bin-clear-button" onPress={handleClear} style={styles.clearButton}>
-                            <Text style={styles.clearButtonText}>Clear All</Text>
-                        </Pressable>
-                    )}
+                    <View style={styles.headerActions}>
+                        {sessionId && sessionRole !== 'voyeur' && (
+                            <Pressable
+                                testID="session-info-button"
+                                onPress={() => setInfoVisible(true)}
+                                style={styles.headerButton}
+                            >
+                                <Ionicons name="information-circle-outline" size={24} color={THEME.colors.primary} />
+                            </Pressable>
+                        )}
+                        {userItems.length > 0 && (
+                            <Pressable testID="bin-clear-button" onPress={handleClear} style={styles.headerButton}>
+                                <Text style={styles.clearButtonText}>Clear All</Text>
+                            </Pressable>
+                        )}
+                    </View>
                 </View>
 
                 {userItems.length === 0 ? (
@@ -116,6 +148,18 @@ export default function BinScreen() {
                     />
                 )}
             </SafeAreaView>
+
+            {sessionId && sessionRole !== 'voyeur' && (
+                <SessionInfoModal
+                    visible={infoVisible}
+                    sessionName={sessionName || 'Session'}
+                    hostName={hostUsername || 'Unknown Host'}
+                    joinCode={joinCode || '?????'}
+                    isBroadcast={!!isBroadcast}
+                    isPermanent={!!isPermanent}
+                    onClose={() => setInfoVisible(false)}
+                />
+            )}
         </GestureHandlerRootView>
     );
 }
@@ -143,7 +187,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: THEME.colors.white,
     },
-    clearButton: {
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: THEME.spacing.sm,
+    },
+    headerButton: {
         padding: THEME.spacing.xs,
     },
     clearButtonText: {

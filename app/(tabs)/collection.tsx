@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
+import { useShallow } from 'zustand/shallow';
 import * as Haptics from 'expo-haptics';
 import Animated, { FadeInUp, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { logger } from '@/utils/logger';
@@ -11,6 +12,7 @@ import { ReleaseDetailsModal } from '@/components/ReleaseDetailsModal';
 import { SessionDrawer } from '@/components/SessionDrawer';
 import { CollectionHeader } from '@/components/CollectionHeader';
 import { SearchBar } from '@/components/SearchBar';
+import { SessionInfoModal } from '@/components/session/SessionInfoModal';
 import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode, useDailySpin } from '@/hooks';
 import { DatabaseService } from '@/services/DatabaseService';
@@ -22,13 +24,33 @@ export default function CollectionScreen() {
     const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('genre');
     const [isSearchVisible, setIsSearchVisible] = useState(false);
+    const [infoVisible, setInfoVisible] = useState(false);
 
     const {
         username,
         syncStatus,
         syncProgress,
-        lastSyncTime
-    } = useSessionStore();
+        lastSyncTime,
+        sessionId,
+        sessionRole,
+        sessionName,
+        hostUsername,
+        joinCode,
+        isBroadcast,
+        isPermanent
+    } = useSessionStore(useShallow(state => ({
+        username: state.username,
+        syncStatus: state.syncStatus,
+        syncProgress: state.syncProgress,
+        lastSyncTime: state.lastSyncTime,
+        sessionId: state.sessionId,
+        sessionRole: state.sessionRole,
+        sessionName: state.sessionName,
+        hostUsername: state.hostUsername,
+        joinCode: state.joinCode,
+        isBroadcast: state.isBroadcast,
+        isPermanent: state.isPermanent
+    })));
 
     // Hooks for data and sync
     const { releases, loading: loadingCollection, refresh: refreshCollection } = useCollectionData();
@@ -173,6 +195,7 @@ export default function CollectionScreen() {
                     onSearchPress={handleSearchToggle}
                     onRandomPress={handleRandomPress}
                     onMenuPress={() => setIsMenuVisible(true)}
+                    onInfoPress={sessionId && sessionRole !== 'voyeur' ? () => setInfoVisible(true) : undefined}
                     onViewModeChange={setViewMode}
                 />
 
@@ -212,6 +235,18 @@ export default function CollectionScreen() {
                     isVisible={isMenuVisible}
                     onClose={() => setIsMenuVisible(false)}
                 />
+
+                {sessionId && (
+                    <SessionInfoModal
+                        visible={infoVisible}
+                        sessionName={sessionName || 'Session'}
+                        hostName={hostUsername || 'Unknown Host'}
+                        joinCode={joinCode || '?????'}
+                        isBroadcast={!!isBroadcast}
+                        isPermanent={!!isPermanent}
+                        onClose={() => setInfoVisible(false)}
+                    />
+                )}
             </SafeAreaView>
         </View>
     );
