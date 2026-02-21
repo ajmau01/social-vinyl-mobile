@@ -18,11 +18,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
+import { useSessionStore } from '@/store/useSessionStore';
+import { logger } from '@/utils/logger';
 import { ProgressRing } from './ProgressRing';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export const NowPlayingBanner = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
+    const { username, hostUsername } = useSessionStore();
+    const isHost = !!username && username === hostUsername;
 
     // Fix Issue #126: Move shared values and styles to top level to avoid conditional hook errors
     const heartScale = useSharedValue(1);
@@ -49,6 +53,19 @@ export const NowPlayingBanner = () => {
         );
 
         await listeningBinSyncService.likeCurrentAlbum();
+    };
+
+    const handleStop = async () => {
+        if (!isHost) return;
+
+        // Haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        try {
+            await listeningBinSyncService.stopPlayback();
+        } catch (error) {
+            logger.error('[NowPlaying] Stop playback failed', error);
+        }
     };
 
     if (!nowPlaying && !isConnecting && !isConnected) return null;
@@ -125,27 +142,43 @@ export const NowPlayingBanner = () => {
                     {/* Right: Interaction */}
                     <View style={styles.interaction}>
                         {nowPlaying && (
-                            <TouchableOpacity
-                                onPress={handleLike}
-                                activeOpacity={0.7}
-                                style={styles.likeButton}
-                            >
-                                <Animated.View style={heartStyle}>
-                                    <Ionicons
-                                        name={nowPlaying.userHasLiked ? "heart" : "heart-outline"}
-                                        size={22}
-                                        color={nowPlaying.userHasLiked ? THEME.colors.secondary : THEME.colors.textDim}
-                                    />
-                                </Animated.View>
-                                {nowPlaying.likeCount !== undefined && nowPlaying.likeCount > 0 && (
-                                    <Text style={[
-                                        styles.likeCount,
-                                        nowPlaying.userHasLiked && { color: THEME.colors.secondary }
-                                    ]}>
-                                        {nowPlaying.likeCount}
-                                    </Text>
+                            <>
+                                <TouchableOpacity
+                                    onPress={handleLike}
+                                    activeOpacity={0.7}
+                                    style={styles.likeButton}
+                                >
+                                    <Animated.View style={heartStyle}>
+                                        <Ionicons
+                                            name={nowPlaying.userHasLiked ? "heart" : "heart-outline"}
+                                            size={22}
+                                            color={nowPlaying.userHasLiked ? THEME.colors.secondary : THEME.colors.textDim}
+                                        />
+                                    </Animated.View>
+                                    {nowPlaying.likeCount !== undefined && nowPlaying.likeCount > 0 && (
+                                        <Text style={[
+                                            styles.likeCount,
+                                            nowPlaying.userHasLiked && { color: THEME.colors.secondary }
+                                        ]}>
+                                            {nowPlaying.likeCount}
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+
+                                {isHost && (
+                                    <TouchableOpacity
+                                        onPress={handleStop}
+                                        activeOpacity={0.7}
+                                        style={styles.stopButton}
+                                    >
+                                        <Ionicons
+                                            name="stop-circle-outline"
+                                            size={24}
+                                            color={THEME.colors.textDim}
+                                        />
+                                    </TouchableOpacity>
                                 )}
-                            </TouchableOpacity>
+                            </>
                         )}
 
                         {!nowPlaying && (
@@ -249,6 +282,11 @@ const styles = StyleSheet.create({
     likeButton: {
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    stopButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: THEME.spacing.xs,
     },
     likeCount: {
         color: THEME.colors.textDim,
