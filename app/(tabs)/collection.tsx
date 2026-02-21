@@ -236,7 +236,7 @@ export default function CollectionScreen() {
                     onClose={() => setIsMenuVisible(false)}
                 />
 
-                {sessionId && (
+                {sessionId && sessionRole !== 'voyeur' && (
                     <SessionInfoModal
                         visible={infoVisible}
                         sessionName={sessionName || 'Session'}
