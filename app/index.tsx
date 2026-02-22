@@ -302,71 +302,76 @@ export default function WelcomeScreen() {
                                     <Text style={[styles.subtitle, { marginTop: 20 }]}>{COPY.HUB_AUTO_LOGGING}</Text>
                                 </View>
                             ) : entryPath === 'none' ? (
-                                isAutoLogging && !hasInteracted ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="large" color={THEME.colors.primary} />
-                                        <Text style={styles.loadingText}>Welcome back...</Text>
+                                <View style={styles.hubContent}>
+                                    <View style={styles.logoContainer}>
+                                        <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
+                                            <View style={styles.vinylCenter} />
+                                        </Animated.View>
                                     </View>
-                                ) : (
-                                    <View style={styles.hubContent}>
-                                        <View style={styles.logoContainer}>
-                                            <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
-                                                <View style={styles.vinylCenter} />
-                                            </Animated.View>
-                                        </View>
 
-                                        <Text style={styles.title}>Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
-                                        <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
+                                    <Text style={styles.title}>Social Vinyl</Text>
+                                    <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
+                                    <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
 
-                                        <View style={styles.personaOptions}>
+                                    <View style={styles.personaOptions}>
+                                        <TouchableOpacity
+                                            testID="mode-host"
+                                            style={[styles.btnModern, styles.btnPrimary]}
+                                            onPress={() => {
+                                                setHasInteracted(true);
+                                                setEntryPath('collector');
+                                            }}
+                                        >
+                                            <View>
+                                                <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
+                                                <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_COLLECTOR}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            testID="mode-solo"
+                                            style={styles.btnModern}
+                                            onPress={() => {
+                                                setHasInteracted(true);
+                                                setEntryPath('explore');
+                                            }}
+                                        >
+                                            <View>
+                                                <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
+                                                <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_EXPLORE}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            testID="mode-invited"
+                                            onPress={() => {
+                                                setHasInteracted(true);
+                                                setEntryPath('invited');
+                                            }}
+                                            style={styles.invitedButton}
+                                        >
+                                            <Text style={styles.invitedText}>
+                                                Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* E2E Partition: Hidden buttons for detox tests */}
+                                    {CONFIG.IS_E2E && (
+                                        <View style={{ opacity: 0, height: 0, width: 0, overflow: 'hidden' }}>
                                             <TouchableOpacity
-                                                testID="mode-host"
-                                                style={[styles.btnModern, styles.btnPrimary]}
-                                                onPress={() => {
-                                                    setHasInteracted(true);
-                                                    setEntryPath('collector');
-                                                }}
-                                            >
-                                                <View>
-                                                    <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
-                                                    <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_COLLECTOR}</Text>
-                                                </View>
-                                                <Text style={styles.btnIcon}>→</Text>
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                testID="mode-solo"
-                                                style={styles.btnModern}
-                                                onPress={() => {
-                                                    setHasInteracted(true);
-                                                    setEntryPath('explore');
-                                                }}
-                                            >
-                                                <View>
-                                                    <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
-                                                    <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_EXPLORE}</Text>
-                                                </View>
-                                                <Text style={styles.btnIcon}>→</Text>
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                testID="mode-invited"
+                                                testID="mode-guest"
                                                 onPress={() => {
                                                     setHasInteracted(true);
                                                     setEntryPath('invited');
                                                 }}
-                                                style={styles.invitedButton}
                                             >
-                                                <Text style={styles.invitedText}>
-                                                    Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
-                                                </Text>
+                                                <Text>Hidden Guest Join</Text>
                                             </TouchableOpacity>
                                         </View>
-                                    </View>
-                                )
+                                    )}
+                                </View>
                             ) : (
-
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
                                         {entryPath === 'collector' && COPY.HUB_HOST_TITLE}
@@ -454,7 +459,7 @@ export default function WelcomeScreen() {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </View>
+        </View >
     );
 }
 

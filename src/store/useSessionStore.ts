@@ -187,7 +187,6 @@ export const useSessionStore = create<SessionState>()(
                 isBroadcast: false,
                 sessionName: null,
                 hostUsername: null,
-                familyPassCode: null,
             }),
         }),
         {
