@@ -139,7 +139,8 @@ export const SessionJoinedSchema = z.object({
     sessionSecret: z.string(),
     publicUrl: z.string(),
     hostUsername: z.string(),
-    isPermanent: z.boolean()
+    isPermanent: z.boolean(),
+    startedAt: z.number().optional()
 });
 
 export const SessionLeftSchema = z.object({
