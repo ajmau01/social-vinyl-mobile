@@ -7,3 +7,10 @@ import { ServiceProvider } from '@/contexts/ServiceContext';
 export const TestWrapper = ({ children }: { children: React.ReactNode }) => {
     return <ServiceProvider>{children}</ServiceProvider>;
 };
+
+
+describe('testUtils', () => {
+    it('is a utility file', () => {
+        expect(true).toBe(true);
+    });
+});

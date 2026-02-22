@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-import { Release } from '@/types';
+import { Release, SessionHistory, SessionPlay } from '@/types';
 import { logger } from '@/utils/logger';
 import { IDatabaseService } from './interfaces';
 
@@ -36,6 +36,9 @@ export class DatabaseService implements IDatabaseService {
                 logger.log('[DB] Initializing SQLite...');
                 this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
                 if (!this.db) throw new Error('Failed to open database');
+
+                // Issue #154: Enable foreign key constraints per connection
+                await this.db.execAsync('PRAGMA foreign_keys = ON;');
 
                 logger.log('[DB] Database opened. Checking schema...');
 
@@ -105,6 +108,31 @@ export class DatabaseService implements IDatabaseService {
                     CREATE INDEX IF NOT EXISTS idx_releases_added_at ON releases(added_at);
                     CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases(artist);
                     CREATE INDEX IF NOT EXISTS idx_releases_title ON releases(title);
+
+                    -- Issue #154 Sessions table
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        id TEXT PRIMARY KEY,
+                        session_name TEXT,
+                        host_username TEXT,
+                        started_at INTEGER NOT NULL,
+                        ended_at INTEGER,
+                        mode TEXT,
+                        guest_count INTEGER
+                    );
+
+                    -- Issue #154 Session plays table
+                    CREATE TABLE IF NOT EXISTS session_plays (
+                        id TEXT PRIMARY KEY,
+                        session_id TEXT NOT NULL REFERENCES sessions(id),
+                        release_id INTEGER NOT NULL,
+                        release_title TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        album_art_url TEXT,
+                        played_at INTEGER NOT NULL,
+                        picked_by_username TEXT
+                    );
+                    
+                    CREATE INDEX IF NOT EXISTS idx_session_plays_session_id ON session_plays(session_id);
                 `);
                 logger.log('[DB] Schema verified/initialized');
             } catch (error) {
@@ -271,6 +299,111 @@ export class DatabaseService implements IDatabaseService {
     public async clearAll() {
         const db = await this.ensureDb();
         await db.execAsync('DELETE FROM releases');
+        await db.execAsync('DELETE FROM session_plays');
+        await db.execAsync('DELETE FROM sessions');
+    }
+
+    // --- History Tracking Methods (Issue #154) ---
+
+    public async createSession(session: SessionHistory): Promise<void> {
+        const db = await this.ensureDb();
+        try {
+            await db.runAsync(
+                'INSERT OR IGNORE INTO sessions (id, session_name, host_username, started_at, ended_at, mode, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                session.id,
+                session.session_name,
+                session.host_username,
+                session.started_at,
+                session.ended_at || null,
+                session.mode,
+                session.guest_count
+            );
+        } catch (error) {
+            logger.error('[DB] Failed to create session history', error);
+            throw error;
+        }
+    }
+
+    public async endSession(sessionId: string, endedAt: number): Promise<void> {
+        const db = await this.ensureDb();
+        try {
+            await db.runAsync(
+                'UPDATE sessions SET ended_at = ? WHERE id = ?',
+                endedAt,
+                sessionId
+            );
+        } catch (error) {
+            logger.error('[DB] Failed to end session history', error);
+            throw error;
+        }
+    }
+
+    public async recordPlay(play: SessionPlay): Promise<void> {
+        const db = await this.ensureDb();
+        try {
+            await db.runAsync(
+                'INSERT OR IGNORE INTO session_plays (id, session_id, release_id, release_title, artist, album_art_url, played_at, picked_by_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                play.id,
+                play.session_id,
+                play.release_id,
+                play.release_title,
+                play.artist,
+                play.album_art_url || null,
+                play.played_at,
+                play.picked_by_username || null
+            );
+        } catch (error) {
+            logger.error('[DB] Failed to record session play', error);
+            throw error;
+        }
+    }
+
+    public async getSessionById(sessionId: string): Promise<SessionHistory | null> {
+        const db = await this.ensureDb();
+        try {
+            const rows = await db.getAllAsync<any>(
+                'SELECT * FROM sessions WHERE id = ?',
+                [sessionId]
+            );
+            return rows.length > 0 ? (rows[0] as SessionHistory) : null;
+        } catch (error) {
+            logger.error('[DB] Failed to get session by ID', error);
+            throw error;
+        }
+    }
+
+    public async getSessionsHistory(limit?: number, offset?: number): Promise<SessionHistory[]> {
+        const db = await this.ensureDb();
+        try {
+            type SQLiteParam = string | number | null | Uint8Array;
+            let query = 'SELECT * FROM sessions ORDER BY started_at DESC';
+            const params: SQLiteParam[] = [];
+
+            if (limit !== undefined && offset !== undefined) {
+                query += ' LIMIT ? OFFSET ?';
+                params.push(limit, offset);
+            }
+
+            const rows = await db.getAllAsync<any>(query, params);
+            return rows as SessionHistory[];
+        } catch (error) {
+            logger.error('[DB] Failed to get sessions history', error);
+            throw error;
+        }
+    }
+
+    public async getSessionSetlist(sessionId: string): Promise<SessionPlay[]> {
+        const db = await this.ensureDb();
+        try {
+            const rows = await db.getAllAsync<any>(
+                'SELECT * FROM session_plays WHERE session_id = ? ORDER BY played_at ASC',
+                [sessionId]
+            );
+            return rows as SessionPlay[];
+        } catch (error) {
+            logger.error('[DB] Failed to get session setlist', error);
+            throw error;
+        }
     }
 
     // Only for testing
