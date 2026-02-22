@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { COPY } from '@/constants/copy';
 
 interface LobbyModalProps {
     visible: boolean;
@@ -35,7 +36,7 @@ export function LobbyModal({ visible, onSubmit, onCancel }: LobbyModalProps) {
                         <Ionicons name="person-circle-outline" size={48} color={THEME.colors.primary} />
                     </View>
                     <Text style={styles.title}>Welcome to the Party!</Text>
-                    <Text style={styles.subtitle}>What should we call you in the session?</Text>
+                    <Text style={styles.subtitle}>What should we call you at the party?</Text>
 
                     <TextInput
                         style={styles.input}

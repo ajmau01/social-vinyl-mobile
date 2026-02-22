@@ -8,6 +8,7 @@ import { SessionCard as ISessionCard } from '@/types';
 import { SessionCard } from '@/components/session/SessionCard';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket } from '@/hooks';
+import { COPY } from '@/constants/copy';
 
 export default function SessionListScreen() {
     const router = useRouter();
@@ -97,7 +98,7 @@ export default function SessionListScreen() {
         <View style={styles.container}>
             <Stack.Screen
                 options={{
-                    title: 'Sessions',
+                    title: COPY.SESSION_NOUN_PLURAL,
                     headerLeft: () => (
                         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
                             <Ionicons name="chevron-back" size={24} color={THEME.colors.text} />
@@ -117,7 +118,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/create-session')}
                 >
                     <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.primaryActionText}>Create Session</Text>
+                    <Text style={styles.primaryActionText}>Start {COPY.SESSION_NOUN}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -125,7 +126,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/join-session')}
                 >
                     <Ionicons name="enter-outline" size={24} color={THEME.colors.primary} />
-                    <Text style={styles.secondaryActionText}>Join Session</Text>
+                    <Text style={styles.secondaryActionText}>Join {COPY.SESSION_NOUN}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -136,8 +137,8 @@ export default function SessionListScreen() {
             ) : sessions.length === 0 ? (
                 <View style={styles.centerContainer}>
                     <Ionicons name="albums-outline" size={64} color={THEME.colors.textMuted} />
-                    <Text style={styles.emptyTitle}>No Active Sessions</Text>
-                    <Text style={styles.emptySubtitle}>Create a session or join an existing one to start listening together.</Text>
+                    <Text style={styles.emptyTitle}>No Active Parties</Text>
+                    <Text style={styles.emptySubtitle}>Start a listening party or join an existing one to listen together.</Text>
                 </View>
             ) : (
                 <FlatList

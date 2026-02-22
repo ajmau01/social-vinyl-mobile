@@ -7,6 +7,7 @@ import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { QRScanner } from '@/components/session/QRScanner';
 import { LobbyModal } from '@/components/session/LobbyModal';
+import { COPY } from '@/constants/copy';
 
 export default function JoinSessionScreen() {
     const router = useRouter();
@@ -76,7 +77,7 @@ export default function JoinSessionScreen() {
                 // Success - navigate to bin
                 router.replace('/(tabs)/bin');
             } else {
-                setError('Failed to join session. Please check the code and try again.');
+                setError('Failed to join party. Please check the code and try again.');
             }
         } catch (err: any) {
             console.error('Join session error:', err);
@@ -115,7 +116,7 @@ export default function JoinSessionScreen() {
         >
             <Stack.Screen
                 options={{
-                    title: 'Join Session',
+                    title: `Join a ${COPY.SESSION_NOUN}`,
                     headerLeft: () => (
                         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
                             <Ionicons name="close" size={24} color={THEME.colors.text} />
@@ -163,7 +164,7 @@ export default function JoinSessionScreen() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.joinButtonText}>Join Session</Text>
+                        <Text style={styles.joinButtonText}>Join Party</Text>
                     )}
                 </TouchableOpacity>
 

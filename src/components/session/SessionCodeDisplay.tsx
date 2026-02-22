@@ -4,6 +4,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { COPY } from '@/constants/copy';
 
 interface SessionCodeDisplayProps {
     joinCode: string;
@@ -17,7 +18,7 @@ export function SessionCodeDisplay({ joinCode, sessionName, isPermanent = false 
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `Join my Social Vinyl session "${sessionName}"! Use code: ${joinCode} or tap the link: ${inviteUrl}`,
+                message: `Join my Social Vinyl ${COPY.SESSION_NOUN_SENTENCE} "${sessionName}"! Use code: ${joinCode} or tap the link: ${inviteUrl}`,
                 url: inviteUrl, // iOS uses this explicitly
                 title: 'Join my Social Vinyl Party',
             });
