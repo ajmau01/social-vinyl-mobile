@@ -64,6 +64,7 @@ interface SessionState {
     setIsBroadcast: (isBroadcast: boolean) => void;
     setDisplayName: (name: string | null) => void;
     setFamilyPassCode: (code: string | null) => void;
+    resetSession: () => void;
 }
 
 export const useSessionStore = create<SessionState>()(
@@ -177,6 +178,17 @@ export const useSessionStore = create<SessionState>()(
             setIsBroadcast: (isBroad) => set({ isBroadcast: isBroad }),
             setDisplayName: (name) => set({ displayName: name }),
             setFamilyPassCode: (code) => set({ familyPassCode: code }),
+            resetSession: () => set({
+                sessionId: null,
+                sessionSecret: null,
+                joinCode: null,
+                sessionRole: null,
+                isPermanent: false,
+                isBroadcast: false,
+                sessionName: null,
+                hostUsername: null,
+                familyPassCode: null,
+            }),
         }),
         {
             name: 'session-storage',

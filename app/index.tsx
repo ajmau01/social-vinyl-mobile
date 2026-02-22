@@ -137,6 +137,7 @@ export default function WelcomeScreen() {
     });
 
     const handleBack = () => {
+        useSessionStore.getState().resetSession();
         setEntryPath('none');
         setError(null);
         setInputValue('');
@@ -158,12 +159,17 @@ export default function WelcomeScreen() {
             });
 
             if (result.success) {
-                setUsername(userId);
-                setLastMode('explore');
+                const store = useSessionStore.getState();
+                store.resetSession(); // Ensure no previous host/guest state bleeds in
+                store.setUsername(userId);
+                store.setLastMode('explore');
+                store.setSessionRole('voyeur'); // Explicitly set voyeur role
+
                 if (result.data.avatarUrl) {
-                    useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
+                    store.setAvatarUrl(result.data.avatarUrl);
                 }
-                useSessionStore.getState().setLastSyncTime(result.data.syncTime);
+                store.setLastSyncTime(result.data.syncTime);
+
                 useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
                 router.replace('/(tabs)/collection');
             } else {

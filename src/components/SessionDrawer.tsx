@@ -30,19 +30,22 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
     const {
         username,
         avatarUrl,
+        authToken,
         setUsername,
         setLastMode,
         setAuthToken,
         sessionId,
         sessionName,
         isBroadcast,
-        setDisplayName
+        setDisplayName,
+        resetSession
     } = useSessionStore();
 
     const { sync, syncStatus, syncProgress } = useSyncCollection();
     const isSyncing = syncStatus === 'syncing';
 
     const handleSwitchUser = () => {
+        resetSession();
         setUsername(null);
         setLastMode(null);
         setAuthToken(null);
@@ -56,6 +59,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
     };
 
     const handleBackToHub = () => {
+        resetSession();
         setLastMode(null);
         setAuthToken(null);
         onClose();
@@ -139,7 +143,9 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                     </View>
                                     <Ionicons name="settings-outline" size={18} color={THEME.colors.textMuted} />
                                 </TouchableOpacity>
-                            ) : (
+                            ) : null}
+
+                            {authToken && !sessionId && (
                                 <TouchableOpacity testID="drawer-manage-sessions" style={styles.optionItem} onPress={() => { onClose(); router.push('/session-list'); }}>
                                     <View style={[styles.iconBox, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
                                         <Ionicons name="people-outline" size={20} color="#06b6d4" />
@@ -151,15 +157,17 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity testID="drawer-history-button" style={styles.optionItem} onPress={() => { onClose(); router.push('/history'); }}>
-                                <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
-                                    <Ionicons name="time-outline" size={20} color="#f59e0b" />
-                                </View>
-                                <View style={styles.optionLabelContainer}>
-                                    <Text style={styles.optionLabel}>Listening History</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
-                            </TouchableOpacity>
+                            {authToken && (
+                                <TouchableOpacity testID="drawer-history-button" style={styles.optionItem} onPress={() => { onClose(); router.push('/history'); }}>
+                                    <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                                        <Ionicons name="time-outline" size={20} color="#f59e0b" />
+                                    </View>
+                                    <View style={styles.optionLabelContainer}>
+                                        <Text style={styles.optionLabel}>Listening History</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
+                                </TouchableOpacity>
+                            )}
 
                             <View style={styles.divider} />
 
@@ -177,7 +185,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                     </BlurView>
                 </Pressable>
             </Pressable>
-        </Modal>
+        </Modal >
     );
 }
 
