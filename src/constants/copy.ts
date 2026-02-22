@@ -9,6 +9,8 @@ export const COPY = {
     SESSION_NOUN: 'Listening Party',            // Title-case noun — "Start a Listening Party"
     SESSION_NOUN_SENTENCE: 'listening party',   // Sentence-case noun — use mid-sentence
     SESSION_NOUN_PLURAL: 'Listening Parties',
+    ACTION_START_PARTY: 'Start Party',          // Short action label for buttons (horizontal layout)
+    ACTION_JOIN_PARTY: 'Join Party',            // Short action label for buttons (horizontal layout)
 
     BIN_NOUN: 'Bin',                    // Forward-declared for #148 (Guest Collection View)
     RECORD_NOUN: 'Record',              // Forward-declared for #148

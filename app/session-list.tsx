@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
@@ -12,6 +13,7 @@ import { COPY } from '@/constants/copy';
 
 export default function SessionListScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { sessionService } = useServices();
     const { sessionId, isBroadcast, setSessionId, setSessionSecret, setJoinCode, setSessionRole, setIsPermanent, setIsBroadcast, setSessionName, setHostUsername } = useSessionStore();
 
@@ -112,13 +114,13 @@ export default function SessionListScreen() {
                 }}
             />
 
-            <View style={styles.actionRow}>
+            <View style={[styles.actionRow, { paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity
                     style={[styles.primaryAction, { marginRight: 8 }]}
                     onPress={() => router.push('/create-session')}
                 >
                     <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.primaryActionText}>Start {COPY.SESSION_NOUN}</Text>
+                    <Text style={styles.primaryActionText}>{COPY.ACTION_START_PARTY}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -126,7 +128,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/join-session')}
                 >
                     <Ionicons name="enter-outline" size={24} color={THEME.colors.primary} />
-                    <Text style={styles.secondaryActionText}>Join {COPY.SESSION_NOUN}</Text>
+                    <Text style={styles.secondaryActionText}>{COPY.ACTION_JOIN_PARTY}</Text>
                 </TouchableOpacity>
             </View>
 
