@@ -16,7 +16,9 @@ import {
     SessionCreatedMessage,
     SessionJoinedMessage,
     SessionListMessage,
-    SessionCard
+    SessionCard,
+    SessionHistory,
+    SessionPlay
 } from '@/types';
 
 /**
@@ -43,7 +45,6 @@ export interface ISyncService {
     fetchTracks(userId: string, releaseId: number): AsyncResult<Track[]>;
 }
 
-import { SessionHistory, SessionPlay } from '@/types';
 
 /**
  * Database Service Interface

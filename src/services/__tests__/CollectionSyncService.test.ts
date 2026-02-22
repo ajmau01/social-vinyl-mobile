@@ -39,24 +39,35 @@ describe('CollectionSyncService', () => {
     });
 
     it('should sync full collection successfully', async () => {
-        // Mock Backend Response (Genre-Grouped)
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
-            ok: true,
-            headers: { get: () => 'application/json' },
-            json: async () => ({
-                albums: {
-                    "Rock": [
-                        { releaseId: 101, instance_id: 1, title: 'Album A', artist: 'Band A', coverImage: 'url1', year: '1990', label: 'Label A', format: 'LP' },
-                        { releaseId: 102, instance_id: 2, title: 'Album B', artist: 'Band B', coverImage: 'url2', year: '1991' }
-                    ],
-                    "Jazz": [
-                        { releaseId: 103, instance_id: 3, title: 'Album C', artist: 'Band C', coverImage: 'url3', year: '1959' }
-                    ]
-                },
-                totalCount: 3,
-                username: mockUserId
-            }),
-        });
+        // Mock Backend Response
+        (global.fetch as jest.Mock)
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ success: true, jobId: 'job-123' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ status: 'COMPLETED' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({
+                    albums: {
+                        "Rock": [
+                            { releaseId: 101, instance_id: 1, title: 'Album A', artist: 'Band A', coverImage: 'url1', year: '1990', label: 'Label A', format: 'LP' },
+                            { releaseId: 102, instance_id: 2, title: 'Album B', artist: 'Band B', coverImage: 'url2', year: '1991' }
+                        ],
+                        "Jazz": [
+                            { releaseId: 103, instance_id: 3, title: 'Album C', artist: 'Band C', coverImage: 'url3', year: '1959' }
+                        ]
+                    },
+                    totalCount: 3,
+                    username: mockUserId
+                }),
+            });
 
         const result = await syncService.syncCollection(mockUserId, callbacks);
 
@@ -65,8 +76,9 @@ describe('CollectionSyncService', () => {
             expect(result.data.itemCount).toBe(3);
         }
 
-        expect(global.fetch).toHaveBeenCalledTimes(1);
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenCalledTimes(3);
+        expect(global.fetch).toHaveBeenNthCalledWith(
+            3,
             `${CONFIG.API_URL}/collection?format=json&username=${mockUserId}`
         );
 
@@ -89,18 +101,29 @@ describe('CollectionSyncService', () => {
     });
 
     it('should deduplicate albums and merge genres', async () => {
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
-            ok: true,
-            headers: { get: () => 'application/json' },
-            json: async () => ({
-                albums: {
-                    "Rock": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }],
-                    "Pop": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }]
-                },
-                totalCount: 1,
-                username: mockUserId
-            }),
-        });
+        (global.fetch as jest.Mock)
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ success: true, jobId: 'job-123' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ status: 'COMPLETED' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({
+                    albums: {
+                        "Rock": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }],
+                        "Pop": [{ releaseId: 500, instance_id: 5, title: 'Thriller', artist: 'MJ', coverImage: 'url', year: '1982' }]
+                    },
+                    totalCount: 1,
+                    username: mockUserId
+                }),
+            });
 
         const result = await syncService.syncCollection(mockUserId, callbacks);
         expect(result.success).toBe(true);
@@ -116,38 +139,49 @@ describe('CollectionSyncService', () => {
         const mockNow = 1700000000000; // Fixed time
         jest.spyOn(Date, 'now').mockReturnValue(mockNow);
 
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
-            ok: true,
-            headers: { get: () => 'application/json' },
-            json: async () => ({
-                albums: {
-                    "Rock": [
-                        {
-                            releaseId: 600,
-                            instance_id: 6,
-                            title: 'Notable Item',
-                            artist: 'Band',
-                            coverImage: 'url',
-                            year: '2020',
-                            addedTimestamp: 1600000000000, // Explicit timestamp (ms)
-                            isNotable: true
-                        },
-                        {
-                            releaseId: 601,
-                            instance_id: 7,
-                            title: 'Standard Item',
-                            artist: 'Band',
-                            coverImage: 'url',
-                            year: '2021',
-                            // No addedTimestamp, should fall back to Date.now()
-                            isNotable: false
-                        }
-                    ],
-                },
-                totalCount: 2,
-                username: mockUserId
-            }),
-        });
+        (global.fetch as jest.Mock)
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ success: true, jobId: 'job-123' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ status: 'COMPLETED' })
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({
+                    albums: {
+                        "Rock": [
+                            {
+                                releaseId: 600,
+                                instance_id: 6,
+                                title: 'Notable Item',
+                                artist: 'Band',
+                                coverImage: 'url',
+                                year: '2020',
+                                addedTimestamp: 1600000000000, // Explicit timestamp (ms)
+                                isNotable: true
+                            },
+                            {
+                                releaseId: 601,
+                                instance_id: 7,
+                                title: 'Standard Item',
+                                artist: 'Band',
+                                coverImage: 'url',
+                                year: '2021',
+                                // No addedTimestamp, should fall back to Date.now()
+                                isNotable: false
+                            }
+                        ],
+                    },
+                    totalCount: 2,
+                    username: mockUserId
+                }),
+            });
 
         const result = await syncService.syncCollection(mockUserId, callbacks);
         expect(result.success).toBe(true);
@@ -159,7 +193,7 @@ describe('CollectionSyncService', () => {
         const notableItem = saveCall.find((r: Release) => r.id === 600);
         expect(notableItem).toBeDefined();
         expect(notableItem.added_at).toBe(1600000000); // 1600000000000 / 1000
-        expect(notableItem.isSaved).toBe(true);
+        expect(notableItem.isNotable).toBe(true);
 
         // Verify Standard Item
         const standardItem = saveCall.find((r: Release) => r.id === 601);
@@ -191,6 +225,8 @@ describe('CollectionSyncService', () => {
         (global.fetch as jest.Mock).mockResolvedValueOnce({
             ok: false,
             headers: { get: () => 'application/json' },
+            json: async () => ({}),
+            text: async () => 'Internal Server Error',
             status: 500
         });
 
@@ -201,17 +237,28 @@ describe('CollectionSyncService', () => {
     });
 
     it('should prevent concurrent syncs for the same user', async () => {
-        (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
-            ok: true,
-            headers: { get: () => 'application/json' },
-            json: async () => ({
-                albums: {
-                    "Rock": [{ releaseId: 999, instance_id: 9, title: 'Sync Test', artist: 'Tester', coverImage: 'url', year: '2024' }]
-                },
-                totalCount: 1,
-                username: mockUserId
+        (global.fetch as jest.Mock)
+            .mockImplementationOnce(() => new Promise(resolve => setTimeout(() => resolve({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ success: true, jobId: 'job-123' })
+            }), 100)))
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({ status: 'COMPLETED' })
             })
-        }), 100)));
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({
+                    albums: {
+                        "Rock": [{ releaseId: 999, instance_id: 9, title: 'Sync Test', artist: 'Tester', coverImage: 'url', year: '2024' }]
+                    },
+                    totalCount: 1,
+                    username: mockUserId
+                })
+            });
 
         const sync1 = syncService.syncCollection(mockUserId, callbacks);
         const sync2 = syncService.syncCollection(mockUserId, callbacks);
@@ -224,7 +271,7 @@ describe('CollectionSyncService', () => {
             expect(res2.error.message).toContain('already in progress');
         }
 
-        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledTimes(3);
     });
 
     describe('fetchTracks', () => {

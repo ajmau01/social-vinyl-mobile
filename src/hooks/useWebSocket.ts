@@ -82,7 +82,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                             host_username: (isPayloadObj && (payload as any).hostUsername) || message.hostUsername || useSessionStore.getState().username || 'unknown',
                             started_at: (isPayloadObj && (payload as any).startedAt) || message.startedAt || Date.now(),
                             ended_at: null,
-                            mode: 'party',
+                            mode: (isPayloadObj && (payload as any).isPermanent) ? 'live' : 'party',
                             guest_count: 0
                         }).catch(err => logger.error('[WebSocket] Failed to ensure session history exists', err));
                     }
@@ -113,7 +113,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                 } else if (type === 'SESSION_ENDED' || type === 'session-ended') {
                     const currentSessionId = useSessionStore.getState().sessionId;
                     if (currentSessionId) {
-                        databaseService.endSession(String(currentSessionId)).catch(err => logger.error('[WebSocket] Failed to mark session ended in DB', err));
+                        databaseService.endSession(String(currentSessionId), Date.now()).catch(err => logger.error('[WebSocket] Failed to mark session ended in DB', err));
                     }
                 } else if (type === 'STATE' || type === 'state') {
                     // Handle state message which contains nowPlaying
@@ -152,7 +152,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                                 host_username: rawState.hostUsername || useSessionStore.getState().username || 'unknown',
                                 started_at: rawState.startedAt || Date.now(),
                                 ended_at: null,
-                                mode: 'party',
+                                mode: rawState.isPermanent ? 'live' : 'party',
                                 guest_count: 0
                             }).then(() => {
                                 // Now safe to insert plays
