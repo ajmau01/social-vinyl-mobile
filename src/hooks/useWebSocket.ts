@@ -95,7 +95,6 @@ export const useWebSocket = (): UseWebSocketResult => {
 
                     // Issue #154: Persist local history on reconnect or first connect
                     if (sessionId) {
-                        const isPayloadObj = payload && typeof payload === 'object';
                         databaseService.createSession({
                             id: String(sessionId),
                             session_name: (isPayloadObj && (payload as any).name) || message.name || 'Unnamed Session',

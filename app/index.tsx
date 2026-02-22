@@ -137,7 +137,6 @@ export default function WelcomeScreen() {
     });
 
     const handleBack = () => {
-        useSessionStore.getState().resetSession();
         setEntryPath('none');
         setError(null);
         setInputValue('');
@@ -356,17 +355,17 @@ export default function WelcomeScreen() {
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* E2E Partition: Hidden buttons for detox tests */}
+                                    {/* E2E Partition: Visible buttons for detox tests */}
                                     {CONFIG.IS_E2E && (
-                                        <View style={{ opacity: 0, height: 0, width: 0, overflow: 'hidden' }}>
-                                            <TouchableOpacity
-                                                testID="mode-guest"
-                                                onPress={() => {
-                                                    setHasInteracted(true);
-                                                    setEntryPath('invited');
-                                                }}
-                                            >
-                                                <Text>Hidden Guest Join</Text>
+                                        <View testID="e2e-mode-select" style={styles.hubContent}>
+                                            <TouchableOpacity testID="mode-host" onPress={() => setEntryPath('collector')}>
+                                                <Text>Host</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity testID="mode-guest" onPress={() => setEntryPath('invited')}>
+                                                <Text>Guest</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity testID="mode-solo" onPress={() => setEntryPath('explore')}>
+                                                <Text>Solo</Text>
                                             </TouchableOpacity>
                                         </View>
                                     )}
@@ -553,7 +552,7 @@ const styles = StyleSheet.create({
     valueProp: {
         fontSize: 14,
         color: THEME.colors.textMuted,
-        fontWeight: '600',
+        fontWeight: '400',
         textAlign: 'center',
         marginBottom: 40,
     },
@@ -620,18 +619,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 10,
         marginTop: 30,
-    },
-    loadingContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 40,
-        minHeight: 250,
-    },
-    loadingText: {
-        color: THEME.colors.primary,
-        fontSize: 18,
-        fontWeight: '600',
-        marginTop: 20,
     },
     invitedButton: {
         marginTop: 25,
