@@ -56,6 +56,7 @@ interface SessionState {
     isBroadcast: boolean;
     displayName: string | null;
     familyPassCode: string | null;
+    sessionMode: 'party' | 'live' | 'solo' | null;
 
     setSessionName: (name: string | null) => void;
     setHostUsername: (username: string | null) => void;
@@ -65,6 +66,7 @@ interface SessionState {
     setIsBroadcast: (isBroadcast: boolean) => void;
     setDisplayName: (name: string | null) => void;
     setFamilyPassCode: (code: string | null) => void;
+    setSessionMode: (mode: 'party' | 'live' | 'solo' | null) => void;
     resetSession: () => void;
 }
 
@@ -87,6 +89,7 @@ export const useSessionStore = create<SessionState>()(
             isBroadcast: false,
             displayName: null,
             familyPassCode: null,
+            sessionMode: null,
 
             setConnectionState: (state) => set({ connectionState: state }),
             setSessionId: async (id) => {
@@ -143,6 +146,7 @@ export const useSessionStore = create<SessionState>()(
                     sessionName: null,
                     hostUsername: null,
                     familyPassCode: null,
+                    sessionMode: null,
                     lastInteractionTime: Date.now()
                 });
             },
@@ -179,6 +183,7 @@ export const useSessionStore = create<SessionState>()(
             setIsBroadcast: (isBroad) => set({ isBroadcast: isBroad }),
             setDisplayName: (name) => set({ displayName: name }),
             setFamilyPassCode: (code) => set({ familyPassCode: code }),
+            setSessionMode: (mode) => set({ sessionMode: mode }),
             resetSession: () => set({
                 sessionId: null,
                 sessionSecret: null,
@@ -188,6 +193,7 @@ export const useSessionStore = create<SessionState>()(
                 isBroadcast: false,
                 sessionName: null,
                 hostUsername: null,
+                sessionMode: null,
             }),
         }),
         {
@@ -206,7 +212,8 @@ export const useSessionStore = create<SessionState>()(
                 joinCode: state.joinCode,
                 isPermanent: state.isPermanent,
                 displayName: state.displayName,
-                familyPassCode: state.familyPassCode
+                familyPassCode: state.familyPassCode,
+                sessionMode: state.sessionMode
             }),
         }
     )

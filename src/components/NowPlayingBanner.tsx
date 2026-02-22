@@ -19,13 +19,19 @@ import * as Haptics from 'expo-haptics';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
 import { useSessionStore } from '@/store/useSessionStore';
+import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { logger } from '@/utils/logger';
 import { ProgressRing } from './ProgressRing';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
-export const NowPlayingBanner = () => {
+interface NowPlayingBannerProps {
+    variant?: 'compact' | 'full';
+}
+
+export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'compact' }) => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
     const { username, hostUsername } = useSessionStore();
+    const { items: binItems } = useListeningBinStore();
     const isHost = !!username && username === hostUsername;
 
     // Fix Issue #126: Move shared values and styles to top level to avoid conditional hook errors
@@ -68,7 +74,55 @@ export const NowPlayingBanner = () => {
         }
     };
 
-    if (!nowPlaying && !isConnecting && !isConnected) return null;
+    const handlePlay = async () => {
+        if (!isHost || binItems.length === 0) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        await listeningBinSyncService.playAlbum(binItems[0]);
+    };
+
+    if (variant === 'compact' && !nowPlaying && !isConnecting && !isConnected) return null;
+
+    if (variant === 'full') {
+        const hasItems = binItems.length > 0;
+        return (
+            <View style={styles.fullContainer}>
+                <View style={styles.fullArtworkContainer}>
+                    {nowPlaying?.albumArt ? (
+                        <Image
+                            source={{ uri: nowPlaying.albumArt }}
+                            style={styles.fullArtworkImage}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <View style={styles.fullArtworkPlaceholder}>
+                            <Ionicons name="disc-outline" size={100} color={THEME.colors.textMuted} />
+                        </View>
+                    )}
+                </View>
+
+                <View style={styles.fullInfo}>
+                    <Text style={styles.fullTrack} numberOfLines={2}>
+                        {nowPlaying?.track || (hasItems ? 'Ready to play' : 'Waiting for album...')}
+                    </Text>
+                    <Text style={styles.fullArtist} numberOfLines={1}>
+                        {nowPlaying?.artist || (hasItems ? 'Tap drop the needle' : 'Add to your bin')}
+                    </Text>
+                </View>
+
+                <TouchableOpacity
+                    onPress={handlePlay}
+                    disabled={!hasItems}
+                    style={[styles.playButton, !hasItems && styles.playButtonDisabled]}
+                >
+                    <Ionicons name="play-circle" size={72} color={THEME.colors.primary} />
+                </TouchableOpacity>
+
+                {nowPlaying && !hasItems && (
+                    <Text style={styles.dropNeedleHint}>Ready to play — tap when you drop the needle</Text>
+                )}
+            </View>
+        );
+    }
 
     return (
         <LinearGradient
@@ -310,5 +364,61 @@ const styles = StyleSheet.create({
     },
     statusDisconnected: {
         backgroundColor: THEME.colors.textMuted,
+    },
+    // Full variant styles
+    fullContainer: {
+        alignItems: 'center',
+        paddingVertical: THEME.spacing.xl,
+        width: '100%',
+    },
+    fullArtworkContainer: {
+        width: 200,
+        height: 200,
+        borderRadius: THEME.radius.lg,
+        overflow: 'hidden',
+        backgroundColor: THEME.colors.surfaceLight,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 15,
+        elevation: 10,
+    },
+    fullArtworkImage: {
+        width: '100%',
+        height: '100%',
+    },
+    fullArtworkPlaceholder: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fullInfo: {
+        alignItems: 'center',
+        marginTop: THEME.spacing.xl,
+        paddingHorizontal: THEME.spacing.xl,
+    },
+    fullTrack: {
+        color: THEME.colors.white,
+        fontSize: 24,
+        fontWeight: '700',
+        textAlign: 'center',
+        marginBottom: THEME.spacing.xs,
+    },
+    fullArtist: {
+        color: THEME.colors.textDim,
+        fontSize: 18,
+        textAlign: 'center',
+    },
+    playButton: {
+        marginTop: THEME.spacing.xl,
+    },
+    playButtonDisabled: {
+        opacity: 0.4,
+    },
+    dropNeedleHint: {
+        color: THEME.colors.textMuted,
+        fontSize: 14,
+        marginTop: THEME.spacing.md,
+        textAlign: 'center',
     },
 });

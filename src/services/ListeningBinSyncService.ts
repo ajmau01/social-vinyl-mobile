@@ -260,6 +260,24 @@ class ListeningBinSyncService {
             return { success: false, error: error as Error };
         }
     }
+
+    /**
+     * Ends the current session (Host only)
+     */
+    public async endSession(): Promise<Result<void>> {
+        const { username: userId, hostUsername } = useSessionStore.getState();
+
+        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (userId !== hostUsername) return { success: false, error: new Error('Only the host can end sessions') };
+
+        try {
+            await wsService.sendAction('archive-session', {});
+            return { success: true, data: undefined };
+        } catch (error) {
+            logger.error('[BinSync] End session failed', error);
+            return { success: false, error: error as Error };
+        }
+    }
 }
 
 export const listeningBinSyncService = ListeningBinSyncService.getInstance();

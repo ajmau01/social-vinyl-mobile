@@ -6,9 +6,7 @@ import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { BinItem as BinItemType } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BinItem } from '@/components/BinItem';
+import { BinList } from '@/components/BinList';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { SessionInfoModal } from '@/components/session/SessionInfoModal';
 
@@ -32,21 +30,10 @@ export default function BinScreen() {
         isBroadcast: state.isBroadcast,
         isPermanent: state.isPermanent
     })));
-    const { items, removeItem, clearBin, setBin } = useListeningBinStore();
+    const { items, setBin } = useListeningBinStore();
     const [infoVisible, setInfoVisible] = React.useState(false);
 
-    // Debug Play Button Logic (Removed noise)
-    /*
-    console.log('[BinScreen] Play Button Check:', {
-        username,
-        hostUsername,
-        match: username === hostUsername && !!username
-    });
-    */
-
-    // SCOPING: Only show items for the current user
-    // FIXED: For Party Mode, we want to see ALL items in the session
-    const userItems = items; // useMemo(() => items.filter(item => item.userId === username), [items, username]);
+    const userItems = items;
 
     const handleRemove = (item: BinItemType) => {
         if (!username) return;
@@ -80,35 +67,24 @@ export default function BinScreen() {
         );
     };
 
-    const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<BinItemType>) => (
-        <BinItem
-            item={item}
-            isActive={isActive}
-            drag={drag}
-            onRemove={handleRemove}
-            canDelete={item.userId === username || username === hostUsername}
-            canPlay={username === hostUsername}
-            onPlay={(item) => listeningBinSyncService.playAlbum(item)}
-        />
-    ), [handleRemove, username, hostUsername]);
-
-    const onDragEnd = async ({ data }: { data: BinItemType[] }) => {
-        // Optimistic Update: Update store immediately
-        // We need to merge with other users' items if any, but since we scoped
-        // we should handle this carefully.
-        // Actually setBin replaces ALL items.
-        // So we need to take non-user items + new user items order.
-
+    const onDragEnd = async (data: BinItemType[]) => {
         const otherItems = items.filter(item => item.userId !== username);
         setBin([...otherItems, ...data]);
 
-        // Sync with backend
         const ids = data.map(item => item.id);
         await listeningBinSyncService.reorderAlbums(ids);
     };
 
+    const emptyComponent = (
+        <View testID="bin-empty-state" style={styles.emptyContainer}>
+            <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
+            <Text style={styles.emptyText}>Your bin is empty</Text>
+            <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
+        </View>
+    );
+
     return (
-        <GestureHandlerRootView style={styles.container}>
+        <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Listening Bin</Text>
@@ -130,23 +106,15 @@ export default function BinScreen() {
                     </View>
                 </View>
 
-                {userItems.length === 0 ? (
-                    <View testID="bin-empty-state" style={styles.emptyContainer}>
-                        <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
-                        <Text style={styles.emptyText}>Your bin is empty</Text>
-                        <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
-                    </View>
-                ) : (
-                    <DraggableFlatList
-                        testID="bin-list"
-                        data={userItems}
-                        onDragEnd={onDragEnd}
-                        keyExtractor={(item, index) => item.frontendId || `${item.id}-${index}`}
-                        renderItem={renderItem}
-                        containerStyle={styles.listContent}
-                        activationDistance={20}
-                    />
-                )}
+                <BinList
+                    items={userItems}
+                    username={username}
+                    hostUsername={hostUsername}
+                    onRemove={handleRemove}
+                    onDragEnd={onDragEnd}
+                    contentContainerStyle={styles.listContent}
+                    emptyComponent={emptyComponent}
+                />
             </SafeAreaView>
 
             {sessionId && sessionRole !== 'voyeur' && (
@@ -160,7 +128,7 @@ export default function BinScreen() {
                     onClose={() => setInfoVisible(false)}
                 />
             )}
-        </GestureHandlerRootView>
+        </View>
     );
 }
 
@@ -177,7 +145,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: THEME.spacing.lg,
-        paddingTop: THEME.spacing.xl, // Increased to avoid status bar
+        paddingTop: THEME.spacing.xl,
         paddingBottom: THEME.spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: THEME.colors.glassBorder,

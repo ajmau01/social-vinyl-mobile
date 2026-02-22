@@ -27,6 +27,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
+import { ActiveSessionView } from '@/components/session/ActiveSessionView';
 
 type EntryPath = 'none' | 'invited' | 'explore';
 
@@ -43,7 +44,8 @@ export default function WelcomeScreen() {
         familyPassCode,
         displayName,
         connectionState,
-        sessionId: sessionStoreId
+        sessionId: sessionStoreId,
+        sessionRole
     } = useSessionStore();
 
     const { sessionService } = useServices();
@@ -53,7 +55,13 @@ export default function WelcomeScreen() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false);
+    const [hasInteracted, setHasInteracted] = setHasInteracted || useState(false);
+
+    // Issue #146: Active Session Gate
+    // If we are a host and have a connected session, take over the screen.
+    if (connectionState === 'connected' && sessionStoreId && sessionRole === 'host') {
+        return <ActiveSessionView />;
+    }
 
     // Issue #142 V3: Auto-logging loading guard (includes connecting states to prevent flicker)
     // Now gated by hasInteracted to prevent trapping users who explicitly cancel a manual path.
