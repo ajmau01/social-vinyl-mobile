@@ -28,9 +28,9 @@ import { StatusBar } from 'expo-status-bar';
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
 
-type PersonaMode = 'none' | 'host' | 'guest' | 'solo';
+type EntryPath = 'none' | 'collector' | 'invited' | 'explore';
 
-export default function HubScreen() {
+export default function WelcomeScreen() {
     const router = useRouter();
     const {
         username,
@@ -41,23 +41,28 @@ export default function HubScreen() {
         setLastMode,
         authToken,
         familyPassCode,
-        displayName
+        displayName,
+        connectionState,
+        sessionId: sessionStoreId
     } = useSessionStore();
 
     const { sessionService } = useServices();
 
-    const [mode, setMode] = useState<PersonaMode>('none');
+    const [entryPath, setEntryPath] = useState<EntryPath>('none');
     const [inputValue, setInputValue] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
 
+    // Issue #142 V2: Auto-logging loading guard
+    const isAutoLogging = connectionState === 'connected' && !!sessionStoreId && entryPath === 'none';
+
     // Auto-rejoin Family Pass Logic
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
-        if (familyPassCode && displayName && mode === 'none' && !autoRejoined) {
+        if (familyPassCode && displayName && entryPath === 'none' && !autoRejoined) {
             const tryAutoRejoin = async () => {
                 setLoading(true);
                 setAutoRejoined(true);
@@ -78,7 +83,7 @@ export default function HubScreen() {
             };
             tryAutoRejoin();
         }
-    }, [familyPassCode, displayName, mode, autoRejoined, sessionService, router]);
+    }, [familyPassCode, displayName, entryPath, autoRejoined, sessionService, router]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -109,13 +114,13 @@ export default function HubScreen() {
     });
 
     const handleBack = () => {
-        setMode('none');
+        setEntryPath('none');
         setError(null);
         setInputValue('');
         setPassword('');
     };
 
-    const handleSoloBrowse = async () => {
+    const handleExplore = async () => {
         const userId = inputValue.trim();
         if (!validateUsername(userId)) {
             setError('Please enter a valid Discogs username (3-30 chars, alphanumeric)');
@@ -131,7 +136,7 @@ export default function HubScreen() {
 
             if (result.success) {
                 setUsername(userId);
-                setLastMode('solo');
+                setLastMode('explore');
                 if (result.data.avatarUrl) {
                     useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
                 }
@@ -163,7 +168,7 @@ export default function HubScreen() {
             .then(result => {
                 if (result.success) {
                     useSessionStore.getState().setUsername(guestUsername);
-                    useSessionStore.getState().setLastMode('guest');
+                    useSessionStore.getState().setLastMode('invited');
                     // Session ID and Name should be returned in result.data from join-session payload
                     if (result.data) {
                         if (result.data.sessionId) useSessionStore.getState().setSessionId(result.data.sessionId);
@@ -185,7 +190,7 @@ export default function HubScreen() {
             });
     };
 
-    const handleHostLogin = async () => {
+    const handleCollectorLogin = async () => {
         const userId = inputValue.trim();
         if (!validateUsername(userId) || !password.trim()) {
             setError('Enter a valid username and password');
@@ -202,7 +207,7 @@ export default function HubScreen() {
 
                 useSessionStore.getState().setAuthToken(data.token);
                 useSessionStore.getState().setUsername(userId);
-                useSessionStore.getState().setLastMode('host');
+                useSessionStore.getState().setLastMode('collector');
                 if (data.sessionId) {
                     await useSessionStore.getState().setSessionId(data.sessionId);
                 }
@@ -248,31 +253,36 @@ export default function HubScreen() {
                 >
                     <ScrollView contentContainerStyle={styles.scrollContent}>
                         <BlurView intensity={10} tint="dark" style={styles.glassPanel}>
-                            {mode === 'none' ? (
+                            {isAutoLogging ? (
+                                <View style={styles.hubContent}>
+                                    <ActivityIndicator size="large" color={THEME.colors.primary} />
+                                    <Text style={[styles.subtitle, { marginTop: 20 }]}>{COPY.HUB_AUTO_LOGGING}</Text>
+                                </View>
+                            ) : entryPath === 'none' ? (
                                 CONFIG.IS_E2E ? (
                                     <View style={styles.hubContent}>
-                                        <Text style={styles.title}>E2E VERSION 2</Text>
-                                        <Text style={styles.subtitle}>Detox Sync Test Screen</Text>
+                                        <Text style={styles.title}>Welcome to Social Vinyl</Text>
+                                        <Text style={styles.subtitle}>E2E Test Partition</Text>
                                         <TouchableOpacity
                                             testID="mode-host"
                                             style={[styles.btnModern, styles.btnPrimary]}
-                                            onPress={() => setMode('host')}
+                                            onPress={() => setEntryPath('collector')}
                                         >
-                                            <Text style={styles.btnText}>Open Host Login</Text>
+                                            <Text style={styles.btnText}>Open Collector Login</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             testID="mode-guest"
                                             style={styles.btnModern}
-                                            onPress={() => setMode('guest')}
+                                            onPress={() => setEntryPath('invited')}
                                         >
-                                            <Text style={styles.btnText}>Guest Mode</Text>
+                                            <Text style={styles.btnText}>Join Party</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             testID="mode-solo"
                                             style={styles.btnModern}
-                                            onPress={() => setMode('solo')}
+                                            onPress={() => setEntryPath('explore')}
                                         >
-                                            <Text style={styles.btnText}>Browse Solo</Text>
+                                            <Text style={styles.btnText}>Explore</Text>
                                         </TouchableOpacity>
                                     </View>
                                 ) : (
@@ -284,33 +294,33 @@ export default function HubScreen() {
                                         </View>
 
                                         <Text style={styles.title}>Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
+                                        <Text style={styles.subtitle}>
+                                            {COPY.TAGLINE}{"\n"}
+                                            <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
+                                        </Text>
 
                                         <View style={styles.personaOptions}>
                                             <TouchableOpacity
                                                 testID="mode-host"
                                                 style={[styles.btnModern, styles.btnPrimary]}
-                                                onPress={() => setMode('host')}
+                                                onPress={() => setEntryPath('collector')}
                                             >
-                                                <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
-                                                <Text style={styles.btnIcon}>→</Text>
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                testID="mode-guest"
-                                                style={styles.btnModern}
-                                                onPress={() => setMode('guest')}
-                                            >
-                                                <Text style={styles.btnText}>{COPY.INTENT_GUEST}</Text>
+                                                <View>
+                                                    <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
+                                                    <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_COLLECTOR}</Text>
+                                                </View>
                                                 <Text style={styles.btnIcon}>→</Text>
                                             </TouchableOpacity>
 
                                             <TouchableOpacity
                                                 testID="mode-solo"
                                                 style={styles.btnModern}
-                                                onPress={() => setMode('solo')}
+                                                onPress={() => setEntryPath('explore')}
                                             >
-                                                <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
+                                                <View>
+                                                    <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
+                                                    <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_EXPLORE}</Text>
+                                                </View>
                                                 <Text style={styles.btnIcon}>→</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -320,30 +330,29 @@ export default function HubScreen() {
 
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
-                                        {mode === 'host' && COPY.HUB_HOST_TITLE}
-                                        {mode === 'guest' && COPY.HUB_GUEST_TITLE}
-                                        {mode === 'solo' && COPY.HUB_SOLO_TITLE}
+                                        {entryPath === 'collector' && COPY.HUB_HOST_TITLE}
+                                        {entryPath === 'explore' && COPY.HUB_SOLO_TITLE}
                                     </Text>
 
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.label}>
-                                            {mode === 'guest' ? 'Join Code' : 'Discogs Username'}
+                                            {entryPath === 'invited' ? 'Join Code' : 'Discogs Username'}
                                         </Text>
                                         <TextInput
                                             testID="login-input"
                                             style={styles.input}
                                             value={inputValue}
                                             onChangeText={setInputValue}
-                                            placeholder={mode === 'guest' ? 'ABCDE' : 'e.g., ajmau'}
+                                            placeholder={entryPath === 'invited' ? 'ABCDE' : 'e.g., ajmau'}
                                             placeholderTextColor={THEME.colors.textMuted}
-                                            autoCapitalize={mode === 'guest' ? 'characters' : 'none'}
-                                            maxLength={mode === 'guest' ? 5 : 50}
+                                            autoCapitalize={entryPath === 'invited' ? 'characters' : 'none'}
+                                            maxLength={entryPath === 'invited' ? 5 : 50}
                                             autoComplete="off"
                                             importantForAutofill="no"
                                         />
                                     </View>
 
-                                    {mode === 'host' && (
+                                    {entryPath === 'collector' && (
                                         <View style={styles.inputGroup}>
                                             <Text style={styles.label}>Password</Text>
                                             <TextInput
@@ -371,9 +380,9 @@ export default function HubScreen() {
                                             testID="login-submit"
                                             style={[styles.btnModern, styles.btnPrimary]}
                                             onPress={() => {
-                                                if (mode === 'solo') handleSoloBrowse();
-                                                if (mode === 'guest') handleGuestJoin();
-                                                if (mode === 'host') handleHostLogin();
+                                                if (entryPath === 'explore') handleExplore();
+                                                if (entryPath === 'invited') handleGuestJoin();
+                                                if (entryPath === 'collector') handleCollectorLogin();
                                             }}
                                             disabled={loading || syncStatus === 'syncing'}
                                         >
@@ -386,13 +395,13 @@ export default function HubScreen() {
                                                 </View>
                                             ) : (
                                                 <Text style={styles.btnText}>
-                                                    {mode === 'host' ? 'Unlock' : mode === 'guest' ? 'Join' : 'Browse'}
+                                                    {entryPath === 'collector' ? 'Unlock' : entryPath === 'invited' ? 'Join' : 'Browse'}
                                                 </Text>
                                             )}
                                         </TouchableOpacity>
                                     </View>
 
-                                    {mode === 'solo' && (
+                                    {entryPath === 'explore' && (
                                         <Text style={styles.infoText}>
                                             First scan takes 5-10 mins. Subsequent visits load instantly.
                                         </Text>
@@ -493,8 +502,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: THEME.colors.textDim,
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 10,
         lineHeight: 22,
+    },
+    valueProp: {
+        fontSize: 14,
+        color: THEME.colors.primary,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     personaOptions: {
         width: '100%',
@@ -517,7 +533,12 @@ const styles = StyleSheet.create({
     btnText: {
         color: '#fff',
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
+    },
+    btnSubtitle: {
+        color: THEME.colors.textDim,
+        fontSize: 12,
+        marginTop: 2,
     },
     btnIcon: {
         color: '#fff',

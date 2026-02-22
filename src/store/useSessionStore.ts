@@ -13,7 +13,7 @@ interface SessionState {
     avatarUrl: string | null;
     authToken: string | null;
     sessionSecret: string | null;
-    lastMode: 'host' | 'guest' | 'solo' | null;
+    lastMode: 'collector' | 'invited' | 'explore' | null;
     error: string | null;
     lastInteractionTime: number;
 
@@ -28,7 +28,7 @@ interface SessionState {
     hydrateCredentials: () => Promise<void>;
     updateLastInteraction: () => void;
     clearSession: () => Promise<void>;
-    setLastMode: (mode: 'host' | 'guest' | 'solo' | null) => void;
+    setLastMode: (mode: 'collector' | 'invited' | 'explore' | null) => void;
     setError: (error: Error | string | null) => void;
 
     // Sync State

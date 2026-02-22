@@ -325,6 +325,7 @@ Claude creates detailed GitHub issues that form a **logical path** for you to fo
 ### 0. CRITICAL WORKFLOW RULES (NON-NEGOTIABLE)
 - **NEVER commit directly to `main`**. ALWAYS work in a `feature/...` or `fix/...` branch.
 - **ALWAYS create a Pull Request** to merge changes. Never merge locally without a PR.
+- **NEVER merge a Pull Request**. Merging must be done manually by the USER or a reviewer after explicit confirmation.
 - **ALWAYS use "Andrew Mauer" (<ajmauer@gmail.com>)** for all commits and PRs. (Local git config has been verified).
 
 ### 1. Check Your Tasks
