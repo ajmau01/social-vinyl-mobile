@@ -299,8 +299,8 @@ export class DatabaseService implements IDatabaseService {
     public async clearAll() {
         const db = await this.ensureDb();
         await db.execAsync('DELETE FROM releases');
-        await db.execAsync('DELETE FROM sessions');
         await db.execAsync('DELETE FROM session_plays');
+        await db.execAsync('DELETE FROM sessions');
     }
 
     // --- History Tracking Methods (Issue #154) ---

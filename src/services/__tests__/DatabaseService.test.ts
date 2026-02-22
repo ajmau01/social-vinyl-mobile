@@ -82,10 +82,23 @@ describe('DatabaseService', () => {
         );
     });
 
-    it('should clear the entire database', async () => {
+    it('should clear the entire database in correct order', async () => {
         await dbService.init();
         await dbService.clearAll();
+
+        // Verify all tables deleted
         expect(mockDb.execAsync).toHaveBeenCalledWith('DELETE FROM releases');
+        expect(mockDb.execAsync).toHaveBeenCalledWith('DELETE FROM session_plays');
+        expect(mockDb.execAsync).toHaveBeenCalledWith('DELETE FROM sessions');
+
+        // Verify order: session_plays must be before sessions
+        const calls = mockDb.execAsync.mock.calls.map((call: any) => call[0]);
+        const playsIndex = calls.indexOf('DELETE FROM session_plays');
+        const sessionsIndex = calls.indexOf('DELETE FROM sessions');
+
+        expect(playsIndex).toBeGreaterThan(-1);
+        expect(sessionsIndex).toBeGreaterThan(-1);
+        expect(playsIndex).toBeLessThan(sessionsIndex);
     });
 
     it('should clear a specific user collection', async () => {
