@@ -96,8 +96,15 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                 </View>
                             )}
                             <View style={styles.profileInfo}>
-                                <Text style={styles.userName}>{username}</Text>
-                                <Text style={styles.statusText}>Connected</Text>
+                                <Text style={styles.userName}>
+                                    {!authToken ? 'Viewing: ' : ''}{username}
+                                </Text>
+                                <Text style={[
+                                    styles.statusText,
+                                    !authToken && { color: THEME.colors.textMuted }
+                                ]}>
+                                    {authToken ? 'Connected' : 'Guest View'}
+                                </Text>
                             </View>
                         </View>
 
