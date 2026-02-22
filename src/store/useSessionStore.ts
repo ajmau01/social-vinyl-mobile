@@ -13,7 +13,6 @@ interface SessionState {
     avatarUrl: string | null;
     authToken: string | null;
     sessionSecret: string | null;
-    /** @deprecated Use sessionRole instead. Kept only for auto-redirect logic for returning users. */
     lastMode: 'collector' | 'invited' | 'explore' | null;
     error: string | null;
     lastInteractionTime: number;
