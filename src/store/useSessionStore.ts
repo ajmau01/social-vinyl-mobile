@@ -13,7 +13,7 @@ interface SessionState {
     avatarUrl: string | null;
     authToken: string | null;
     sessionSecret: string | null;
-    lastMode: 'host' | 'guest' | 'solo' | null;
+    lastMode: 'collector' | 'invited' | 'explore' | null;
     error: string | null;
     lastInteractionTime: number;
 
@@ -28,7 +28,7 @@ interface SessionState {
     hydrateCredentials: () => Promise<void>;
     updateLastInteraction: () => void;
     clearSession: () => Promise<void>;
-    setLastMode: (mode: 'host' | 'guest' | 'solo' | null) => void;
+    setLastMode: (mode: 'collector' | 'invited' | 'explore' | null) => void;
     setError: (error: Error | string | null) => void;
 
     // Sync State
@@ -64,6 +64,7 @@ interface SessionState {
     setIsBroadcast: (isBroadcast: boolean) => void;
     setDisplayName: (name: string | null) => void;
     setFamilyPassCode: (code: string | null) => void;
+    resetSession: () => void;
 }
 
 export const useSessionStore = create<SessionState>()(
@@ -177,6 +178,16 @@ export const useSessionStore = create<SessionState>()(
             setIsBroadcast: (isBroad) => set({ isBroadcast: isBroad }),
             setDisplayName: (name) => set({ displayName: name }),
             setFamilyPassCode: (code) => set({ familyPassCode: code }),
+            resetSession: () => set({
+                sessionId: null,
+                sessionSecret: null,
+                joinCode: null,
+                sessionRole: null,
+                isPermanent: false,
+                isBroadcast: false,
+                sessionName: null,
+                hostUsername: null,
+            }),
         }),
         {
             name: 'session-storage',

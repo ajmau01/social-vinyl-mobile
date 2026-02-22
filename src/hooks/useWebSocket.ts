@@ -73,9 +73,28 @@ export const useWebSocket = (): UseWebSocketResult => {
                             : undefined);
                     if (secret) setSessionSecret(secret);
 
+                    // Sync metadata if present in payload (Issue #142 Redesign V5.2)
+                    const isPayloadObj = payload && typeof payload === 'object';
+                    const store = useSessionStore.getState();
+                    const name = (isPayloadObj && (payload as any).name) || message.name;
+                    const code = (isPayloadObj && (payload as any).joinCode) || message.joinCode;
+                    const host = (isPayloadObj && (payload as any).hostUsername) || message.hostUsername;
+                    const perm = (isPayloadObj && (payload as any).isPermanent) !== undefined ? (isPayloadObj && (payload as any).isPermanent) : message.isPermanent;
+
+                    if (name) store.setSessionName(name);
+                    if (code) store.setJoinCode(code);
+                    if (host) store.setHostUsername(host);
+                    if (perm !== undefined) store.setIsPermanent(perm);
+
+                    // Update role dynamically
+                    if (host && store.username && host.toLowerCase() === store.username.toLowerCase()) {
+                        store.setSessionRole('host');
+                    } else if (host) {
+                        store.setSessionRole('guest');
+                    }
+
                     // Issue #154: Persist local history on reconnect or first connect
                     if (sessionId) {
-                        const isPayloadObj = payload && typeof payload === 'object';
                         databaseService.createSession({
                             id: String(sessionId),
                             session_name: (isPayloadObj && (payload as any).name) || message.name || 'Unnamed Session',
@@ -139,6 +158,21 @@ export const useWebSocket = (): UseWebSocketResult => {
                             }).catch(err => logger.error('[WebSocket:State] Failed to record play', err));
                         }
                     }
+
+                    // Sync metadata from state (Issue #142 Redesign V5.2)
+                    const store = useSessionStore.getState();
+                    if (rawState.sessionName) store.setSessionName(rawState.sessionName);
+                    if (rawState.joinCode) store.setJoinCode(rawState.joinCode);
+                    if (rawState.hostUsername) {
+                        store.setHostUsername(rawState.hostUsername);
+                        // Update role dynamically
+                        if (store.username && rawState.hostUsername.toLowerCase() === store.username.toLowerCase()) {
+                            store.setSessionRole('host');
+                        } else {
+                            store.setSessionRole('guest');
+                        }
+                    }
+                    if (rawState.isPermanent !== undefined) store.setIsPermanent(rawState.isPermanent);
 
                     // Issue #154: Sync full history from state payload
                     if (rawState.history && Array.isArray(rawState.history)) {

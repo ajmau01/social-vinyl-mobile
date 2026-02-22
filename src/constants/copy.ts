@@ -7,13 +7,17 @@
  */
 export const COPY = {
     TAGLINE: 'Where record collections come alive.',
+    WELCOME_VALUE_PROP: 'Your crate, your room, your people.',
     INTENT_HOST: 'I have a collection',
-    INTENT_GUEST: 'I was invited',
     INTENT_SOLO: 'Explore collections',
 
+    SUBTITLE_COLLECTOR: 'Connect your Discogs and host a party.',
+    SUBTITLE_EXPLORE: "Browse public crates and see what's spinning.",
+
+    HUB_AUTO_LOGGING: 'Welcome back...',
     HUB_HOST_TITLE: 'Collector Login',
     HUB_GUEST_TITLE: 'Enter Party Code',
-    HUB_SOLO_TITLE: 'Browse Collection',
+    HUB_SOLO_TITLE: 'Explore collections',
 
     SESSION_NOUN: 'Listening Party',            // Title-case noun — "Start a Listening Party"
     SESSION_NOUN_SENTENCE: 'listening party',   // Sentence-case noun — use mid-sentence

@@ -76,6 +76,8 @@ function RootLayout() {
   }, []);
 
   // Issue #128: Process Deep Links (socialvinyl://join?code=XXXXX)
+  // NOTE: Deep links trigger an immediate router.push(), which effectively 
+  // bypasses the WelcomeScreen (index.tsx) for guest entry.
   useEffect(() => {
     if (url) {
       const parsed = Linking.parse(url);

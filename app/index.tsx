@@ -28,9 +28,9 @@ import { StatusBar } from 'expo-status-bar';
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
 
-type PersonaMode = 'none' | 'host' | 'guest' | 'solo';
+type EntryPath = 'none' | 'collector' | 'invited' | 'explore';
 
-export default function HubScreen() {
+export default function WelcomeScreen() {
     const router = useRouter();
     const {
         username,
@@ -41,23 +41,38 @@ export default function HubScreen() {
         setLastMode,
         authToken,
         familyPassCode,
-        displayName
+        displayName,
+        connectionState,
+        sessionId: sessionStoreId
     } = useSessionStore();
 
     const { sessionService } = useServices();
 
-    const [mode, setMode] = useState<PersonaMode>('none');
+    const [entryPath, setEntryPath] = useState<EntryPath>('none');
     const [inputValue, setInputValue] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
+
+    // Issue #142 V3: Auto-logging loading guard (includes connecting states to prevent flicker)
+    // Now gated by hasInteracted to prevent trapping users who explicitly cancel a manual path.
+    // Also checks for legacy lastMode values to avoid "dead zones" where it spins but never redirects.
+    const isAutoLogging = !hasInteracted &&
+        (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') &&
+        !!sessionStoreId &&
+        entryPath === 'none' &&
+        (
+            (!!familyPassCode && !!displayName) ||
+            ((lastMode as any) === 'collector' || (lastMode as any) === 'explore' || (lastMode as any) === 'host' || (lastMode as any) === 'solo')
+        );
 
     // Auto-rejoin Family Pass Logic
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
-        if (familyPassCode && displayName && mode === 'none' && !autoRejoined) {
+        if (familyPassCode && displayName && entryPath === 'none' && !autoRejoined) {
             const tryAutoRejoin = async () => {
                 setLoading(true);
                 setAutoRejoined(true);
@@ -78,7 +93,20 @@ export default function HubScreen() {
             };
             tryAutoRejoin();
         }
-    }, [familyPassCode, displayName, mode, autoRejoined, sessionService, router]);
+    }, [familyPassCode, displayName, entryPath, autoRejoined, sessionService, router]);
+
+    // Issue #142 V2.1: Auto-redirect returning Users/Collectors
+    useEffect(() => {
+        if (CONFIG.IS_E2E) return;
+
+        // Only redirect if we have a session, are connected, and haven't selected a path manually
+        if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
+            const mode = lastMode as any;
+            if (mode === 'collector' || mode === 'explore' || mode === 'host' || mode === 'solo') {
+                router.replace('/(tabs)/collection');
+            }
+        }
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -109,13 +137,13 @@ export default function HubScreen() {
     });
 
     const handleBack = () => {
-        setMode('none');
+        setEntryPath('none');
         setError(null);
         setInputValue('');
         setPassword('');
     };
 
-    const handleSoloBrowse = async () => {
+    const handleExplore = async () => {
         const userId = inputValue.trim();
         if (!validateUsername(userId)) {
             setError('Please enter a valid Discogs username (3-30 chars, alphanumeric)');
@@ -130,12 +158,17 @@ export default function HubScreen() {
             });
 
             if (result.success) {
-                setUsername(userId);
-                setLastMode('solo');
+                const store = useSessionStore.getState();
+                store.resetSession(); // Ensure no previous host/guest state bleeds in
+                store.setUsername(userId);
+                store.setLastMode('explore');
+                store.setSessionRole('voyeur'); // Explicitly set voyeur role
+
                 if (result.data.avatarUrl) {
-                    useSessionStore.getState().setAvatarUrl(result.data.avatarUrl);
+                    store.setAvatarUrl(result.data.avatarUrl);
                 }
-                useSessionStore.getState().setLastSyncTime(result.data.syncTime);
+                store.setLastSyncTime(result.data.syncTime);
+
                 useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
                 router.replace('/(tabs)/collection');
             } else {
@@ -163,7 +196,7 @@ export default function HubScreen() {
             .then(result => {
                 if (result.success) {
                     useSessionStore.getState().setUsername(guestUsername);
-                    useSessionStore.getState().setLastMode('guest');
+                    useSessionStore.getState().setLastMode('invited');
                     // Session ID and Name should be returned in result.data from join-session payload
                     if (result.data) {
                         if (result.data.sessionId) useSessionStore.getState().setSessionId(result.data.sessionId);
@@ -185,7 +218,7 @@ export default function HubScreen() {
             });
     };
 
-    const handleHostLogin = async () => {
+    const handleCollectorLogin = async () => {
         const userId = inputValue.trim();
         if (!validateUsername(userId) || !password.trim()) {
             setError('Enter a valid username and password');
@@ -199,16 +232,30 @@ export default function HubScreen() {
             if (result.success) {
                 const { data } = result;
                 const userId = data.userId || inputValue.trim();
+                const store = useSessionStore.getState();
 
-                useSessionStore.getState().setAuthToken(data.token);
-                useSessionStore.getState().setUsername(userId);
-                useSessionStore.getState().setLastMode('host');
+                store.setAuthToken(data.token);
+                store.setUsername(userId);
+                store.setLastMode('collector');
                 if (data.sessionId) {
-                    await useSessionStore.getState().setSessionId(data.sessionId);
+                    await store.setSessionId(String(data.sessionId));
                 }
                 if (data.sessionSecret) {
-                    await useSessionStore.getState().setSessionSecret(data.sessionSecret);
+                    await store.setSessionSecret(data.sessionSecret);
                 }
+                if (data.joinCode) {
+                    store.setJoinCode(data.joinCode);
+                }
+                if (data.sessionName) {
+                    store.setSessionName(data.sessionName);
+                }
+                if (data.hostUsername) {
+                    store.setHostUsername(data.hostUsername);
+                }
+                if (data.isPermanent !== undefined) {
+                    store.setIsPermanent(data.isPermanent);
+                }
+                store.setSessionRole('host');
 
                 useSessionStore.getState().setSyncStatus('syncing');
                 router.replace('/(tabs)/collection');
@@ -248,102 +295,109 @@ export default function HubScreen() {
                 >
                     <ScrollView contentContainerStyle={styles.scrollContent}>
                         <BlurView intensity={10} tint="dark" style={styles.glassPanel}>
-                            {mode === 'none' ? (
-                                CONFIG.IS_E2E ? (
-                                    <View style={styles.hubContent}>
-                                        <Text style={styles.title}>E2E VERSION 2</Text>
-                                        <Text style={styles.subtitle}>Detox Sync Test Screen</Text>
-                                        <TouchableOpacity
-                                            testID="mode-host"
-                                            style={[styles.btnModern, styles.btnPrimary]}
-                                            onPress={() => setMode('host')}
-                                        >
-                                            <Text style={styles.btnText}>Open Host Login</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            testID="mode-guest"
-                                            style={styles.btnModern}
-                                            onPress={() => setMode('guest')}
-                                        >
-                                            <Text style={styles.btnText}>Guest Mode</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            testID="mode-solo"
-                                            style={styles.btnModern}
-                                            onPress={() => setMode('solo')}
-                                        >
-                                            <Text style={styles.btnText}>Browse Solo</Text>
-                                        </TouchableOpacity>
+                            {isAutoLogging ? (
+                                <View style={styles.hubContent}>
+                                    <ActivityIndicator size="large" color={THEME.colors.primary} />
+                                    <Text style={[styles.subtitle, { marginTop: 20 }]}>{COPY.HUB_AUTO_LOGGING}</Text>
+                                </View>
+                            ) : entryPath === 'none' ? (
+                                <View style={styles.hubContent}>
+                                    <View style={styles.logoContainer}>
+                                        <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
+                                            <View style={styles.vinylCenter} />
+                                        </Animated.View>
                                     </View>
-                                ) : (
-                                    <View style={styles.hubContent}>
-                                        <View style={styles.logoContainer}>
-                                            <Animated.View style={[styles.vinyl, { transform: [{ rotate: rotation }] }]}>
-                                                <View style={styles.vinylCenter} />
-                                            </Animated.View>
-                                        </View>
 
-                                        <Text style={styles.title}>Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
+                                    <Text style={styles.title}>Social Vinyl</Text>
+                                    <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
+                                    <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
 
-                                        <View style={styles.personaOptions}>
-                                            <TouchableOpacity
-                                                testID="mode-host"
-                                                style={[styles.btnModern, styles.btnPrimary]}
-                                                onPress={() => setMode('host')}
-                                            >
-                                                <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
-                                                <Text style={styles.btnIcon}>→</Text>
+                                    {CONFIG.IS_E2E ? (
+                                        <View testID="e2e-mode-select" style={styles.hubContent}>
+                                            <TouchableOpacity testID="mode-host" onPress={() => setEntryPath('collector')}>
+                                                <Text>Host</Text>
                                             </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                testID="mode-guest"
-                                                style={styles.btnModern}
-                                                onPress={() => setMode('guest')}
-                                            >
-                                                <Text style={styles.btnText}>{COPY.INTENT_GUEST}</Text>
-                                                <Text style={styles.btnIcon}>→</Text>
+                                            <TouchableOpacity testID="mode-guest" onPress={() => setEntryPath('invited')}>
+                                                <Text>Guest</Text>
                                             </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                testID="mode-solo"
-                                                style={styles.btnModern}
-                                                onPress={() => setMode('solo')}
-                                            >
-                                                <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
-                                                <Text style={styles.btnIcon}>→</Text>
+                                            <TouchableOpacity testID="mode-solo" onPress={() => setEntryPath('explore')}>
+                                                <Text>Solo</Text>
                                             </TouchableOpacity>
                                         </View>
-                                    </View>
-                                )
+                                    ) : (
+                                        <>
+                                            <View style={styles.personaOptions}>
+                                                <TouchableOpacity
+                                                    testID="mode-host"
+                                                    style={[styles.btnModern, styles.btnPrimary]}
+                                                    onPress={() => {
+                                                        setHasInteracted(true);
+                                                        setEntryPath('collector');
+                                                    }}
+                                                >
+                                                    <View>
+                                                        <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
+                                                        <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_COLLECTOR}</Text>
+                                                    </View>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    testID="mode-solo"
+                                                    style={styles.btnModern}
+                                                    onPress={() => {
+                                                        setHasInteracted(true);
+                                                        setEntryPath('explore');
+                                                    }}
+                                                >
+                                                    <View>
+                                                        <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
+                                                        <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_EXPLORE}</Text>
+                                                    </View>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity
+                                                    testID="mode-invited"
+                                                    onPress={() => {
+                                                        setHasInteracted(true);
+                                                        setEntryPath('invited');
+                                                    }}
+                                                    style={styles.invitedButton}
+                                                >
+                                                    <Text style={styles.invitedText}>
+                                                        Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
                             ) : (
-
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
-                                        {mode === 'host' && COPY.HUB_HOST_TITLE}
-                                        {mode === 'guest' && COPY.HUB_GUEST_TITLE}
-                                        {mode === 'solo' && COPY.HUB_SOLO_TITLE}
+                                        {entryPath === 'collector' && COPY.HUB_HOST_TITLE}
+                                        {entryPath === 'invited' && COPY.HUB_GUEST_TITLE}
+                                        {entryPath === 'explore' && COPY.HUB_SOLO_TITLE}
                                     </Text>
 
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.label}>
-                                            {mode === 'guest' ? 'Join Code' : 'Discogs Username'}
+                                            {entryPath === 'invited' ? 'Join Code' : 'Discogs Username'}
                                         </Text>
                                         <TextInput
                                             testID="login-input"
                                             style={styles.input}
                                             value={inputValue}
                                             onChangeText={setInputValue}
-                                            placeholder={mode === 'guest' ? 'ABCDE' : 'e.g., ajmau'}
+                                            placeholder={entryPath === 'invited' ? 'ABCDE' : 'e.g., ajmau'}
                                             placeholderTextColor={THEME.colors.textMuted}
-                                            autoCapitalize={mode === 'guest' ? 'characters' : 'none'}
-                                            maxLength={mode === 'guest' ? 5 : 50}
+                                            autoCapitalize={entryPath === 'invited' ? 'characters' : 'none'}
+                                            maxLength={entryPath === 'invited' ? 5 : 50}
                                             autoComplete="off"
                                             importantForAutofill="no"
                                         />
                                     </View>
 
-                                    {mode === 'host' && (
+                                    {entryPath === 'collector' && (
                                         <View style={styles.inputGroup}>
                                             <Text style={styles.label}>Password</Text>
                                             <TextInput
@@ -371,9 +425,9 @@ export default function HubScreen() {
                                             testID="login-submit"
                                             style={[styles.btnModern, styles.btnPrimary]}
                                             onPress={() => {
-                                                if (mode === 'solo') handleSoloBrowse();
-                                                if (mode === 'guest') handleGuestJoin();
-                                                if (mode === 'host') handleHostLogin();
+                                                if (entryPath === 'explore') handleExplore();
+                                                if (entryPath === 'invited') handleGuestJoin();
+                                                if (entryPath === 'collector') handleCollectorLogin();
                                             }}
                                             disabled={loading || syncStatus === 'syncing'}
                                         >
@@ -386,13 +440,13 @@ export default function HubScreen() {
                                                 </View>
                                             ) : (
                                                 <Text style={styles.btnText}>
-                                                    {mode === 'host' ? 'Unlock' : mode === 'guest' ? 'Join' : 'Browse'}
+                                                    {entryPath === 'collector' ? 'Unlock' : entryPath === 'invited' ? 'Join' : 'Browse'}
                                                 </Text>
                                             )}
                                         </TouchableOpacity>
                                     </View>
 
-                                    {mode === 'solo' && (
+                                    {entryPath === 'explore' && (
                                         <Text style={styles.infoText}>
                                             First scan takes 5-10 mins. Subsequent visits load instantly.
                                         </Text>
@@ -405,7 +459,7 @@ export default function HubScreen() {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </View>
+        </View >
     );
 }
 
@@ -493,8 +547,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: THEME.colors.textDim,
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 5,
         lineHeight: 22,
+    },
+    valueProp: {
+        fontSize: 14,
+        color: THEME.colors.textMuted,
+        fontWeight: '400',
+        textAlign: 'center',
+        marginBottom: 40,
     },
     personaOptions: {
         width: '100%',
@@ -517,7 +578,12 @@ const styles = StyleSheet.create({
     btnText: {
         color: '#fff',
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
+    },
+    btnSubtitle: {
+        color: THEME.colors.textDim,
+        fontSize: 12,
+        marginTop: 2,
     },
     btnIcon: {
         color: '#fff',
@@ -554,6 +620,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 10,
         marginTop: 30,
+    },
+    invitedButton: {
+        marginTop: 25,
+        alignSelf: 'center',
+        padding: 10,
+    },
+    invitedText: {
+        color: THEME.colors.textMuted,
+        fontSize: 16,
+    },
+    invitedLink: {
+        color: THEME.colors.primary,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
     },
     errorMsg: {
         color: THEME.colors.status.error,
