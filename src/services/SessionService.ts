@@ -69,7 +69,14 @@ export class SessionService implements ISessionService {
                 store.setSessionSecret(response.sessionSecret);
                 store.setHostUsername(response.hostUsername);
                 store.setIsPermanent(response.isPermanent);
-                store.setSessionRole('guest'); // Could be voyeur depending on logic, but default to guest
+
+                // Determine role dynamically (Issue #142 Redesign V5.2)
+                if (response.hostUsername && store.username && response.hostUsername.toLowerCase() === store.username.toLowerCase()) {
+                    store.setSessionRole('host');
+                } else {
+                    store.setSessionRole('guest');
+                }
+
                 store.setDisplayName(name); // Ensure display name is saved
 
                 // Issue #154: Persist local history
