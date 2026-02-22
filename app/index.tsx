@@ -293,31 +293,35 @@ export default function WelcomeScreen() {
                                                     </View>
                                                 </TouchableOpacity>
 
-                                                <TouchableOpacity
-                                                    testID="mode-invited"
-                                                    onPress={() => {
-                                                        setHasInteracted(true);
-                                                        setEntryPath('invited');
-                                                    }}
-                                                    style={styles.invitedButton}
-                                                >
-                                                    <Text style={styles.invitedText}>
-                                                        Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
-                                                    </Text>
-                                                </TouchableOpacity>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 15 }}>
+                                                    <TouchableOpacity
+                                                        testID="mode-invited"
+                                                        onPress={() => {
+                                                            setHasInteracted(true);
+                                                            setEntryPath('invited');
+                                                        }}
+                                                        style={{ padding: 5 }}
+                                                    >
+                                                        <Text style={styles.invitedText}>
+                                                            Have an invite? <Text style={styles.invitedLink}>Join</Text>
+                                                        </Text>
+                                                    </TouchableOpacity>
 
-                                                <TouchableOpacity
-                                                    testID="mode-create-account"
-                                                    onPress={() => {
-                                                        setHasInteracted(true);
-                                                        router.push('/account-create');
-                                                    }}
-                                                    style={styles.invitedButton}
-                                                >
-                                                    <Text style={styles.invitedText}>
-                                                        No account? <Text style={styles.invitedLink}>Create one</Text>
-                                                    </Text>
-                                                </TouchableOpacity>
+                                                    <Text style={{ color: THEME.colors.textMuted }}>|</Text>
+
+                                                    <TouchableOpacity
+                                                        testID="mode-create-account"
+                                                        onPress={() => {
+                                                            setHasInteracted(true);
+                                                            router.push('/account-create');
+                                                        }}
+                                                        style={{ padding: 5 }}
+                                                    >
+                                                        <Text style={styles.invitedText}>
+                                                            No account? <Text style={styles.invitedLink}>Sign up</Text>
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
                                         </>
                                     )}
@@ -562,7 +566,7 @@ const styles = StyleSheet.create({
     },
     invitedText: {
         color: THEME.colors.textMuted,
-        fontSize: 16,
+        fontSize: 15,
     },
     invitedLink: {
         color: THEME.colors.primary,
