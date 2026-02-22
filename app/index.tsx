@@ -55,17 +55,10 @@ export default function WelcomeScreen() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
-    const [hasInteracted, setHasInteracted] = setHasInteracted || useState(false);
-
-    // Issue #146: Active Session Gate
-    // If we are a host and have a connected session, take over the screen.
-    if (connectionState === 'connected' && sessionStoreId && sessionRole === 'host') {
-        return <ActiveSessionView />;
-    }
+    const [hasInteracted, setHasInteracted] = useState(false);
 
     // Issue #142 V3: Auto-logging loading guard (includes connecting states to prevent flicker)
     // Now gated by hasInteracted to prevent trapping users who explicitly cancel a manual path.
-    // Also checks for legacy lastMode values to avoid "dead zones" where it spins but never redirects.
     const isAutoLogging = !hasInteracted &&
         (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') &&
         !!sessionStoreId &&
@@ -89,7 +82,6 @@ export default function WelcomeScreen() {
                         useListeningBinStore.getState().clearBin();
                         router.replace('/(tabs)/bin');
                     } else {
-                        // Failed to rejoin (maybe session ended), clear the family pass
                         useSessionStore.getState().setFamilyPassCode(null);
                     }
                 } catch (e) {
@@ -106,7 +98,6 @@ export default function WelcomeScreen() {
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
-        // Only redirect if we have a session, are connected, and haven't selected a path manually
         if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
             const mode = lastMode as any;
             if (mode === 'collector' || mode === 'explore' || mode === 'host' || mode === 'solo') {
@@ -142,6 +133,13 @@ export default function WelcomeScreen() {
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
     });
+
+    // Issue #146: Active Session Gate
+    // If we are a host and have a connected session, take over the screen.
+    // Moved here to follow all Hook declarations and avoid "Rendered fewer hooks" errors.
+    if (connectionState === 'connected' && sessionStoreId && sessionRole === 'host') {
+        return <ActiveSessionView />;
+    }
 
     const handleBack = () => {
         setEntryPath('none');
