@@ -15,7 +15,12 @@ export default function SessionListScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { sessionService } = useServices();
-    const { sessionId, isBroadcast, setSessionId, setSessionSecret, setJoinCode, setSessionRole, setIsPermanent, setIsBroadcast, setSessionName, setHostUsername } = useSessionStore();
+    const {
+        sessionId, username, isBroadcast,
+        setSessionId, setSessionSecret, setJoinCode,
+        setSessionRole, setIsPermanent, setIsBroadcast,
+        setSessionName, setHostUsername
+    } = useSessionStore();
 
     const [sessions, setSessions] = useState<ISessionCard[]>([]);
     const [loading, setLoading] = useState(true);
@@ -49,10 +54,25 @@ export default function SessionListScreen() {
         loadSessions();
     };
 
-    const handleJoinSession = (session: ISessionCard) => {
+    const handleJoinSession = async (session: ISessionCard, silent = false) => {
         if (session.id.toString() === sessionId?.toString()) {
             return router.replace('/(tabs)/bin');
         }
+
+        // Silent join for hosts (Issue #142 Redesign V5.3)
+        if (silent) {
+            try {
+                // We use the host's own identity as the "display name" for the guest record (if required)
+                // but since they are the host, the dynamic role detection in SessionService will keep them as 'host'.
+                const result = await sessionService.joinSession(session.code, username || 'Host');
+                if (result.success) {
+                    return; // Metadata is already synced via useWebSocket hook
+                }
+            } catch (error) {
+                console.error('[SessionList] Silent join failed:', error);
+            }
+        }
+
         router.push(`/join-session?code=${session.code}`);
     };
 
@@ -120,6 +140,9 @@ export default function SessionListScreen() {
                 } else {
                     // Another session stole the broadcast; active session is no longer broadcasting
                     setIsBroadcast(false);
+                    // UX Improvement (Issue #142 Redesign V5.3): 
+                    // Automatically switch to the session that just went live
+                    handleJoinSession(session, true);
                 }
             } else {
                 if (session.id.toString() === sessionId?.toString()) {
