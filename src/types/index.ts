@@ -124,6 +124,27 @@ export interface SessionCard {
     createdAt: string;   // ISO date string
 }
 
+export interface SessionHistory {
+    id: string; // Internal SQLite ID or Session ID from backend if available
+    session_name: string;
+    host_username: string;
+    started_at: number;
+    ended_at: number | null;
+    mode: 'party' | 'live' | 'solo';
+    guest_count: number;
+}
+
+export interface SessionPlay {
+    id: string;
+    session_id: string;
+    release_id: number;
+    release_title: string;
+    artist: string;
+    album_art_url: string | null;
+    played_at: number;
+    picked_by_username: string | null;
+}
+
 export interface SessionCreatedMessage {
     type: 'session-created';
     sessionId: number;
@@ -188,6 +209,7 @@ export type WebSocketMessageType =
     | 'ACCESS_LEVEL' | 'access-level'
     | 'SESSION_JOINED' | 'session-joined'
     | 'NOW_PLAYING' | 'now-playing'
+    | 'now-playing-cleared'
     | 'SESSION_ENDED' | 'session-ended'
     | 'ERROR' | 'error'
     | 'admin-login-success'

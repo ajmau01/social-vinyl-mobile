@@ -1,8 +1,10 @@
 import { useEffect, useCallback } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
+import { dbService } from '@/services/DatabaseService';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
 import { normalizeNowPlayingPayload } from '@/utils/normalization';
+import { logger } from '@/utils/logger';
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -75,6 +77,21 @@ export const useWebSocket = (): UseWebSocketResult => {
                     // Normalize backend message to frontend NowPlaying interface
                     const normalized = normalizeNowPlayingPayload(payload);
                     setNowPlaying(normalized);
+
+                    // Issue #154: Persist to local history
+                    const currentSessionId = useSessionStore.getState().sessionId;
+                    if (currentSessionId && normalized && normalized.track) {
+                        dbService.recordPlay({
+                            id: `${currentSessionId}-${normalized.timestamp || Date.now()}`,
+                            session_id: String(currentSessionId),
+                            release_id: parseInt(normalized.releaseId || '0', 10),
+                            release_title: normalized.album,
+                            artist: normalized.artist,
+                            album_art_url: normalized.albumArt || null,
+                            played_at: normalized.timestamp || Date.now(),
+                            picked_by_username: normalized.playedBy || null
+                        }).catch(err => logger.error('[WebSocket] Failed to record play', err));
+                    }
                 } else if (type === 'now-playing-cleared') {
                     // Host explicitly stopped playback
                     setNowPlaying(null);
@@ -84,6 +101,21 @@ export const useWebSocket = (): UseWebSocketResult => {
                     if (rawState.nowPlaying) {
                         const normalized = normalizeNowPlayingPayload(rawState.nowPlaying);
                         setNowPlaying(normalized);
+
+                        // Issue #154: Persist to local history
+                        const currentSessionId = useSessionStore.getState().sessionId;
+                        if (currentSessionId && normalized && normalized.track) {
+                            dbService.recordPlay({
+                                id: `${currentSessionId}-${normalized.timestamp || Date.now()}`,
+                                session_id: String(currentSessionId),
+                                release_id: parseInt(normalized.releaseId || '0', 10),
+                                release_title: normalized.album,
+                                artist: normalized.artist,
+                                album_art_url: normalized.albumArt || null,
+                                played_at: normalized.timestamp || Date.now(),
+                                picked_by_username: normalized.playedBy || null
+                            }).catch(err => logger.error('[WebSocket] Failed to record play', err));
+                        }
                     }
                     // REGRESSION FIX: Do NOT clear nowPlaying if state doesn't have it.
                     // State messages (bin updates) often omit nowPlaying.

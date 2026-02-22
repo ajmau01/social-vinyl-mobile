@@ -43,6 +43,8 @@ export interface ISyncService {
     fetchTracks(userId: string, releaseId: number): AsyncResult<Track[]>;
 }
 
+import { SessionHistory, SessionPlay } from '@/types';
+
 /**
  * Database Service Interface
  * Manages local SQLite database operations
@@ -56,6 +58,13 @@ export interface IDatabaseService {
     toggleSaved(instanceId: number): Promise<boolean>;
     clearUserCollection(userId: string): Promise<void>;
     clearAll(): Promise<void>;
+
+    // History methods
+    createSession(session: SessionHistory): Promise<void>;
+    endSession(sessionId: string, endedAt: number): Promise<void>;
+    recordPlay(play: SessionPlay): Promise<void>;
+    getSessionsHistory(limit?: number, offset?: number): Promise<SessionHistory[]>;
+    getSessionSetlist(sessionId: string): Promise<SessionPlay[]>;
 }
 
 /**

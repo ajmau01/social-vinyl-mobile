@@ -151,6 +151,16 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                 </TouchableOpacity>
                             )}
 
+                            <TouchableOpacity testID="drawer-history-button" style={styles.optionItem} onPress={() => { onClose(); router.push('/history'); }}>
+                                <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                                    <Ionicons name="time-outline" size={20} color="#f59e0b" />
+                                </View>
+                                <View style={styles.optionLabelContainer}>
+                                    <Text style={styles.optionLabel}>Listening History</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
+                            </TouchableOpacity>
+
                             <View style={styles.divider} />
 
                             <TouchableOpacity testID="drawer-logout-button" style={styles.optionItem} onPress={handleSwitchUser}>

@@ -1,5 +1,6 @@
 import { ISessionService } from './interfaces';
 import { wsService } from './WebSocketService';
+import { dbService } from './DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
 import {
     AsyncResult,
@@ -25,6 +26,17 @@ export class SessionService implements ISessionService {
                 store.setSessionSecret(response.sessionSecret);
                 store.setIsPermanent(permanent);
                 store.setSessionRole('host');
+
+                // Issue #154: Persist local history
+                dbService.createSession({
+                    id: String(response.sessionId),
+                    session_name: response.name,
+                    host_username: store.username || 'unknown',
+                    started_at: Date.now(),
+                    ended_at: null,
+                    mode: permanent ? 'party' : 'party', // Simplified mode logic
+                    guest_count: 0
+                }).catch(err => logger.error('[SessionService] Failed to record session history', err));
 
                 resolve({ success: true, data: response });
             };
@@ -60,6 +72,17 @@ export class SessionService implements ISessionService {
                 store.setSessionRole('guest'); // Could be voyeur depending on logic, but default to guest
                 store.setDisplayName(name); // Ensure display name is saved
 
+                // Issue #154: Persist local history
+                dbService.createSession({
+                    id: String(response.sessionId),
+                    session_name: response.name,
+                    host_username: response.hostUsername || 'unknown',
+                    started_at: Date.now(),
+                    ended_at: null,
+                    mode: 'party',
+                    guest_count: 0
+                }).catch(err => logger.error('[SessionService] Failed to record session history', err));
+
                 resolve({ success: true, data: response });
             };
 
@@ -85,6 +108,12 @@ export class SessionService implements ISessionService {
             // Clear session state logic can wait or we can call store.clearSession()
             // But we might want to keep some Auth tokens, just clearing session context
             const store = useSessionStore.getState();
+            if (store.sessionId) {
+                // Issue #154: Terminate local history record
+                dbService.endSession(String(store.sessionId), Date.now())
+                    .catch(err => logger.error('[SessionService] Failed to end session history', err));
+            }
+
             store.setSessionId(null);
             store.setSessionSecret(null);
             store.setJoinCode(null);
@@ -109,6 +138,10 @@ export class SessionService implements ISessionService {
             // Clear local session if we ended our active one
             const store = useSessionStore.getState();
             if (store.sessionId === sessionId || store.sessionId === String(sessionId)) {
+                // Issue #154: Terminate local history record
+                dbService.endSession(String(store.sessionId), Date.now())
+                    .catch(err => logger.error('[SessionService] Failed to end session history', err));
+
                 store.setSessionId(null);
                 store.setSessionSecret(null);
                 store.setJoinCode(null);
