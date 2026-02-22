@@ -37,6 +37,9 @@ export class DatabaseService implements IDatabaseService {
                 this.db = await SQLite.openDatabaseAsync('social_vinyl.db');
                 if (!this.db) throw new Error('Failed to open database');
 
+                // Issue #154: Enable foreign key constraints per connection
+                await this.db.execAsync('PRAGMA foreign_keys = ON;');
+
                 logger.log('[DB] Database opened. Checking schema...');
 
                 // AGGRESSIVE SCHEMA MIGRATION: 
@@ -351,6 +354,20 @@ export class DatabaseService implements IDatabaseService {
             );
         } catch (error) {
             logger.error('[DB] Failed to record session play', error);
+            throw error;
+        }
+    }
+
+    public async getSessionById(sessionId: string): Promise<SessionHistory | null> {
+        const db = await this.ensureDb();
+        try {
+            const rows = await db.getAllAsync<any>(
+                'SELECT * FROM sessions WHERE id = ?',
+                [sessionId]
+            );
+            return rows.length > 0 ? (rows[0] as SessionHistory) : null;
+        } catch (error) {
+            logger.error('[DB] Failed to get session by ID', error);
             throw error;
         }
     }

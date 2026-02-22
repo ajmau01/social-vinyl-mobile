@@ -34,7 +34,7 @@ export class SessionService implements ISessionService {
                     host_username: store.username || 'unknown',
                     started_at: Date.now(),
                     ended_at: null,
-                    mode: permanent ? 'party' : 'party', // Simplified mode logic
+                    mode: permanent ? 'live' : 'party',
                     guest_count: 0
                 }).catch(err => logger.error('[SessionService] Failed to record session history', err));
 
@@ -79,7 +79,7 @@ export class SessionService implements ISessionService {
                     host_username: response.hostUsername || 'unknown',
                     started_at: Date.now(),
                     ended_at: null,
-                    mode: 'party',
+                    mode: response.isPermanent ? 'live' : 'party',
                     guest_count: 0
                 }).catch(err => logger.error('[SessionService] Failed to record session history', err));
 

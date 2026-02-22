@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
-import { dbService } from '@/services/DatabaseService';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
 import { normalizeNowPlayingPayload } from '@/utils/normalization';
 import { logger } from '@/utils/logger';
@@ -27,7 +26,7 @@ export interface UseWebSocketResult {
  * session information, and actions for managing the connection.
  */
 export const useWebSocket = (): UseWebSocketResult => {
-    const { webSocketService } = useServices();
+    const { webSocketService, databaseService } = useServices();
     const {
         connectionState,
         sessionId,
@@ -77,11 +76,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                     // Issue #154: Persist local history on reconnect or first connect
                     if (sessionId) {
                         const isPayloadObj = payload && typeof payload === 'object';
-                        dbService.createSession({
+                        databaseService.createSession({
                             id: String(sessionId),
                             session_name: (isPayloadObj && (payload as any).name) || message.name || 'Unnamed Session',
                             host_username: (isPayloadObj && (payload as any).hostUsername) || message.hostUsername || useSessionStore.getState().username || 'unknown',
-                            started_at: Date.now(),
+                            started_at: (isPayloadObj && (payload as any).startedAt) || message.startedAt || Date.now(),
                             ended_at: null,
                             mode: 'party',
                             guest_count: 0
@@ -97,7 +96,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                     if (currentSessionId && normalized && normalized.track) {
                         const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
                         logger.info(`[WebSocket] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
-                        dbService.recordPlay({
+                        databaseService.recordPlay({
                             id: playId,
                             session_id: String(currentSessionId),
                             release_id: parseInt(normalized.releaseId || '0', 10),
@@ -111,6 +110,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                 } else if (type === 'now-playing-cleared') {
                     // Host explicitly stopped playback
                     setNowPlaying(null);
+                } else if (type === 'SESSION_ENDED' || type === 'session-ended') {
+                    const currentSessionId = useSessionStore.getState().sessionId;
+                    if (currentSessionId) {
+                        databaseService.endSession(String(currentSessionId)).catch(err => logger.error('[WebSocket] Failed to mark session ended in DB', err));
+                    }
                 } else if (type === 'STATE' || type === 'state') {
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
@@ -123,7 +127,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                         if (currentSessionId && normalized && normalized.track) {
                             const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
                             logger.info(`[WebSocket:State] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
-                            dbService.recordPlay({
+                            databaseService.recordPlay({
                                 id: playId,
                                 session_id: String(currentSessionId),
                                 release_id: parseInt(normalized.releaseId || '0', 10),
@@ -142,11 +146,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                         if (currentSessionId) {
                             // Eagerly create the session in the DB before inserting plays
                             // to satisfy the foreign key constraint because 'state' arrives before 'session-joined'
-                            dbService.createSession({
+                            databaseService.createSession({
                                 id: String(currentSessionId),
                                 session_name: rawState.sessionName || 'Unnamed Session',
                                 host_username: rawState.hostUsername || useSessionStore.getState().username || 'unknown',
-                                started_at: Date.now(),
+                                started_at: rawState.startedAt || Date.now(),
                                 ended_at: null,
                                 mode: 'party',
                                 guest_count: 0
@@ -154,7 +158,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                                 // Now safe to insert plays
                                 rawState.history.forEach((histItem: any) => {
                                     const playId = `${currentSessionId}-${histItem.playedAt}`;
-                                    dbService.recordPlay({
+                                    databaseService.recordPlay({
                                         id: playId,
                                         session_id: String(currentSessionId),
                                         release_id: parseInt(histItem.releaseId?.toString() || '0', 10),
@@ -163,7 +167,7 @@ export const useWebSocket = (): UseWebSocketResult => {
                                         album_art_url: histItem.coverImage || null,
                                         played_at: histItem.playedAt,
                                         picked_by_username: histItem.playedBy || null
-                                    }).catch(err => { }); // Ignore DUPLICATE PK errors gracefully
+                                    }).catch(err => { logger.warn('[WebSocket:State] Failed to record history play (duplicate ignored)', err.message); });
                                 });
                             }).catch(err => logger.error('[WebSocket:State] Failed to eagerly create session', err));
                         }

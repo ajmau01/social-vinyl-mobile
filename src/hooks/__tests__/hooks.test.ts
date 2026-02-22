@@ -26,7 +26,14 @@ jest.mock('expo-sqlite', () => ({
 
 jest.mock('@/services/WebSocketService');
 jest.mock('@/services/CollectionSyncService');
-jest.mock('@/services/DatabaseService');
+jest.mock('@/services/DatabaseService', () => ({
+    dbService: {
+        getReleases: jest.fn(),
+        createSession: jest.fn().mockResolvedValue(undefined),
+        recordPlay: jest.fn().mockResolvedValue(undefined),
+        endSession: jest.fn().mockResolvedValue(undefined),
+    }
+}));
 
 describe('Phase 2 Hooks', () => {
     beforeEach(() => {

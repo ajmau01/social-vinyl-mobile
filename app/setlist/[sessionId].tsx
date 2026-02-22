@@ -92,10 +92,7 @@ export default function SetlistScreen() {
         try {
             setIsLoading(true);
 
-            // Need to get session details. 
-            // We can fetch all and filter, or add a getSessionById. For now, fetch all and filter.
-            const history = await databaseService.getSessionsHistory();
-            const session = history.find(s => s.id === sessionId);
+            const session = await databaseService.getSessionById(sessionId);
             if (session) {
                 setSessionConfig(session);
             }

@@ -144,7 +144,7 @@ describe('DatabaseService', () => {
         await dbService.createSession(session);
 
         expect(mockDb.runAsync).toHaveBeenCalledWith(
-            expect.stringContaining('INSERT OR REPLACE INTO sessions'),
+            expect.stringContaining('INSERT OR IGNORE INTO sessions'),
             'sess_123', 'Test Party', 'hostuser', 1000, null, 'party', 0
         );
     });

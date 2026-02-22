@@ -64,6 +64,7 @@ export interface IDatabaseService {
     endSession(sessionId: string, endedAt: number): Promise<void>;
     recordPlay(play: SessionPlay): Promise<void>;
     getSessionsHistory(limit?: number, offset?: number): Promise<SessionHistory[]>;
+    getSessionById(sessionId: string): Promise<SessionHistory | null>;
     getSessionSetlist(sessionId: string): Promise<SessionPlay[]>;
 }
 
