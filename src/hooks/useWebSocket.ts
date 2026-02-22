@@ -73,6 +73,20 @@ export const useWebSocket = (): UseWebSocketResult => {
                             ? (payload as { sessionSecret?: string }).sessionSecret
                             : undefined);
                     if (secret) setSessionSecret(secret);
+
+                    // Issue #154: Persist local history on reconnect or first connect
+                    if (sessionId) {
+                        const isPayloadObj = payload && typeof payload === 'object';
+                        dbService.createSession({
+                            id: String(sessionId),
+                            session_name: (isPayloadObj && (payload as any).name) || message.name || 'Unnamed Session',
+                            host_username: (isPayloadObj && (payload as any).hostUsername) || message.hostUsername || useSessionStore.getState().username || 'unknown',
+                            started_at: Date.now(),
+                            ended_at: null,
+                            mode: 'party',
+                            guest_count: 0
+                        }).catch(err => logger.error('[WebSocket] Failed to ensure session history exists', err));
+                    }
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     // Normalize backend message to frontend NowPlaying interface
                     const normalized = normalizeNowPlayingPayload(payload);
@@ -81,8 +95,10 @@ export const useWebSocket = (): UseWebSocketResult => {
                     // Issue #154: Persist to local history
                     const currentSessionId = useSessionStore.getState().sessionId;
                     if (currentSessionId && normalized && normalized.track) {
+                        const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
+                        logger.info(`[WebSocket] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
                         dbService.recordPlay({
-                            id: `${currentSessionId}-${normalized.timestamp || Date.now()}`,
+                            id: playId,
                             session_id: String(currentSessionId),
                             release_id: parseInt(normalized.releaseId || '0', 10),
                             release_title: normalized.album,
@@ -105,8 +121,10 @@ export const useWebSocket = (): UseWebSocketResult => {
                         // Issue #154: Persist to local history
                         const currentSessionId = useSessionStore.getState().sessionId;
                         if (currentSessionId && normalized && normalized.track) {
+                            const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
+                            logger.info(`[WebSocket:State] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
                             dbService.recordPlay({
-                                id: `${currentSessionId}-${normalized.timestamp || Date.now()}`,
+                                id: playId,
                                 session_id: String(currentSessionId),
                                 release_id: parseInt(normalized.releaseId || '0', 10),
                                 release_title: normalized.album,
@@ -114,7 +132,40 @@ export const useWebSocket = (): UseWebSocketResult => {
                                 album_art_url: normalized.albumArt || null,
                                 played_at: normalized.timestamp || Date.now(),
                                 picked_by_username: normalized.playedBy || null
-                            }).catch(err => logger.error('[WebSocket] Failed to record play', err));
+                            }).catch(err => logger.error('[WebSocket:State] Failed to record play', err));
+                        }
+                    }
+
+                    // Issue #154: Sync full history from state payload
+                    if (rawState.history && Array.isArray(rawState.history)) {
+                        const currentSessionId = useSessionStore.getState().sessionId;
+                        if (currentSessionId) {
+                            // Eagerly create the session in the DB before inserting plays
+                            // to satisfy the foreign key constraint because 'state' arrives before 'session-joined'
+                            dbService.createSession({
+                                id: String(currentSessionId),
+                                session_name: rawState.sessionName || 'Unnamed Session',
+                                host_username: rawState.hostUsername || useSessionStore.getState().username || 'unknown',
+                                started_at: Date.now(),
+                                ended_at: null,
+                                mode: 'party',
+                                guest_count: 0
+                            }).then(() => {
+                                // Now safe to insert plays
+                                rawState.history.forEach((histItem: any) => {
+                                    const playId = `${currentSessionId}-${histItem.playedAt}`;
+                                    dbService.recordPlay({
+                                        id: playId,
+                                        session_id: String(currentSessionId),
+                                        release_id: parseInt(histItem.releaseId?.toString() || '0', 10),
+                                        release_title: histItem.title || '',
+                                        artist: histItem.artist || '',
+                                        album_art_url: histItem.coverImage || null,
+                                        played_at: histItem.playedAt,
+                                        picked_by_username: histItem.playedBy || null
+                                    }).catch(err => { }); // Ignore DUPLICATE PK errors gracefully
+                                });
+                            }).catch(err => logger.error('[WebSocket:State] Failed to eagerly create session', err));
                         }
                     }
                     // REGRESSION FIX: Do NOT clear nowPlaying if state doesn't have it.

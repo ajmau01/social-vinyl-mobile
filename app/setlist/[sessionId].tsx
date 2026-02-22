@@ -101,6 +101,8 @@ export default function SetlistScreen() {
             }
 
             const setlist = await databaseService.getSessionSetlist(sessionId);
+            logger.info('[SetlistScreen] Fetched setlist length:', setlist.length);
+
             setPlays(setlist);
         } catch (error) {
             logger.error('[SetlistScreen] Failed to load setlist', error);

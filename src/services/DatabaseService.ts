@@ -306,7 +306,7 @@ export class DatabaseService implements IDatabaseService {
         const db = await this.ensureDb();
         try {
             await db.runAsync(
-                'INSERT OR REPLACE INTO sessions (id, session_name, host_username, started_at, ended_at, mode, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'INSERT OR IGNORE INTO sessions (id, session_name, host_username, started_at, ended_at, mode, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 session.id,
                 session.session_name,
                 session.host_username,
