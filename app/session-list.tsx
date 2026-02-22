@@ -89,16 +89,27 @@ export default function SessionListScreen() {
     };
 
     const handleToggleBroadcast = async (session: ISessionCard) => {
-        try {
-            const newBroadcastState = !session.isBroadcast;
-            await sessionService.setBroadcast(session.id);
-            loadSessions();
+        const newBroadcastState = !session.isBroadcast;
 
-            // If it's the current session, update local store
+        // Optimistic local update — flip isBroadcast on just this session.
+        // Do NOT call loadSessions() here: it re-fetches from the DB and would
+        // resurface any optimistically-deleted sessions.
+        setSessions(prev =>
+            prev.map(s => s.id === session.id ? { ...s, isBroadcast: newBroadcastState } : s)
+        );
+
+        try {
+            await sessionService.setBroadcast(session.id);
+
+            // Keep the global session store in sync if this is the active session
             if (session.id.toString() === sessionId?.toString()) {
                 setIsBroadcast(newBroadcastState);
             }
         } catch (error) {
+            // Roll back on failure
+            setSessions(prev =>
+                prev.map(s => s.id === session.id ? { ...s, isBroadcast: session.isBroadcast } : s)
+            );
             console.error('Failed to toggle broadcast:', error);
         }
     };
