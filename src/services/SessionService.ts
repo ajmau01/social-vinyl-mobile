@@ -103,7 +103,9 @@ export class SessionService implements ISessionService {
 
     public async archiveSession(sessionId: number): Promise<AsyncResult<void>> {
         try {
-            await wsService.sendAction('archive-session', { sessionId });
+            // Backend has no handler for 'archive-session' (enum exists but unregistered).
+            // 'leave-session' correctly calls LeaveSessionHandler -> delegate.removeSessionParty().
+            await wsService.sendAction('leave-session', { sessionId });
 
             // Clear local session if we ended our active one
             const store = useSessionStore.getState();
@@ -118,7 +120,7 @@ export class SessionService implements ISessionService {
             }
             return { success: true, data: undefined };
         } catch (error: any) {
-            logger.error('[SessionService] endSession failed:', error);
+            logger.error('[SessionService] archiveSession failed:', error);
             return { success: false, error };
         }
     }
