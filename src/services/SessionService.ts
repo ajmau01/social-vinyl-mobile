@@ -103,6 +103,7 @@ export class SessionService implements ISessionService {
 
     public async archiveSession(sessionId: number): Promise<AsyncResult<void>> {
         try {
+            // Sends the true 'archive-session' action which sets active=false on the backend.
             await wsService.sendAction('archive-session', { sessionId });
 
             // Clear local session if we ended our active one
@@ -118,7 +119,7 @@ export class SessionService implements ISessionService {
             }
             return { success: true, data: undefined };
         } catch (error: any) {
-            logger.error('[SessionService] endSession failed:', error);
+            logger.error('[SessionService] archiveSession failed:', error);
             return { success: false, error };
         }
     }

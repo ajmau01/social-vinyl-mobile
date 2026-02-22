@@ -489,6 +489,13 @@ class WebSocketService implements IWebSocketService {
                     }
                     break;
             }
+            // Dispatch to temporary message listeners (used by SessionService for session-created, session-list, etc.)
+            if (type && this.messageListeners.has(type)) {
+                const listenersForType = this.messageListeners.get(type)!.slice();
+                listenersForType.forEach(listener => {
+                    try { listener(data); } catch (e) { logger.error('[WS] messageListener error for type:', type, e); }
+                });
+            }
         } catch (e) {
             logger.error('[WS] Failed to parse message', e);
         }

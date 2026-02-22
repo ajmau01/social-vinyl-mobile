@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
@@ -12,6 +13,7 @@ import { COPY } from '@/constants/copy';
 
 export default function SessionListScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { sessionService } = useServices();
     const { sessionId, isBroadcast, setSessionId, setSessionSecret, setJoinCode, setSessionRole, setIsPermanent, setIsBroadcast, setSessionName, setHostUsername } = useSessionStore();
 
@@ -24,7 +26,9 @@ export default function SessionListScreen() {
     const loadSessions = async () => {
         try {
             const list = await sessionService.getSessions();
-            setSessions(list || []);
+            // The backend returns both active and archived sessions to the host.
+            // We only want to display active sessions in this view.
+            setSessions((list || []).filter(s => s.active));
         } catch (error) {
             console.error('Failed to load sessions:', error);
         } finally {
@@ -53,10 +57,15 @@ export default function SessionListScreen() {
     };
 
     const handleEndSession = async (session: ISessionCard) => {
-        // Confirm deletion in a real scenario
+        // Optimistic removal: update UI immediately so the session disappears on tap.
+        // NOTE: Backend 'leave-session' removes WS party membership but does NOT delete
+        // the session record from the DB. ArchiveSessionHandler is tracked as a backend
+        // issue. For now we remove locally and avoid re-fetching (which would resurface it).
+        setSessions(prev => prev.filter(s => s.id !== session.id));
+
         try {
             await sessionService.archiveSession(session.id);
-            // Local store cleanup using existing setters
+            // Clear local store if this was the user's active session
             if (session.id.toString() === sessionId?.toString()) {
                 setSessionId(null);
                 setSessionSecret(null);
@@ -67,10 +76,12 @@ export default function SessionListScreen() {
                 setSessionName(null);
                 setHostUsername(null);
             }
-            loadSessions();
         } catch (error) {
+            // Restore on error so the user knows something went wrong
+            setSessions(prev => [...prev, session]);
             console.error('Failed to end session:', error);
         }
+
     };
 
     const handleShare = (session: ISessionCard) => {
@@ -80,16 +91,44 @@ export default function SessionListScreen() {
     };
 
     const handleToggleBroadcast = async (session: ISessionCard) => {
-        try {
-            const newBroadcastState = !session.isBroadcast;
-            await sessionService.setBroadcast(session.id);
-            loadSessions();
+        const newBroadcastState = !session.isBroadcast;
 
-            // If it's the current session, update local store
-            if (session.id.toString() === sessionId?.toString()) {
-                setIsBroadcast(newBroadcastState);
+        // Optimistic local update — flip isBroadcast, enforce single ON AIR
+        setSessions(prev =>
+            prev.map(s => {
+                if (s.id === session.id) {
+                    return { ...s, isBroadcast: newBroadcastState };
+                }
+                // Single broadcast enforcement: if turning one ON, turn others OFF
+                if (newBroadcastState && s.isBroadcast) {
+                    return { ...s, isBroadcast: false };
+                }
+                return s;
+            })
+        );
+
+        try {
+            await sessionService.setBroadcast(session.id);
+
+            // Keep the global session store in sync
+            if (newBroadcastState) {
+                if (session.id.toString() === sessionId?.toString()) {
+                    setIsBroadcast(true);
+                } else {
+                    // Another session stole the broadcast; active session is no longer broadcasting
+                    setIsBroadcast(false);
+                }
+            } else {
+                if (session.id.toString() === sessionId?.toString()) {
+                    setIsBroadcast(false);
+                }
             }
         } catch (error) {
+            // Roll back on failure (naive rollback — doesn't restore stolen broadcasts perfectly, 
+            // but next pull-to-refresh will correct it)
+            setSessions(prev =>
+                prev.map(s => s.id === session.id ? { ...s, isBroadcast: session.isBroadcast } : s)
+            );
             console.error('Failed to toggle broadcast:', error);
         }
     };
@@ -112,13 +151,13 @@ export default function SessionListScreen() {
                 }}
             />
 
-            <View style={styles.actionRow}>
+            <View style={[styles.actionRow, { paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity
                     style={[styles.primaryAction, { marginRight: 8 }]}
                     onPress={() => router.push('/create-session')}
                 >
                     <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.primaryActionText}>Start {COPY.SESSION_NOUN}</Text>
+                    <Text style={styles.primaryActionText}>{COPY.ACTION_START_PARTY}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -126,7 +165,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/join-session')}
                 >
                     <Ionicons name="enter-outline" size={24} color={THEME.colors.primary} />
-                    <Text style={styles.secondaryActionText}>Join {COPY.SESSION_NOUN}</Text>
+                    <Text style={styles.secondaryActionText}>{COPY.ACTION_JOIN_PARTY}</Text>
                 </TouchableOpacity>
             </View>
 
