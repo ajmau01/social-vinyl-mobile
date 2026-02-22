@@ -50,7 +50,6 @@ export default function WelcomeScreen() {
 
     const [entryPath, setEntryPath] = useState<EntryPath>('none');
     const [inputValue, setInputValue] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
@@ -140,7 +139,6 @@ export default function WelcomeScreen() {
         setEntryPath('none');
         setError(null);
         setInputValue('');
-        setPassword('');
     };
 
     const handleExplore = async () => {
@@ -558,9 +556,9 @@ const styles = StyleSheet.create({
         marginTop: 30,
     },
     invitedButton: {
-        marginTop: 25,
+        marginTop: 15, // Reduced from 25 to fit both links on smaller screens
         alignSelf: 'center',
-        padding: 10,
+        padding: 5, // Reduced padding to tighten the hit area vertically
     },
     invitedText: {
         color: THEME.colors.textMuted,
