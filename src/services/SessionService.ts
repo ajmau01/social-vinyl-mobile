@@ -103,9 +103,8 @@ export class SessionService implements ISessionService {
 
     public async archiveSession(sessionId: number): Promise<AsyncResult<void>> {
         try {
-            // Backend has no handler for 'archive-session' (enum exists but unregistered).
-            // 'leave-session' correctly calls LeaveSessionHandler -> delegate.removeSessionParty().
-            await wsService.sendAction('leave-session', { sessionId });
+            // Sends the true 'archive-session' action which sets active=false on the backend.
+            await wsService.sendAction('archive-session', { sessionId });
 
             // Clear local session if we ended our active one
             const store = useSessionStore.getState();

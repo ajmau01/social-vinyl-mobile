@@ -26,7 +26,9 @@ export default function SessionListScreen() {
     const loadSessions = async () => {
         try {
             const list = await sessionService.getSessions();
-            setSessions(list || []);
+            // The backend returns both active and archived sessions to the host.
+            // We only want to display active sessions in this view.
+            setSessions((list || []).filter(s => s.active));
         } catch (error) {
             console.error('Failed to load sessions:', error);
         } finally {
