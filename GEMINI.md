@@ -978,3 +978,17 @@ ALL Milestone 13 features require backend support. Backend team works in paralle
 ---
 
 *For full setup instructions, see: `ObsidianVaults/SocialVinyl-Dev/_Dashboard/Setup-Gemini-Antigravity.md`*
+
+---
+
+## Model Selection Protocol
+Analyze every user request for complexity before taking action. 
+- For **SIMPLE** tasks (e.g., CSS tweaks, small bug fixes, renaming variables, single-file updates), explicitly state: "Ready for FAST mode (Cmd+E)."
+- For **COMPLEX** tasks (e.g., database schema changes, new feature architecture, multi-file refactors), explicitly state: "Recommend PLANNING mode (Cmd+E)."
+Do not proceed with implementation until you have suggested the optimal mode for the task.
+
+## Communication & Response Style
+To optimize for token efficiency and project speed:
+- **Prose Style:** Use a strictly concise, bulleted manner. Eliminate introductory filler ("I understand," "Here is the code," etc.) and concluding summaries.
+- **Code Priority:** Do NOT curtail code. Implementation details must remain rich, full, and production-ready. 
+- **Documentation:** Provide technical explanations only for complex logic or when explicitly asked. Use inline code comments for clarity instead of long-form text blocks.
