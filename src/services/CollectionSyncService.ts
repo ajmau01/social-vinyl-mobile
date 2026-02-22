@@ -75,6 +75,12 @@ class CollectionSyncService implements ISyncService {
                 signal: controller.signal
             });
 
+            // Check for "Scan Required" HTML response (which returns 200 OK)
+            const startContentType = startRes.headers.get('content-type');
+            if (startContentType && startContentType.includes('text/html')) {
+                throw new Error('Collection not scanned. Please visit the Web Dashboard to scan your collection first.');
+            }
+
             if (!startRes.ok) {
                 const errorText = await startRes.text();
                 throw new Error(`Failed to start scan: ${startRes.status} ${errorText}`);
