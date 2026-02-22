@@ -76,6 +76,7 @@ describe('ActiveSessionView', () => {
             sessionName: 'Test Party',
             sessionRole: 'host',
             sessionMode: 'party',
+            sessionStartTime: Date.now(),
             hostUsername: 'hostUser',
             username: 'hostUser',
             joinCode: 'ABCDE',

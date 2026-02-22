@@ -57,9 +57,15 @@ export const ActiveSessionView = () => {
     };
 
     const showMenu = () => {
-        const options = ['Session Info', 'Share Join Code', 'End Session', 'Cancel'];
-        const destructiveButtonIndex = 2;
-        const cancelButtonIndex = 3;
+        const isParty = sessionMode === 'party';
+        const options = ['Session Info'];
+        if (isParty) options.push('Share QR');
+        else options.push('Share Join Code');
+        options.push('End Session');
+        options.push('Cancel');
+
+        const destructiveButtonIndex = options.indexOf('End Session');
+        const cancelButtonIndex = options.indexOf('Cancel');
 
         if (Platform.OS === 'ios') {
             ActionSheetIOS.showActionSheetWithOptions(
@@ -70,11 +76,12 @@ export const ActiveSessionView = () => {
                     title: sessionName || 'Active Session',
                 },
                 (buttonIndex) => {
-                    if (buttonIndex === 0) {
+                    const selected = options[buttonIndex];
+                    if (selected === 'Session Info') {
                         // Info (modal handled elsewhere or future enhancement)
-                    } else if (buttonIndex === 1) {
+                    } else if (selected === 'Share QR' || selected === 'Share Join Code') {
                         handleShare();
-                    } else if (buttonIndex === 2) {
+                    } else if (selected === 'End Session') {
                         handleEndSession();
                     }
                 }
@@ -85,7 +92,7 @@ export const ActiveSessionView = () => {
                 'Choose an action',
                 [
                     { text: 'Session Info', onPress: () => { } },
-                    { text: 'Share Join Code', onPress: handleShare },
+                    { text: isParty ? 'Share QR' : 'Share Join Code', onPress: handleShare },
                     { text: 'End Session', style: 'destructive', onPress: handleEndSession },
                     { text: 'Cancel', style: 'cancel' }
                 ]
@@ -130,6 +137,7 @@ export const ActiveSessionView = () => {
                         )}
                         <Text style={styles.sessionStatusText}>
                             {isBroadcast ? 'On Air' : 'Live'}
+                            {/* TODO: #145 - Implement session duration display using sessionStartTime */}
                         </Text>
                     </View>
                     <Pressable testID="session-menu-button" onPress={showMenu} style={styles.menuButton}>
