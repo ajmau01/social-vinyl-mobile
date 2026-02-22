@@ -14,8 +14,9 @@ export const COPY = {
     SUBTITLE_COLLECTOR: 'Connect your Discogs and host a party.',
     SUBTITLE_EXPLORE: 'Browse public crates and see what\'s spinning.',
 
-    HUB_HOST_TITLE: 'Collector Login',
-    HUB_SOLO_TITLE: 'Browse Collection',
+    HUB_HOST_TITLE: 'Open DJ Booth',
+    HUB_GUEST_TITLE: 'Join the party',
+    HUB_SOLO_TITLE: 'Explore collections',
     HUB_AUTO_LOGGING: 'Welcome back...',
 
     SESSION_NOUN: 'Listening Party',            // Title-case noun — "Start a Listening Party"

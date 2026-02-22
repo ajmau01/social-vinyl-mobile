@@ -55,8 +55,8 @@ export default function WelcomeScreen() {
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
 
-    // Issue #142 V2: Auto-logging loading guard
-    const isAutoLogging = connectionState === 'connected' && !!sessionStoreId && entryPath === 'none';
+    // Issue #142 V2.1: Auto-logging loading guard (includes connecting states to prevent flicker)
+    const isAutoLogging = (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') && !!sessionStoreId && entryPath === 'none';
 
     // Auto-rejoin Family Pass Logic
     useEffect(() => {
@@ -84,6 +84,18 @@ export default function WelcomeScreen() {
             tryAutoRejoin();
         }
     }, [familyPassCode, displayName, entryPath, autoRejoined, sessionService, router]);
+
+    // Issue #142 V2.1: Auto-redirect returning Users/Collectors
+    useEffect(() => {
+        if (CONFIG.IS_E2E) return;
+
+        // Only redirect if we have a session, are connected, and haven't selected a path manually
+        if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected') {
+            if (lastMode === 'collector' || lastMode === 'explore') {
+                router.replace('/(tabs)/collection');
+            }
+        }
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -294,10 +306,8 @@ export default function WelcomeScreen() {
                                         </View>
 
                                         <Text style={styles.title}>Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>
-                                            {COPY.TAGLINE}{"\n"}
-                                            <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
-                                        </Text>
+                                        <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
+                                        <Text style={styles.valueProp}>{COPY.WELCOME_VALUE_PROP}</Text>
 
                                         <View style={styles.personaOptions}>
                                             <TouchableOpacity
@@ -331,6 +341,7 @@ export default function WelcomeScreen() {
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
                                         {entryPath === 'collector' && COPY.HUB_HOST_TITLE}
+                                        {entryPath === 'invited' && COPY.HUB_GUEST_TITLE}
                                         {entryPath === 'explore' && COPY.HUB_SOLO_TITLE}
                                     </Text>
 
@@ -502,15 +513,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: THEME.colors.textDim,
         textAlign: 'center',
-        marginBottom: 10,
+        marginBottom: 5,
         lineHeight: 22,
     },
     valueProp: {
         fontSize: 14,
-        color: THEME.colors.primary,
+        color: THEME.colors.secondary,
         fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+        textAlign: 'center',
+        marginBottom: 40,
     },
     personaOptions: {
         width: '100%',
