@@ -30,5 +30,11 @@ export const COPY = {
     BOOKMARK_VERB: 'Mark it',           // Forward-declared for #149 (Bookmark-to-Buy)
     BOOKMARK_NOUN: 'Want it',           // Forward-declared for #149
     SETLIST_NOUN: 'Setlist',            // Forward-declared for #154 (History & Setlist)
+
+    // Issue #143: Account & Identity Model
+    SIGN_IN: 'Sign In',
+    CREATE_ACCOUNT: 'Create Account',
+    DISPLAY_NAME: 'Display Name',
+    WELCOME_BACK: 'Welcome Back',
 } as const;
 

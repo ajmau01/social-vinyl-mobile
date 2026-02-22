@@ -113,6 +113,8 @@ function RootLayout() {
             <Stack.Screen name="session-list" />
             <Stack.Screen name="create-session" />
             <Stack.Screen name="join-session" />
+            <Stack.Screen name="account-create" />
+            <Stack.Screen name="account-login" />
           </Stack>
         </View>
       </ServiceProvider>

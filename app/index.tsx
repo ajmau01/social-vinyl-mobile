@@ -28,7 +28,7 @@ import { StatusBar } from 'expo-status-bar';
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
 
-type EntryPath = 'none' | 'collector' | 'invited' | 'explore';
+type EntryPath = 'none' | 'invited' | 'explore';
 
 export default function WelcomeScreen() {
     const router = useRouter();
@@ -50,7 +50,6 @@ export default function WelcomeScreen() {
 
     const [entryPath, setEntryPath] = useState<EntryPath>('none');
     const [inputValue, setInputValue] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
@@ -140,7 +139,6 @@ export default function WelcomeScreen() {
         setEntryPath('none');
         setError(null);
         setInputValue('');
-        setPassword('');
     };
 
     const handleExplore = async () => {
@@ -218,67 +216,7 @@ export default function WelcomeScreen() {
             });
     };
 
-    const handleCollectorLogin = async () => {
-        const userId = inputValue.trim();
-        if (!validateUsername(userId) || !password.trim()) {
-            setError('Enter a valid username and password');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-        try {
-            const result = await wsService.login(userId, password);
-            if (result.success) {
-                const { data } = result;
-                const userId = data.userId || inputValue.trim();
-                const store = useSessionStore.getState();
-
-                store.setAuthToken(data.token);
-                store.setUsername(userId);
-                store.setLastMode('collector');
-                if (data.sessionId) {
-                    await store.setSessionId(String(data.sessionId));
-                }
-                if (data.sessionSecret) {
-                    await store.setSessionSecret(data.sessionSecret);
-                }
-                if (data.joinCode) {
-                    store.setJoinCode(data.joinCode);
-                }
-                if (data.sessionName) {
-                    store.setSessionName(data.sessionName);
-                }
-                if (data.hostUsername) {
-                    store.setHostUsername(data.hostUsername);
-                }
-                if (data.isPermanent !== undefined) {
-                    store.setIsPermanent(data.isPermanent);
-                }
-                store.setSessionRole('host');
-
-                useSessionStore.getState().setSyncStatus('syncing');
-                router.replace('/(tabs)/collection');
-
-                useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
-
-                syncService.syncCollection(userId, {
-                    onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
-                    onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
-                }).then(syncResult => {
-                    if (!syncResult.success) {
-                        console.error('[Login] Auto-sync failed:', syncResult.error);
-                    }
-                });
-            } else {
-                setError(result.error.message || 'Login failed');
-            }
-        } catch (e: any) {
-            setError(e.message || 'Login failed');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // handleCollectorLogin has been moved to account-login.tsx
 
     return (
         <View style={styles.container}>
@@ -314,7 +252,7 @@ export default function WelcomeScreen() {
 
                                     {CONFIG.IS_E2E ? (
                                         <View testID="e2e-mode-select" style={styles.hubContent}>
-                                            <TouchableOpacity testID="mode-host" onPress={() => setEntryPath('collector')}>
+                                            <TouchableOpacity testID="mode-host" onPress={() => router.push('/account-login')}>
                                                 <Text>Host</Text>
                                             </TouchableOpacity>
                                             <TouchableOpacity testID="mode-guest" onPress={() => setEntryPath('invited')}>
@@ -332,7 +270,7 @@ export default function WelcomeScreen() {
                                                     style={[styles.btnModern, styles.btnPrimary]}
                                                     onPress={() => {
                                                         setHasInteracted(true);
-                                                        setEntryPath('collector');
+                                                        router.push('/account-login');
                                                     }}
                                                 >
                                                     <View>
@@ -355,18 +293,35 @@ export default function WelcomeScreen() {
                                                     </View>
                                                 </TouchableOpacity>
 
-                                                <TouchableOpacity
-                                                    testID="mode-invited"
-                                                    onPress={() => {
-                                                        setHasInteracted(true);
-                                                        setEntryPath('invited');
-                                                    }}
-                                                    style={styles.invitedButton}
-                                                >
-                                                    <Text style={styles.invitedText}>
-                                                        Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
-                                                    </Text>
-                                                </TouchableOpacity>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 15 }}>
+                                                    <TouchableOpacity
+                                                        testID="mode-invited"
+                                                        onPress={() => {
+                                                            setHasInteracted(true);
+                                                            setEntryPath('invited');
+                                                        }}
+                                                        style={{ padding: 5 }}
+                                                    >
+                                                        <Text style={styles.invitedText}>
+                                                            Have an invite? <Text style={styles.invitedLink}>Join</Text>
+                                                        </Text>
+                                                    </TouchableOpacity>
+
+                                                    <Text style={{ color: THEME.colors.textMuted }}>|</Text>
+
+                                                    <TouchableOpacity
+                                                        testID="mode-create-account"
+                                                        onPress={() => {
+                                                            setHasInteracted(true);
+                                                            router.push('/account-create');
+                                                        }}
+                                                        style={{ padding: 5 }}
+                                                    >
+                                                        <Text style={styles.invitedText}>
+                                                            No account? <Text style={styles.invitedLink}>Sign up</Text>
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
                                         </>
                                     )}
@@ -374,7 +329,6 @@ export default function WelcomeScreen() {
                             ) : (
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
-                                        {entryPath === 'collector' && COPY.HUB_HOST_TITLE}
                                         {entryPath === 'invited' && COPY.HUB_GUEST_TITLE}
                                         {entryPath === 'explore' && COPY.HUB_SOLO_TITLE}
                                     </Text>
@@ -397,22 +351,7 @@ export default function WelcomeScreen() {
                                         />
                                     </View>
 
-                                    {entryPath === 'collector' && (
-                                        <View style={styles.inputGroup}>
-                                            <Text style={styles.label}>Password</Text>
-                                            <TextInput
-                                                testID="login-password"
-                                                style={styles.input}
-                                                value={password}
-                                                onChangeText={setPassword}
-                                                secureTextEntry
-                                                placeholder="Enter password"
-                                                placeholderTextColor={THEME.colors.textMuted}
-                                                autoComplete="off"
-                                                importantForAutofill="no"
-                                            />
-                                        </View>
-                                    )}
+
 
                                     {error && <Text testID="login-error" style={styles.errorMsg}>{error}</Text>}
 
@@ -427,7 +366,6 @@ export default function WelcomeScreen() {
                                             onPress={() => {
                                                 if (entryPath === 'explore') handleExplore();
                                                 if (entryPath === 'invited') handleGuestJoin();
-                                                if (entryPath === 'collector') handleCollectorLogin();
                                             }}
                                             disabled={loading || syncStatus === 'syncing'}
                                         >
@@ -440,7 +378,7 @@ export default function WelcomeScreen() {
                                                 </View>
                                             ) : (
                                                 <Text style={styles.btnText}>
-                                                    {entryPath === 'collector' ? 'Unlock' : entryPath === 'invited' ? 'Join' : 'Browse'}
+                                                    {entryPath === 'invited' ? 'Join' : 'Browse'}
                                                 </Text>
                                             )}
                                         </TouchableOpacity>
@@ -622,13 +560,13 @@ const styles = StyleSheet.create({
         marginTop: 30,
     },
     invitedButton: {
-        marginTop: 25,
+        marginTop: 15, // Reduced from 25 to fit both links on smaller screens
         alignSelf: 'center',
-        padding: 10,
+        padding: 5, // Reduced padding to tighten the hit area vertically
     },
     invitedText: {
         color: THEME.colors.textMuted,
-        fontSize: 16,
+        fontSize: 15,
     },
     invitedLink: {
         color: THEME.colors.primary,
