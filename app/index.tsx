@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     },
     valueProp: {
         fontSize: 14,
-        color: THEME.colors.secondary,
+        color: THEME.colors.textMuted,
         fontWeight: '600',
         textAlign: 'center',
         marginBottom: 40,

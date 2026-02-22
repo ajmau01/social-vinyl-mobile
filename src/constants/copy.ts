@@ -12,12 +12,12 @@ export const COPY = {
     INTENT_SOLO: 'Explore collections',
 
     SUBTITLE_COLLECTOR: 'Connect your Discogs and host a party.',
-    SUBTITLE_EXPLORE: 'Browse public crates and see what\'s spinning.',
+    SUBTITLE_EXPLORE: "Browse public crates and see what's spinning.",
 
-    HUB_HOST_TITLE: 'Open DJ Booth',
-    HUB_GUEST_TITLE: 'Join the party',
-    HUB_SOLO_TITLE: 'Explore collections',
     HUB_AUTO_LOGGING: 'Welcome back...',
+    HUB_HOST_TITLE: 'Collector Login',
+    HUB_GUEST_TITLE: 'Enter Party Code',
+    HUB_SOLO_TITLE: 'Explore collections',
 
     SESSION_NOUN: 'Listening Party',            // Title-case noun — "Start a Listening Party"
     SESSION_NOUN_SENTENCE: 'listening party',   // Sentence-case noun — use mid-sentence
