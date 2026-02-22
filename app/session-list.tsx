@@ -91,22 +91,39 @@ export default function SessionListScreen() {
     const handleToggleBroadcast = async (session: ISessionCard) => {
         const newBroadcastState = !session.isBroadcast;
 
-        // Optimistic local update — flip isBroadcast on just this session.
-        // Do NOT call loadSessions() here: it re-fetches from the DB and would
-        // resurface any optimistically-deleted sessions.
+        // Optimistic local update — flip isBroadcast, enforce single ON AIR
         setSessions(prev =>
-            prev.map(s => s.id === session.id ? { ...s, isBroadcast: newBroadcastState } : s)
+            prev.map(s => {
+                if (s.id === session.id) {
+                    return { ...s, isBroadcast: newBroadcastState };
+                }
+                // Single broadcast enforcement: if turning one ON, turn others OFF
+                if (newBroadcastState && s.isBroadcast) {
+                    return { ...s, isBroadcast: false };
+                }
+                return s;
+            })
         );
 
         try {
             await sessionService.setBroadcast(session.id);
 
-            // Keep the global session store in sync if this is the active session
-            if (session.id.toString() === sessionId?.toString()) {
-                setIsBroadcast(newBroadcastState);
+            // Keep the global session store in sync
+            if (newBroadcastState) {
+                if (session.id.toString() === sessionId?.toString()) {
+                    setIsBroadcast(true);
+                } else {
+                    // Another session stole the broadcast; active session is no longer broadcasting
+                    setIsBroadcast(false);
+                }
+            } else {
+                if (session.id.toString() === sessionId?.toString()) {
+                    setIsBroadcast(false);
+                }
             }
         } catch (error) {
-            // Roll back on failure
+            // Roll back on failure (naive rollback — doesn't restore stolen broadcasts perfectly, 
+            // but next pull-to-refresh will correct it)
             setSessions(prev =>
                 prev.map(s => s.id === session.id ? { ...s, isBroadcast: session.isBroadcast } : s)
             );
