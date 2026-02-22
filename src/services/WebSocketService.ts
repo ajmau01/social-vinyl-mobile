@@ -224,7 +224,12 @@ class WebSocketService implements IWebSocketService {
                             data: {
                                 sessionId: data.sessionId,
                                 token: data.authToken,
-                                userId: data.username
+                                userId: data.username,
+                                sessionSecret: data.sessionSecret,
+                                sessionName: data.name,
+                                joinCode: data.joinCode,
+                                hostUsername: data.hostUsername,
+                                isPermanent: data.isPermanent
                             }
                         });
                     } else if (data.type === 'error') {

@@ -233,16 +233,30 @@ export default function WelcomeScreen() {
             if (result.success) {
                 const { data } = result;
                 const userId = data.userId || inputValue.trim();
+                const store = useSessionStore.getState();
 
-                useSessionStore.getState().setAuthToken(data.token);
-                useSessionStore.getState().setUsername(userId);
-                useSessionStore.getState().setLastMode('collector');
+                store.setAuthToken(data.token);
+                store.setUsername(userId);
+                store.setLastMode('collector');
                 if (data.sessionId) {
-                    await useSessionStore.getState().setSessionId(data.sessionId);
+                    await store.setSessionId(String(data.sessionId));
                 }
                 if (data.sessionSecret) {
-                    await useSessionStore.getState().setSessionSecret(data.sessionSecret);
+                    await store.setSessionSecret(data.sessionSecret);
                 }
+                if (data.joinCode) {
+                    store.setJoinCode(data.joinCode);
+                }
+                if (data.sessionName) {
+                    store.setSessionName(data.sessionName);
+                }
+                if (data.hostUsername) {
+                    store.setHostUsername(data.hostUsername);
+                }
+                if (data.isPermanent !== undefined) {
+                    store.setIsPermanent(data.isPermanent);
+                }
+                store.setSessionRole('host');
 
                 useSessionStore.getState().setSyncStatus('syncing');
                 router.replace('/(tabs)/collection');

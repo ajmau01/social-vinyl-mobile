@@ -180,6 +180,10 @@ export interface LoginResult {
     token: string;
     userId?: string;
     sessionSecret?: string;
+    sessionName?: string;
+    joinCode?: string;
+    hostUsername?: string;
+    isPermanent?: boolean;
 }
 
 export interface SyncResult {
