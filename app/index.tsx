@@ -26,6 +26,7 @@ import { CONFIG } from '@/config';
 import { StatusBar } from 'expo-status-bar';
 
 import { validateUsername, validatePartyCode } from '@/utils/validation';
+import { COPY } from '@/constants/copy';
 
 type PersonaMode = 'none' | 'host' | 'guest' | 'solo';
 
@@ -283,7 +284,7 @@ export default function HubScreen() {
                                         </View>
 
                                         <Text style={styles.title}>Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>The digital companion for physical collections.</Text>
+                                        <Text style={styles.subtitle}>{COPY.TAGLINE}</Text>
 
                                         <View style={styles.personaOptions}>
                                             <TouchableOpacity
@@ -291,7 +292,7 @@ export default function HubScreen() {
                                                 style={[styles.btnModern, styles.btnPrimary]}
                                                 onPress={() => setMode('host')}
                                             >
-                                                <Text style={styles.btnText}>Unlock the DJ Booth</Text>
+                                                <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
                                                 <Text style={styles.btnIcon}>→</Text>
                                             </TouchableOpacity>
 
@@ -300,7 +301,7 @@ export default function HubScreen() {
                                                 style={styles.btnModern}
                                                 onPress={() => setMode('guest')}
                                             >
-                                                <Text style={styles.btnText}>Join a Listening Party</Text>
+                                                <Text style={styles.btnText}>{COPY.INTENT_GUEST}</Text>
                                                 <Text style={styles.btnIcon}>→</Text>
                                             </TouchableOpacity>
 
@@ -309,7 +310,7 @@ export default function HubScreen() {
                                                 style={styles.btnModern}
                                                 onPress={() => setMode('solo')}
                                             >
-                                                <Text style={styles.btnText}>Browse Collection Solo</Text>
+                                                <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
                                                 <Text style={styles.btnIcon}>→</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -319,9 +320,9 @@ export default function HubScreen() {
 
                                 <View style={styles.formContent}>
                                     <Text style={styles.formTitle}>
-                                        {mode === 'host' && 'Host Login'}
-                                        {mode === 'guest' && 'Join Party'}
-                                        {mode === 'solo' && 'Browse Collection'}
+                                        {mode === 'host' && COPY.HUB_HOST_TITLE}
+                                        {mode === 'guest' && COPY.HUB_GUEST_TITLE}
+                                        {mode === 'solo' && COPY.HUB_SOLO_TITLE}
                                     </Text>
 
                                     <View style={styles.inputGroup}>

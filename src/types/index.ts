@@ -163,6 +163,7 @@ export interface SessionJoinedMessage {
     publicUrl: string;
     hostUsername: string;
     isPermanent: boolean;
+    startedAt?: number;
 }
 
 export interface SessionLeftMessage {
@@ -240,6 +241,7 @@ export interface WebSocketMessage {
     isPermanent?: boolean;
     sessions?: SessionCard[];
     username?: string;
+    startedAt?: number;
     // Issue #125: Add actionId and status for ACK correlation
     actionId?: string;
     status?: 'success' | 'error';

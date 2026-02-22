@@ -6,6 +6,15 @@
  * types) are intentionally kept as-is (session, queue, etc.) for code stability.
  */
 export const COPY = {
+    TAGLINE: 'Where record collections come alive.',
+    INTENT_HOST: 'I have a collection',
+    INTENT_GUEST: 'I was invited',
+    INTENT_SOLO: 'Explore collections',
+
+    HUB_HOST_TITLE: 'Collector Login',
+    HUB_GUEST_TITLE: 'Enter Party Code',
+    HUB_SOLO_TITLE: 'Browse Collection',
+
     SESSION_NOUN: 'Listening Party',            // Title-case noun — "Start a Listening Party"
     SESSION_NOUN_SENTENCE: 'listening party',   // Sentence-case noun — use mid-sentence
     SESSION_NOUN_PLURAL: 'Listening Parties',
