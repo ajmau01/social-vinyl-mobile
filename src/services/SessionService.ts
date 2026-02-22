@@ -126,7 +126,10 @@ export class SessionService implements ISessionService {
 
     public async getSessions(): Promise<ISessionCard[]> {
         return new Promise((resolve) => {
+            let timeoutId: ReturnType<typeof setTimeout>;
+
             const listener = (data: any) => {
+                clearTimeout(timeoutId);
                 wsService.removeListener('session-list', listener);
                 resolve(data.sessions || []);
             };
@@ -134,7 +137,7 @@ export class SessionService implements ISessionService {
             wsService.addListener('session-list', listener);
 
             // Set a fallback timeout in case the server never responds
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 wsService.removeListener('session-list', listener);
                 resolve([]);
             }, 5000);

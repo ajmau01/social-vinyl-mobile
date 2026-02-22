@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
@@ -58,30 +58,33 @@ export default function SessionListScreen() {
 
     const handleEndSession = async (session: ISessionCard) => {
         // Optimistic removal: update UI immediately so the session disappears on tap.
-        // NOTE: Backend 'leave-session' removes WS party membership but does NOT delete
-        // the session record from the DB. ArchiveSessionHandler is tracked as a backend
-        // issue. For now we remove locally and avoid re-fetching (which would resurface it).
         setSessions(prev => prev.filter(s => s.id !== session.id));
 
         try {
-            await sessionService.archiveSession(session.id);
-            // Clear local store if this was the user's active session
-            if (session.id.toString() === sessionId?.toString()) {
-                setSessionId(null);
-                setSessionSecret(null);
-                setJoinCode(null);
-                setSessionRole(null);
-                setIsPermanent(false);
-                setIsBroadcast(false);
-                setSessionName(null);
-                setHostUsername(null);
+            const result = await sessionService.archiveSession(session.id);
+            if (!result.success) {
+                // Restore it on failure and alert the user
+                Alert.alert('Error', 'Failed to delete the party. Please try again.');
+                loadSessions(); // Re-fetch to restore the session in the list
+            } else {
+                // Clear local store if this was the user's active session AND the archive was successful
+                if (session.id.toString() === sessionId?.toString()) {
+                    setSessionId(null);
+                    setSessionSecret(null);
+                    setJoinCode(null);
+                    setSessionRole(null);
+                    setIsPermanent(false);
+                    setIsBroadcast(false);
+                    setSessionName(null);
+                    setHostUsername(null);
+                }
             }
         } catch (error) {
             // Restore on error so the user knows something went wrong
-            setSessions(prev => [...prev, session]);
+            Alert.alert('Error', 'Failed to delete the party. Please try again.');
+            loadSessions();
             console.error('Failed to end session:', error);
         }
-
     };
 
     const handleShare = (session: ISessionCard) => {
@@ -135,23 +138,17 @@ export default function SessionListScreen() {
 
     return (
         <View style={styles.container}>
-            <Stack.Screen
-                options={{
-                    title: COPY.SESSION_NOUN_PLURAL,
-                    headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                            <Ionicons name="chevron-back" size={24} color={THEME.colors.text} />
-                        </TouchableOpacity>
-                    ),
-                    headerRight: () => (
-                        <TouchableOpacity onPress={loadSessions} style={styles.headerButton}>
-                            <Ionicons name="refresh" size={24} color={THEME.colors.text} />
-                        </TouchableOpacity>
-                    )
-                }}
-            />
+            <View style={[styles.customHeader, { paddingTop: insets.top }]}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+                    <Ionicons name="chevron-back" size={24} color={THEME.colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{COPY.SESSION_NOUN_PLURAL}</Text>
+                <TouchableOpacity onPress={loadSessions} style={styles.headerButton}>
+                    <Ionicons name="refresh" size={24} color={THEME.colors.text} />
+                </TouchableOpacity>
+            </View>
 
-            <View style={[styles.actionRow, { paddingTop: insets.top + 8 }]}>
+            <View style={[styles.actionRow]}>
                 <TouchableOpacity
                     style={[styles.primaryAction, { marginRight: 8 }]}
                     onPress={() => router.push('/create-session')}
@@ -208,8 +205,23 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: THEME.colors.background,
     },
+    customHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingBottom: 12,
+        backgroundColor: THEME.colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: THEME.colors.glassBorder,
+    },
     headerButton: {
         padding: 8,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: THEME.colors.text,
     },
     actionRow: {
         flexDirection: 'row',
