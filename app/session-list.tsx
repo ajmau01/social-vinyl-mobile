@@ -55,10 +55,15 @@ export default function SessionListScreen() {
     };
 
     const handleEndSession = async (session: ISessionCard) => {
-        // Confirm deletion in a real scenario
+        // Optimistic removal: update UI immediately so the session disappears on tap.
+        // NOTE: Backend 'leave-session' removes WS party membership but does NOT delete
+        // the session record from the DB. ArchiveSessionHandler is tracked as a backend
+        // issue. For now we remove locally and avoid re-fetching (which would resurface it).
+        setSessions(prev => prev.filter(s => s.id !== session.id));
+
         try {
             await sessionService.archiveSession(session.id);
-            // Local store cleanup using existing setters
+            // Clear local store if this was the user's active session
             if (session.id.toString() === sessionId?.toString()) {
                 setSessionId(null);
                 setSessionSecret(null);
@@ -69,10 +74,12 @@ export default function SessionListScreen() {
                 setSessionName(null);
                 setHostUsername(null);
             }
-            loadSessions();
         } catch (error) {
+            // Restore on error so the user knows something went wrong
+            setSessions(prev => [...prev, session]);
             console.error('Failed to end session:', error);
         }
+
     };
 
     const handleShare = (session: ISessionCard) => {
