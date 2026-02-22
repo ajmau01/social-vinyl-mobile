@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
@@ -12,6 +13,7 @@ import { COPY } from '@/constants/copy';
 
 export default function SessionListScreen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { sessionService } = useServices();
     const { sessionId, isBroadcast, setSessionId, setSessionSecret, setJoinCode, setSessionRole, setIsPermanent, setIsBroadcast, setSessionName, setHostUsername } = useSessionStore();
 
@@ -95,7 +97,7 @@ export default function SessionListScreen() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
             <Stack.Screen
                 options={{
                     title: COPY.SESSION_NOUN_PLURAL,
