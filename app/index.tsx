@@ -288,31 +288,10 @@ export default function WelcomeScreen() {
                                     <Text style={[styles.subtitle, { marginTop: 20 }]}>{COPY.HUB_AUTO_LOGGING}</Text>
                                 </View>
                             ) : entryPath === 'none' ? (
-                                CONFIG.IS_E2E ? (
-                                    <View style={styles.hubContent}>
-                                        <Text style={styles.title}>Welcome to Social Vinyl</Text>
-                                        <Text style={styles.subtitle}>E2E Test Partition</Text>
-                                        <TouchableOpacity
-                                            testID="mode-host"
-                                            style={[styles.btnModern, styles.btnPrimary]}
-                                            onPress={() => setEntryPath('collector')}
-                                        >
-                                            <Text style={styles.btnText}>Open Collector Login</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            testID="mode-guest"
-                                            style={styles.btnModern}
-                                            onPress={() => setEntryPath('invited')}
-                                        >
-                                            <Text style={styles.btnText}>Join Party</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            testID="mode-solo"
-                                            style={styles.btnModern}
-                                            onPress={() => setEntryPath('explore')}
-                                        >
-                                            <Text style={styles.btnText}>Explore</Text>
-                                        </TouchableOpacity>
+                                isAutoLogging && !hasInteracted ? (
+                                    <View style={styles.loadingContainer}>
+                                        <ActivityIndicator size="large" color={THEME.colors.primary} />
+                                        <Text style={styles.loadingText}>Welcome back...</Text>
                                     </View>
                                 ) : (
                                     <View style={styles.hubContent}>
@@ -355,6 +334,19 @@ export default function WelcomeScreen() {
                                                     <Text style={styles.btnSubtitle}>{COPY.SUBTITLE_EXPLORE}</Text>
                                                 </View>
                                                 <Text style={styles.btnIcon}>→</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                testID="mode-invited"
+                                                onPress={() => {
+                                                    setHasInteracted(true);
+                                                    setEntryPath('invited');
+                                                }}
+                                                style={styles.invitedButton}
+                                            >
+                                                <Text style={styles.invitedText}>
+                                                    Invited to a party? <Text style={styles.invitedLink}>Tap here</Text>
+                                                </Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -609,6 +601,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 10,
         marginTop: 30,
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+        minHeight: 250,
+    },
+    loadingText: {
+        color: THEME.colors.primary,
+        fontSize: 18,
+        fontWeight: '600',
+        marginTop: 20,
+    },
+    invitedButton: {
+        marginTop: 25,
+        alignSelf: 'center',
+        padding: 10,
+    },
+    invitedText: {
+        color: THEME.colors.textMuted,
+        fontSize: 16,
+    },
+    invitedLink: {
+        color: THEME.colors.primary,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
     },
     errorMsg: {
         color: THEME.colors.status.error,
