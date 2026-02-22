@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'rea
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { SessionCodeDisplay } from './SessionCodeDisplay';
+import { COPY } from '@/constants/copy';
 
 interface SessionInfoModalProps {
     visible: boolean;
@@ -32,7 +33,7 @@ export function SessionInfoModal({
         >
             <View style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Session Info</Text>
+                    <Text style={styles.headerTitle}>{`${COPY.SESSION_NOUN} Info`}</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Ionicons name="close-circle" size={28} color={THEME.colors.textDim} />
                     </TouchableOpacity>

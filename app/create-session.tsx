@@ -5,6 +5,7 @@ import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
+import { COPY } from '@/constants/copy';
 
 export default function CreateSessionScreen() {
     const router = useRouter();
@@ -12,7 +13,7 @@ export default function CreateSessionScreen() {
     const { username } = useSessionStore();
 
     // Default session name based on user
-    const [name, setName] = useState(`${username || 'My'} Session`);
+    const [name, setName] = useState(`${username || 'My'}'s ${COPY.SESSION_NOUN}`);
     const [isPermanent, setIsPermanent] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export default function CreateSessionScreen() {
     const handleCreate = async () => {
         const trimmedName = name.trim();
         if (!trimmedName) {
-            setError('Please enter a session name');
+            setError('Please enter a party name');
             return;
         }
 
@@ -37,7 +38,7 @@ export default function CreateSessionScreen() {
                 // Return to bin view on success
                 router.replace('/(tabs)/bin');
             } else {
-                setError('Failed to create session');
+                setError('Failed to create party');
             }
         } catch (err: any) {
             console.error('Create session error:', err);
@@ -55,7 +56,7 @@ export default function CreateSessionScreen() {
         >
             <Stack.Screen
                 options={{
-                    title: 'Create Session',
+                    title: 'Start a Listening Party',
                     headerLeft: () => (
                         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
                             <Ionicons name="close" size={24} color={THEME.colors.text} />
@@ -70,10 +71,10 @@ export default function CreateSessionScreen() {
                 </View>
 
                 <Text style={styles.title}>Start a Party</Text>
-                <Text style={styles.subtitle}>Create a session for friends to join and listen together.</Text>
+                <Text style={styles.subtitle}>Start a {COPY.SESSION_NOUN.toLowerCase()} for friends to join and listen together.</Text>
 
                 <View style={styles.formGroup}>
-                    <Text style={styles.label}>Session Name</Text>
+                    <Text style={styles.label}>Party Name</Text>
                     <TextInput
                         style={styles.input}
                         value={name}
@@ -89,7 +90,7 @@ export default function CreateSessionScreen() {
 
                 <View style={styles.switchGroup}>
                     <View style={styles.switchInfo}>
-                        <Text style={styles.label}>Family Pass (Permanent Session)</Text>
+                        <Text style={styles.label}>Family Pass (Always-on Party)</Text>
                         <Text style={styles.switchDescription}>
                             Permanent sessions don't expire when you leave. Perfect for households or shared spaces.
                         </Text>
@@ -117,7 +118,7 @@ export default function CreateSessionScreen() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.createButtonText}>Create Session</Text>
+                        <Text style={styles.createButtonText}>Start Party</Text>
                     )}
                 </TouchableOpacity>
             </ScrollView>

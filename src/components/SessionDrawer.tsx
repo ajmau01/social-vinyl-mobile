@@ -16,6 +16,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { useRouter } from 'expo-router';
 import { useSyncCollection } from '@/hooks/useSyncCollection';
 import { ActivityIndicator } from 'react-native';
+import { COPY } from '@/constants/copy';
 
 interface SessionDrawerProps {
     isVisible: boolean;
@@ -133,7 +134,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                         <Ionicons name="people-outline" size={20} color="#06b6d4" />
                                     </View>
                                     <View style={styles.optionLabelContainer}>
-                                        <Text style={styles.optionLabel}>{sessionName || 'Active Session'}</Text>
+                                        <Text style={styles.optionLabel}>{sessionName || `Active ${COPY.SESSION_NOUN}`}</Text>
                                         <Text style={styles.optionSublabel}>{isBroadcast ? 'ON AIR' : 'Host'}</Text>
                                     </View>
                                     <Ionicons name="settings-outline" size={18} color={THEME.colors.textMuted} />
@@ -144,7 +145,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                         <Ionicons name="people-outline" size={20} color="#06b6d4" />
                                     </View>
                                     <View style={styles.optionLabelContainer}>
-                                        <Text style={styles.optionLabel}>Manage Sessions</Text>
+                                        <Text style={styles.optionLabel}>Manage {COPY.SESSION_NOUN_PLURAL}</Text>
                                     </View>
                                     <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
                                 </TouchableOpacity>

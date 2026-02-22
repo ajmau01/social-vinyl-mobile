@@ -173,7 +173,7 @@ export default function HubScreen() {
                     useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
                     router.replace('/(tabs)/bin');
                 } else {
-                    setError(result.error.message || 'Failed to join session');
+                    setError(result.error.message || 'Failed to join party');
                 }
             })
             .catch(err => {
