@@ -54,9 +54,19 @@ export default function WelcomeScreen() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [autoRejoined, setAutoRejoined] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
 
-    // Issue #142 V2.1: Auto-logging loading guard (includes connecting states to prevent flicker)
-    const isAutoLogging = (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') && !!sessionStoreId && entryPath === 'none';
+    // Issue #142 V3: Auto-logging loading guard (includes connecting states to prevent flicker)
+    // Now gated by hasInteracted to prevent trapping users who explicitly cancel a manual path.
+    // Also checks for legacy lastMode values to avoid "dead zones" where it spins but never redirects.
+    const isAutoLogging = !hasInteracted &&
+        (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') &&
+        !!sessionStoreId &&
+        entryPath === 'none' &&
+        (
+            (!!familyPassCode && !!displayName) ||
+            ((lastMode as any) === 'collector' || (lastMode as any) === 'explore' || (lastMode as any) === 'host' || (lastMode as any) === 'solo')
+        );
 
     // Auto-rejoin Family Pass Logic
     useEffect(() => {
@@ -90,12 +100,13 @@ export default function WelcomeScreen() {
         if (CONFIG.IS_E2E) return;
 
         // Only redirect if we have a session, are connected, and haven't selected a path manually
-        if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected') {
-            if (lastMode === 'collector' || lastMode === 'explore') {
+        if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
+            const mode = lastMode as any;
+            if (mode === 'collector' || mode === 'explore' || mode === 'host' || mode === 'solo') {
                 router.replace('/(tabs)/collection');
             }
         }
-    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router]);
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -313,7 +324,10 @@ export default function WelcomeScreen() {
                                             <TouchableOpacity
                                                 testID="mode-host"
                                                 style={[styles.btnModern, styles.btnPrimary]}
-                                                onPress={() => setEntryPath('collector')}
+                                                onPress={() => {
+                                                    setHasInteracted(true);
+                                                    setEntryPath('collector');
+                                                }}
                                             >
                                                 <View>
                                                     <Text style={styles.btnText}>{COPY.INTENT_HOST}</Text>
@@ -325,7 +339,10 @@ export default function WelcomeScreen() {
                                             <TouchableOpacity
                                                 testID="mode-solo"
                                                 style={styles.btnModern}
-                                                onPress={() => setEntryPath('explore')}
+                                                onPress={() => {
+                                                    setHasInteracted(true);
+                                                    setEntryPath('explore');
+                                                }}
                                             >
                                                 <View>
                                                     <Text style={styles.btnText}>{COPY.INTENT_SOLO}</Text>
