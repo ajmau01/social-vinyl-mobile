@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
@@ -13,7 +12,6 @@ import { COPY } from '@/constants/copy';
 
 export default function SessionListScreen() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
     const { sessionService } = useServices();
     const { sessionId, isBroadcast, setSessionId, setSessionSecret, setJoinCode, setSessionRole, setIsPermanent, setIsBroadcast, setSessionName, setHostUsername } = useSessionStore();
 
@@ -97,7 +95,7 @@ export default function SessionListScreen() {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <Stack.Screen
                 options={{
                     title: COPY.SESSION_NOUN_PLURAL,
@@ -120,7 +118,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/create-session')}
                 >
                     <Ionicons name="add-circle-outline" size={24} color="white" />
-                    <Text style={styles.primaryActionText}>Start Party</Text>
+                    <Text style={styles.primaryActionText}>Start {COPY.SESSION_NOUN}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -128,7 +126,7 @@ export default function SessionListScreen() {
                     onPress={() => router.push('/join-session')}
                 >
                     <Ionicons name="enter-outline" size={24} color={THEME.colors.primary} />
-                    <Text style={styles.secondaryActionText}>Join Party</Text>
+                    <Text style={styles.secondaryActionText}>Join {COPY.SESSION_NOUN}</Text>
                 </TouchableOpacity>
             </View>
 

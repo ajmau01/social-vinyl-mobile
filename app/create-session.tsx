@@ -71,7 +71,7 @@ export default function CreateSessionScreen() {
                 </View>
 
                 <Text style={styles.title}>Start a Party</Text>
-                <Text style={styles.subtitle}>Start a {COPY.SESSION_NOUN.toLowerCase()} for friends to join and listen together.</Text>
+                <Text style={styles.subtitle}>Start a {COPY.SESSION_NOUN_SENTENCE} for friends to join and listen together.</Text>
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>Party Name</Text>
