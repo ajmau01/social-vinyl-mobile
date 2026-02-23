@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
+import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
 import { normalizeNowPlayingPayload } from '@/utils/normalization';
 import { logger } from '@/utils/logger';
@@ -74,6 +75,13 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                         (payload && typeof payload === 'object' && 'sessionId' in payload
                             ? (payload as { sessionId?: string }).sessionId
                             : undefined);
+
+                    // If this is a NEW session (not a reconnect to the same one), clear stale bin items.
+                    // On reconnect the server will push the current bin state immediately after.
+                    if (sessionId && sessionId !== currentSessionId) {
+                        useListeningBinStore.getState().setBin([]);
+                    }
+
                     if (sessionId) setSessionId(sessionId);
 
                     const secret = message.sessionSecret ||
