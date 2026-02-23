@@ -152,7 +152,7 @@ export class DatabaseService implements IDatabaseService {
             await db.runAsync(
                 'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount, totalDuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?), ?)',
                 release.id,
-                release.instanceId,
+                release.instanceId ?? release.id,
                 release.userId,
                 release.title,
                 release.artist,
@@ -163,11 +163,11 @@ export class DatabaseService implements IDatabaseService {
                 release.label || null,
                 release.format || null,
                 release.tracks || null,
-                release.instanceId,
+                release.instanceId ?? release.id,
                 release.isSaved ? 1 : 0,
-                release.instanceId,
+                release.instanceId ?? release.id,
                 release.isNotable ? 1 : 0,
-                release.instanceId,
+                release.instanceId ?? release.id,
                 release.spinCount || 0,
                 release.totalDuration || 0
             );
@@ -186,7 +186,7 @@ export class DatabaseService implements IDatabaseService {
                     await db.runAsync(
                         'INSERT OR REPLACE INTO releases (id, instanceId, userId, title, artist, thumb_url, added_at, year, genres, label, format, tracks, isSaved, isNotable, spinCount, totalDuration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT isSaved FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT isNotable FROM releases WHERE instanceId = ?), ?), COALESCE((SELECT spinCount FROM releases WHERE instanceId = ?), ?), ?)',
                         release.id,
-                        release.instanceId,
+                        release.instanceId ?? release.id,
                         release.userId,
                         release.title,
                         release.artist,
@@ -197,11 +197,11 @@ export class DatabaseService implements IDatabaseService {
                         release.label || null,
                         release.format || null,
                         release.tracks || null,
-                        release.instanceId,
+                        release.instanceId ?? release.id,
                         release.isSaved ? 1 : 0,
-                        release.instanceId,
+                        release.instanceId ?? release.id,
                         release.isNotable ? 1 : 0,
-                        release.instanceId,
+                        release.instanceId ?? release.id,
                         release.spinCount || 0,
                         release.totalDuration || 0
                     );

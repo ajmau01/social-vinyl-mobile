@@ -13,10 +13,13 @@ interface BinListProps {
     hostUsername: string | null;
     onRemove: (item: BinItemType) => void;
     onDragEnd: (data: BinItemType[]) => void;
+    onPlay?: (item: BinItemType) => void;
     contentContainerStyle?: object;
-    emptyComponent?: React.ReactNode;
-    canDisplayPlay?: boolean; // New: Allow overriding play button display
-    canDisplayDelete?: boolean; // New: Allow overriding delete button display
+    emptyComponent?: React.ReactElement | null;
+    ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
+    ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+    canDisplayPlay?: boolean;
+    canDisplayDelete?: boolean;
 }
 
 export const BinList: React.FC<BinListProps> = ({
@@ -25,8 +28,11 @@ export const BinList: React.FC<BinListProps> = ({
     hostUsername,
     onRemove,
     onDragEnd,
+    onPlay,
     contentContainerStyle,
     emptyComponent,
+    ListHeaderComponent,
+    ListFooterComponent,
     canDisplayPlay = true,
     canDisplayDelete = true
 }) => {
@@ -38,15 +44,15 @@ export const BinList: React.FC<BinListProps> = ({
             onRemove={onRemove}
             canDelete={canDisplayDelete && (item.userId === username || username === hostUsername)}
             canPlay={canDisplayPlay && username === hostUsername}
-            onPlay={(item) => listeningBinSyncService.playAlbum(item)}
+            onPlay={onPlay ? (item) => onPlay(item) : (item) => listeningBinSyncService.playAlbum(item)}
         />
-    ), [onRemove, username, hostUsername, canDisplayPlay, canDisplayDelete]);
+    ), [onRemove, username, hostUsername, canDisplayPlay, canDisplayDelete, onPlay]);
 
     const handleDragEnd = ({ data }: { data: BinItemType[] }) => {
         onDragEnd(data);
     };
 
-    if (items.length === 0 && emptyComponent) {
+    if (items.length === 0 && emptyComponent && !ListHeaderComponent) {
         return <>{emptyComponent}</>;
     }
 
@@ -58,7 +64,10 @@ export const BinList: React.FC<BinListProps> = ({
                 onDragEnd={handleDragEnd}
                 keyExtractor={(item, index) => item.frontendId || `${item.id}-${index}`}
                 renderItem={renderItem}
-                containerStyle={contentContainerStyle}
+                ListHeaderComponent={ListHeaderComponent}
+                ListFooterComponent={ListFooterComponent}
+                ListEmptyComponent={emptyComponent}
+                contentContainerStyle={contentContainerStyle}
                 activationDistance={20}
             />
         </GestureHandlerRootView>

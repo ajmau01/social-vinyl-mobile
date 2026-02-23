@@ -41,7 +41,7 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
             <FlatList
                 data={releases}
                 renderItem={renderItem}
-                keyExtractor={(item) => item.instanceId.toString()}
+                keyExtractor={(item) => (item.instanceId ?? item.id).toString()}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}

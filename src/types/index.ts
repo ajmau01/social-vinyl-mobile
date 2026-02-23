@@ -32,7 +32,7 @@ export interface SyncCallbacks {
 export interface Release {
     id: number;
     releaseId?: number; // Backend alias
-    instanceId: number; // UNIQUE identifier from Discogs
+    instanceId?: number; // UNIQUE identifier from Discogs (or instance PK from backend)
     userId: string; // SCOPING: User ID for isolation
     title: string;
     artist: string;

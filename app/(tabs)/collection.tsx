@@ -124,7 +124,7 @@ export default function CollectionScreen() {
                     onPress: async () => {
                         try {
                             const db = DatabaseService.getInstance();
-                            const newState = await db.toggleNotable(release.instanceId);
+                            const newState = await db.toggleNotable(release.instanceId ?? release.id);
 
                             if (newState) {
                                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -148,7 +148,7 @@ export default function CollectionScreen() {
                     onPress: async () => {
                         try {
                             const db = DatabaseService.getInstance();
-                            const newState = await db.toggleSaved(release.instanceId);
+                            const newState = await db.toggleSaved(release.instanceId ?? release.id);
 
                             if (newState) {
                                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

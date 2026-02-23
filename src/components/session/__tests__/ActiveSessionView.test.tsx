@@ -18,9 +18,17 @@ jest.mock('../../NowPlayingBanner', () => ({
     NowPlayingBanner: () => null,
 }));
 
-jest.mock('../../BinList', () => ({
-    BinList: (props: any) => (props.items.length === 0 ? props.emptyComponent : null),
-}));
+jest.mock('../../BinList', () => {
+    const { View } = require('react-native');
+    return {
+        BinList: (props: any) => (
+            <View>
+                {props.ListHeaderComponent}
+                {props.items.length === 0 ? props.emptyComponent : null}
+            </View>
+        )
+    };
+});
 
 jest.mock('@/services/ListeningBinSyncService', () => ({
     listeningBinSyncService: {
@@ -106,7 +114,7 @@ describe('ActiveSessionView', () => {
         const { getByText, getByTestId } = render(<ActiveSessionView />);
 
         expect(getByText('PARTY')).toBeTruthy();
-        expect(getByText('On Air')).toBeTruthy();
+        expect(getByText(/On Air/i)).toBeTruthy();
         expect(getByTestId('up-next-title')).toBeTruthy();
     });
 

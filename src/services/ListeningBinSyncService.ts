@@ -33,14 +33,16 @@ class ListeningBinSyncService {
      * Handles incoming bin state from server
      */
     private handleBinState({ items, hostUsername }: { items: BinItem[], hostUsername?: string }) {
-        logger.log('[BinSync] Received bin state update. Items:', items?.length || 0);
+        if (!items) {
+            return;
+        }
 
         if (hostUsername) {
             useSessionStore.getState().setHostUsername(hostUsername);
         }
 
-        if (items && items.length > 0) {
-            logger.log('[BinSync] First item:', JSON.stringify(items[0]));
+        if (hostUsername) {
+            useSessionStore.getState().setHostUsername(hostUsername);
         }
 
         const { setBin } = useListeningBinStore.getState();
@@ -50,20 +52,19 @@ class ListeningBinSyncService {
         // Backend currently only sends releaseId, which causes duplicate key errors
         // if the same album is added twice.
         const syncedItems = items.map((item, index) => {
-            // Ensure we have a valid ID for frontend components
-            const releaseId = item.id || item.releaseId || 0;
+            // Priority: instanceId > database id > releaseId
+            const id = item.instanceId || item.id || item.releaseId || 0;
 
             return {
                 ...item,
-                id: releaseId,
+                id: id,
                 status: 'synced' as const,
                 // Issue #126: Map backend coverImage to frontend thumb_url
                 thumb_url: item.coverImage || item.thumb_url || null,
-                // Use instanceId if available, otherwise generate a stable unique key
-                // combining releaseId, timestamp, and index to guarantee uniqueness
+                // Use instanceId as frontendId for stability
                 frontendId: item.instanceId
                     ? item.instanceId.toString()
-                    : `${releaseId}-${item.addedTimestamp}-${index}`
+                    : `${item.releaseId}-${item.addedTimestamp}-${index}`
             };
         });
 
@@ -88,7 +89,12 @@ class ListeningBinSyncService {
         try {
             // 2. Send Action
             // Payload MUST match backend expectations (wrapped in "album" object)
-            const result = await wsService.sendAction<{ success: boolean, releaseId: number, addedTimestamp: number }>('add', {
+            const result = await wsService.sendAction<{
+                success: boolean,
+                releaseId: number,
+                addedTimestamp: number,
+                instanceId?: number
+            }>('add', {
                 album: {
                     releaseId: release.id,
                     masterId: 0, // Not currently available on mobile Release type
@@ -105,7 +111,7 @@ class ListeningBinSyncService {
             });
 
             // 3. Confirm success
-            confirmAdd(tempId, result.releaseId, result.addedTimestamp);
+            confirmAdd(tempId, result.releaseId, result.addedTimestamp, result.instanceId);
             return { success: true, data: undefined };
 
         } catch (error) {
@@ -135,7 +141,8 @@ class ListeningBinSyncService {
         try {
             // 2. Send Action
             await wsService.sendAction('remove', {
-                releaseId: releaseId
+                releaseId: itemToRemove.releaseId,
+                instanceId: itemToRemove.instanceId
             });
 
             // 3. Success (no specific confirm action needed as state is already gone)
@@ -152,13 +159,13 @@ class ListeningBinSyncService {
     /**
      * Reorders albums in the bin
      */
-    public async reorderAlbums(releaseIds: number[]): Promise<Result<void>> {
+    public async reorderAlbums(ids: number[]): Promise<Result<void>> {
         // Optimistic reorder is handled by UI/Store directly before calling this
         // So we just send the new order
 
         try {
             await wsService.sendAction('reorder', {
-                releaseIds
+                instanceIds: ids
             });
             return { success: true, data: undefined };
         } catch (error) {

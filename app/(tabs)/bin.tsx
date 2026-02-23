@@ -10,6 +10,7 @@ import { BinList } from '@/components/BinList';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { SessionInfoModal } from '@/components/session/SessionInfoModal';
 import { ActiveSessionView } from '@/components/session/ActiveSessionView';
+import { NowPlayingHero } from '@/components/NowPlayingHero';
 
 export default function BinScreen() {
     const {
@@ -20,7 +21,8 @@ export default function BinScreen() {
         joinCode,
         sessionRole,
         isBroadcast,
-        isPermanent
+        isPermanent,
+        nowPlaying
     } = useSessionStore(useShallow(state => ({
         username: state.username,
         hostUsername: state.hostUsername,
@@ -29,7 +31,8 @@ export default function BinScreen() {
         joinCode: state.joinCode,
         sessionRole: state.sessionRole,
         isBroadcast: state.isBroadcast,
-        isPermanent: state.isPermanent
+        isPermanent: state.isPermanent,
+        nowPlaying: state.nowPlaying
     })));
     const { items, setBin } = useListeningBinStore();
     const [infoVisible, setInfoVisible] = React.useState(false);
@@ -120,6 +123,13 @@ export default function BinScreen() {
                     onDragEnd={onDragEnd}
                     contentContainerStyle={styles.listContent}
                     emptyComponent={emptyComponent}
+                    ListHeaderComponent={
+                        sessionId ? (
+                            <NowPlayingHero
+                                nowPlaying={nowPlaying}
+                            />
+                        ) : null
+                    }
                 />
             </SafeAreaView>
 

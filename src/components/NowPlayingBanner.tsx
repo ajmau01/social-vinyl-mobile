@@ -24,35 +24,22 @@ import { logger } from '@/utils/logger';
 import { ProgressRing } from './ProgressRing';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
-export interface NowPlayingBannerProps {
-    variant?: 'compact' | 'full';
-}
-
-export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'compact' }) => {
+export const NowPlayingBanner: React.FC = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
     const { username, hostUsername } = useSessionStore();
-    const { items: binItems } = useListeningBinStore();
     const isHost = !!username && username === hostUsername;
 
-    // Fix Issue #126: Move shared values and styles to top level to avoid conditional hook errors
     const heartScale = useSharedValue(1);
 
     const heartStyle = useAnimatedStyle(() => ({
         transform: [{ scale: heartScale.value }]
     }));
 
-    const progress = useMemo(() => {
-        if (!nowPlaying?.duration || !nowPlaying?.position) return 0;
-        return Math.min(nowPlaying.position / nowPlaying.duration, 1);
-    }, [nowPlaying?.position, nowPlaying?.duration]);
-
     const handleLike = async () => {
         if (!nowPlaying) return;
 
-        // Haptic feedback
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-        // Animate heart
         heartScale.value = withSequence(
             withTiming(1.4, { duration: 100 }),
             withTiming(1, { duration: 100 })
@@ -63,15 +50,12 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
 
     const isSpinning = useMemo(() => {
         if (!nowPlaying?.position || !nowPlaying?.duration) return false;
-        // Consider it spinning if we have a position and it's within the first 99% of the track
-        // (to avoid showing "Stop" for a track that just finished and is about to clear)
         return nowPlaying.position > 0 && nowPlaying.position < (nowPlaying.duration * 0.99);
     }, [nowPlaying?.position, nowPlaying?.duration]);
 
     const handleStop = async () => {
         if (!isHost) return;
 
-        // Haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         try {
@@ -81,111 +65,7 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
         }
     };
 
-    const handleMainAction = async () => {
-        if (!isHost) return;
-
-        if (isSpinning) {
-            await handleStop();
-            return;
-        }
-
-        // If something is staged (Now Playing but not spinning), play it
-        if (nowPlaying) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            await listeningBinSyncService.playAlbum(nowPlaying);
-            return;
-        }
-
-        // Otherwise play the next item in the bin
-        if (binItems.length > 0) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            await listeningBinSyncService.playAlbum(binItems[0]);
-        }
-    };
-
-    if (variant === 'compact' && !nowPlaying && !isConnecting && !isConnected) return null;
-
-    if (variant === 'full') {
-        const hasItems = binItems.length > 0;
-        const canPlay = !!nowPlaying || hasItems;
-
-        return (
-            <View style={styles.fullContainer}>
-                <View style={styles.fullArtworkContainer}>
-                    {/* Ring size matches style + stroke (200 + 12 = 212) */}
-                    <View style={styles.fullRingWrapper}>
-                        <ProgressRing
-                            size={212}
-                            strokeWidth={6}
-                            position={nowPlaying?.position || 0}
-                            duration={nowPlaying?.duration || 0}
-                            playedAt={nowPlaying?.playedAt}
-                            color={THEME.colors.primary}
-                        />
-                    </View>
-                    <View style={styles.fullArtworkWrapper}>
-                        {nowPlaying?.albumArt ? (
-                            <Image
-                                source={{ uri: nowPlaying.albumArt }}
-                                style={styles.fullArtworkImage}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={styles.fullArtworkPlaceholder}>
-                                <Ionicons name="disc-outline" size={100} color={THEME.colors.textMuted} />
-                            </View>
-                        )}
-                    </View>
-                </View>
-
-                <View style={styles.fullControls}>
-                    <TouchableOpacity
-                        onPress={handleMainAction}
-                        disabled={!canPlay && !isSpinning}
-                        style={[styles.fullPlayButton, (!canPlay && !isSpinning) && styles.playButtonDisabled]}
-                    >
-                        <Ionicons
-                            name={isSpinning ? "stop-circle" : "play-circle"}
-                            size={80}
-                            color={isSpinning ? THEME.colors.textDim : THEME.colors.primary}
-                        />
-                    </TouchableOpacity>
-
-                    {hasItems && (
-                        <TouchableOpacity
-                            onPress={async () => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                                await listeningBinSyncService.playAlbum(binItems[0]);
-                            }}
-                            style={styles.fullSkipButton}
-                        >
-                            <View style={styles.skipIconWrapper}>
-                                <Ionicons name="play-skip-forward" size={32} color={THEME.colors.textDim} />
-                            </View>
-                            <Text style={styles.skipLabel}>Next</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                <View style={styles.fullInfo}>
-                    <Text style={styles.fullTrack} numberOfLines={2}>
-                        {nowPlaying?.track || (hasItems ? 'Staging Next Album' : 'Waiting for album...')}
-                    </Text>
-                    <Text style={styles.fullArtist} numberOfLines={1}>
-                        {nowPlaying?.artist || (hasItems ? 'Tap to drop the needle' : 'Add to your bin')}
-                    </Text>
-                </View>
-
-                {nowPlaying && (
-                    <Text style={styles.dropNeedleHint}>
-                        {isSpinning
-                            ? "Now spinning — tap to stop"
-                            : "Ready to play — tap when you drop the needle"}
-                    </Text>
-                )}
-            </View>
-        );
-    }
+    if (!nowPlaying && !isConnecting && !isConnected) return null;
 
     return (
         <LinearGradient
@@ -321,7 +201,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: THEME.radius.lg,
         borderTopWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        paddingBottom: 4, // Leave space for home indicator on some LPs
+        paddingBottom: 4,
     },
     container: {
         paddingVertical: 12,
@@ -341,9 +221,9 @@ const styles = StyleSheet.create({
     },
     artworkWrapper: {
         position: 'absolute',
-        width: 34,
-        height: 34,
-        borderRadius: 17, // Circular
+        width: 32,
+        height: 32,
+        borderRadius: 4, // Square with rounded corners
         overflow: 'hidden',
         backgroundColor: THEME.colors.surfaceLight,
     },
@@ -427,102 +307,5 @@ const styles = StyleSheet.create({
     },
     statusDisconnected: {
         backgroundColor: THEME.colors.textMuted,
-    },
-
-    // --- Full Variant Styles (Issue #146) ---
-    fullContainer: {
-        width: '100%',
-        alignItems: 'center',
-        paddingVertical: THEME.spacing.xl,
-        gap: THEME.spacing.lg,
-    },
-    fullArtworkContainer: {
-        position: 'relative',
-        width: 212,
-        height: 212,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    fullRingWrapper: {
-        position: 'absolute',
-        width: 212,
-        height: 212,
-    },
-    fullArtworkWrapper: {
-        width: 200,
-        height: 200,
-        borderRadius: 100, // Circular platter look
-        overflow: 'hidden',
-        backgroundColor: THEME.colors.surfaceLight,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
-        elevation: 10,
-    },
-    fullArtworkImage: {
-        width: '100%',
-        height: '100%',
-    },
-    fullArtworkPlaceholder: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: THEME.colors.surfaceLight,
-    },
-    fullControls: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: THEME.spacing.xl,
-        width: '100%',
-    },
-    fullPlayButton: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    playButtonDisabled: {
-        opacity: 0.3,
-    },
-    fullSkipButton: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    skipIconWrapper: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
-    },
-    skipLabel: {
-        color: THEME.colors.textDim,
-        fontSize: 10,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    fullInfo: {
-        alignItems: 'center',
-        paddingHorizontal: THEME.spacing.xl,
-    },
-    fullTrack: {
-        color: THEME.colors.white,
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 4,
-    },
-    fullArtist: {
-        color: THEME.colors.textDim,
-        fontSize: 18,
-        textAlign: 'center',
-    },
-    dropNeedleHint: {
-        color: THEME.colors.textMuted,
-        fontSize: 12,
-        fontStyle: 'italic',
-        marginTop: -THEME.spacing.sm,
     },
 });

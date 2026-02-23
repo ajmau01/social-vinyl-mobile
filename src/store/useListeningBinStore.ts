@@ -15,7 +15,7 @@ interface ListeningBinState {
     // Issue #126: Optimistic Updates & Sync
     addAlbumOptimistic: (release: Release, userId: string, tempId: string) => void;
     removeAlbumOptimistic: (releaseId: number, userId: string) => void;
-    confirmAdd: (tempId: string, realId: number, timestamp: number) => void;
+    confirmAdd: (tempId: string, realId: number, timestamp: number, instanceId?: number) => void;
     revertAdd: (tempId: string) => void;
     confirmRemove: (releaseId: number) => void;
     revertRemove: (release: Release, userId: string, timestamp: number) => void;
@@ -85,11 +85,19 @@ export const useListeningBinStore = create<ListeningBinState>()(
             }));
         },
 
-        confirmAdd: (tempId, realId, timestamp) => {
+        confirmAdd: (tempId, realId, timestamp, instanceId) => {
             set((state) => ({
                 items: state.items.map(item =>
                     item.tempId === tempId
-                        ? { ...item, status: 'synced', id: realId, addedTimestamp: timestamp, tempId: undefined }
+                        ? {
+                            ...item,
+                            status: 'synced',
+                            id: instanceId || realId,
+                            releaseId: realId,
+                            instanceId: instanceId,
+                            addedTimestamp: timestamp,
+                            tempId: undefined
+                        }
                         : item
                 )
             }));

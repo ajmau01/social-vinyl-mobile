@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export default function TabLayout() {
+    const pathname = usePathname();
     const insets = useSafeAreaInsets();
     // Add extra padding for bottom safe area, or default to 10 if none (non-X iPhones/Android)
     const bottomPadding = Math.max(insets.bottom, 10);
@@ -65,8 +66,8 @@ export default function TabLayout() {
             </Tabs>
 
             {/* Now Playing Banner - sits above tab bar */}
-            {/* Visible to all roles across all tabs in a session */}
-            {sessionId && (
+            {/* Suppress on the Bin tab for Host because BinScreen renders ActiveSessionView (Command View) */}
+            {sessionId && !(sessionRole === 'host' && pathname === '/bin') && (
                 <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
                     <NowPlayingBanner />
                 </View>
