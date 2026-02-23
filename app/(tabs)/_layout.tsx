@@ -65,8 +65,8 @@ export default function TabLayout() {
             </Tabs>
 
             {/* Now Playing Banner - sits above tab bar */}
-            {/* Hide if host is in ActiveSessionView (Command View) */}
-            {!(sessionRole === 'host' && sessionId) && (
+            {/* Visible to all roles across all tabs in a session */}
+            {sessionId && (
                 <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
                     <NowPlayingBanner />
                 </View>

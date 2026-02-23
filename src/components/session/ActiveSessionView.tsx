@@ -169,6 +169,7 @@ export const ActiveSessionView = () => {
                         hostUsername={hostUsername}
                         onRemove={handleRemove}
                         onDragEnd={onDragEnd}
+                        canDisplayPlay={false}
                         contentContainerStyle={styles.binListContent}
                         emptyComponent={emptyComponent}
                     />

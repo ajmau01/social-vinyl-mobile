@@ -15,6 +15,8 @@ interface BinListProps {
     onDragEnd: (data: BinItemType[]) => void;
     contentContainerStyle?: object;
     emptyComponent?: React.ReactNode;
+    canDisplayPlay?: boolean; // New: Allow overriding play button display
+    canDisplayDelete?: boolean; // New: Allow overriding delete button display
 }
 
 export const BinList: React.FC<BinListProps> = ({
@@ -24,7 +26,9 @@ export const BinList: React.FC<BinListProps> = ({
     onRemove,
     onDragEnd,
     contentContainerStyle,
-    emptyComponent
+    emptyComponent,
+    canDisplayPlay = true,
+    canDisplayDelete = true
 }) => {
     const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<BinItemType>) => (
         <BinItem
@@ -32,11 +36,11 @@ export const BinList: React.FC<BinListProps> = ({
             isActive={isActive}
             drag={drag}
             onRemove={onRemove}
-            canDelete={item.userId === username || username === hostUsername}
-            canPlay={username === hostUsername}
+            canDelete={canDisplayDelete && (item.userId === username || username === hostUsername)}
+            canPlay={canDisplayPlay && username === hostUsername}
             onPlay={(item) => listeningBinSyncService.playAlbum(item)}
         />
-    ), [onRemove, username, hostUsername]);
+    ), [onRemove, username, hostUsername, canDisplayPlay, canDisplayDelete]);
 
     const handleDragEnd = ({ data }: { data: BinItemType[] }) => {
         onDragEnd(data);
