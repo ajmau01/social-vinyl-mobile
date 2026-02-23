@@ -46,6 +46,7 @@ export default function AccountLoginScreen() {
                 if (data.isPermanent !== undefined) store.setIsPermanent(data.isPermanent);
 
                 store.setSessionRole('host');
+                store.setAvatarUrl(null); // Clear any stale voyeur avatar immediately
                 useSessionStore.getState().setSyncStatus('syncing');
                 useListeningBinStore.getState().clearBin();
 
@@ -55,7 +56,11 @@ export default function AccountLoginScreen() {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
                     onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
                 }).then(syncResult => {
-                    if (!syncResult.success) {
+                    if (syncResult.success) {
+                        if (syncResult.data.avatarUrl) {
+                            useSessionStore.getState().setAvatarUrl(syncResult.data.avatarUrl);
+                        }
+                    } else {
                         console.error('[Login] Auto-sync failed:', syncResult.error);
                     }
                 });
@@ -102,6 +107,7 @@ export default function AccountLoginScreen() {
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry
+                                autoCapitalize="none"
                                 placeholder="Enter password"
                                 placeholderTextColor={THEME.colors.textMuted}
                             />
@@ -191,7 +197,7 @@ const styles = StyleSheet.create({
     },
     actionButtons: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
         gap: 12,
         marginTop: 24,
     },
