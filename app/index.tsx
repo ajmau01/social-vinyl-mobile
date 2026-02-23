@@ -141,9 +141,10 @@ export default function WelcomeScreen() {
 
     // Issue #146: Active Session Gate
     // If we are a host and have an active session, take over the screen.
-    // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent 
+    // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent
     // "Cannot find single active touch" errors by avoiding unmount/remount of the active view.
-    const isSessionActive = !!sessionStoreId && sessionRole === 'host' &&
+    // authToken guard: prevents the gate from firing if host credentials were cleared (e.g. voyeur mode).
+    const isSessionActive = !!sessionStoreId && sessionRole === 'host' && !!authToken &&
         (connectionState === 'connected' || connectionState === 'reconnecting');
 
     if (isSessionActive) {
@@ -173,6 +174,8 @@ export default function WelcomeScreen() {
             if (result.success) {
                 const store = useSessionStore.getState();
                 store.resetSession(); // Ensure no previous host/guest state bleeds in
+                await store.setAuthToken(null); // Clear host auth token; must await so store updates before WS reconnects
+                wsService.disconnect(); // Close old host WS connection before reconnecting as voyeur
                 store.setUsername(userId);
                 store.setLastMode('explore');
                 store.setSessionRole('voyeur'); // Explicitly set voyeur role
@@ -571,6 +574,7 @@ const styles = StyleSheet.create({
     },
     authActions: {
         flexDirection: 'row',
+        justifyContent: 'center',
         gap: 10,
         marginTop: 30,
     },
