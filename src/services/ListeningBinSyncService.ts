@@ -87,10 +87,21 @@ class ListeningBinSyncService {
 
         try {
             // 2. Send Action
-            // Payload should match what backend expects for 'add' action
+            // Payload MUST match backend expectations (wrapped in "album" object)
             const result = await wsService.sendAction<{ success: boolean, releaseId: number, addedTimestamp: number }>('add', {
-                releaseId: release.id,
-                instanceId: release.instanceId
+                album: {
+                    releaseId: release.id,
+                    masterId: 0, // Not currently available on mobile Release type
+                    title: release.title,
+                    artist: release.artist,
+                    year: release.year || '',
+                    format: release.format || '',
+                    label: release.label || '',
+                    coverImage: release.thumb_url || '',
+                    totalDuration: release.totalDuration || 0,
+                },
+                clientUUID: tempId,
+                displayName: userId
             });
 
             // 3. Confirm success
@@ -227,13 +238,12 @@ class ListeningBinSyncService {
         try {
             await wsService.sendAction('play-album', {
                 album: {
-                    releaseId: releaseId,
+                    releaseId: Number(releaseId),
                     title: album.title,
                     artist: album.artist,
                     coverImage: album.thumb_url || album.coverImage,
-                    year: album.year,
+                    year: String(album.year || ''),
                     totalDuration: album.totalDuration || 0
-                    // Add other fields as needed by backend Album.fromJson
                 }
             });
             return { success: true, data: undefined };

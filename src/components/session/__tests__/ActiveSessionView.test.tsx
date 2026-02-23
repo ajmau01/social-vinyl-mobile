@@ -7,6 +7,21 @@ import { useListeningBinStore } from '@/store/useListeningBinStore';
 // Comprehensive mocks
 jest.mock('@/store/useSessionStore');
 jest.mock('@/store/useListeningBinStore');
+jest.mock('@/hooks/useWebSocket', () => ({
+    useWebSocket: jest.fn(() => ({
+        isConnected: true,
+        connectionState: 'connected',
+    })),
+}));
+
+jest.mock('../../NowPlayingBanner', () => ({
+    NowPlayingBanner: () => null,
+}));
+
+jest.mock('../../BinList', () => ({
+    BinList: (props: any) => (props.items.length === 0 ? props.emptyComponent : null),
+}));
+
 jest.mock('@/services/ListeningBinSyncService', () => ({
     listeningBinSyncService: {
         endSession: jest.fn(),

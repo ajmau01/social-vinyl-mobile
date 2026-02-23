@@ -84,7 +84,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                     if (name) store.setSessionName(name);
                     if (code) store.setJoinCode(code);
                     if (host) store.setHostUsername(host);
-                    if (perm !== undefined) store.setIsPermanent(perm);
+                    if (perm !== undefined) {
+                        store.setIsPermanent(perm);
+                        // Issue #146: Derive and set sessionMode
+                        store.setSessionMode(perm ? 'live' : 'party');
+                    }
 
                     // Update role dynamically
                     if (host && store.username && host.toLowerCase() === store.username.toLowerCase()) {
@@ -172,7 +176,11 @@ export const useWebSocket = (): UseWebSocketResult => {
                             store.setSessionRole('guest');
                         }
                     }
-                    if (rawState.isPermanent !== undefined) store.setIsPermanent(rawState.isPermanent);
+                    if (rawState.isPermanent !== undefined) {
+                        store.setIsPermanent(rawState.isPermanent);
+                        // Issue #146: Update sessionMode from state
+                        store.setSessionMode(rawState.isPermanent ? 'live' : 'party');
+                    }
 
                     // Issue #154: Sync full history from state payload
                     if (rawState.history && Array.isArray(rawState.history)) {

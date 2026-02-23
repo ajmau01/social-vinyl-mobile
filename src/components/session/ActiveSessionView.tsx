@@ -5,6 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useShallow } from 'zustand/shallow';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
+import { logger } from '@/utils/logger';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { NowPlayingBanner } from '../NowPlayingBanner';
@@ -59,15 +60,10 @@ export const ActiveSessionView = () => {
     };
 
     const showMenu = () => {
-        const isParty = sessionMode === 'party';
-        const options = ['Session Info'];
-        if (isParty) options.push('Share QR');
-        else options.push('Share Join Code');
-        options.push('End Session');
-        options.push('Cancel');
+        const options = ['Session Info', 'Share Join Code', 'Share QR Code', 'End Session', 'Cancel'];
 
-        const destructiveButtonIndex = options.indexOf('End Session');
-        const cancelButtonIndex = options.indexOf('Cancel');
+        const destructiveButtonIndex = 3;
+        const cancelButtonIndex = 4;
 
         if (Platform.OS === 'ios') {
             ActionSheetIOS.showActionSheetWithOptions(
@@ -78,12 +74,13 @@ export const ActiveSessionView = () => {
                     title: sessionName || 'Active Session',
                 },
                 (buttonIndex) => {
-                    const selected = options[buttonIndex];
-                    if (selected === 'Session Info') {
-                        // Info (modal handled elsewhere or future enhancement)
-                    } else if (selected === 'Share QR' || selected === 'Share Join Code') {
-                        handleShare();
-                    } else if (selected === 'End Session') {
+                    if (buttonIndex === 0) {
+                        Alert.alert('Session Info', `Session ID: ${sessionId}\nHost: ${hostUsername}\nMode: ${sessionMode}`);
+                    } else if (buttonIndex === 1) {
+                        handleShare(); // Shares Join Code
+                    } else if (buttonIndex === 2) {
+                        handleShare(); // Future: Share QR specifically
+                    } else if (buttonIndex === 3) {
                         handleEndSession();
                     }
                 }
@@ -93,8 +90,9 @@ export const ActiveSessionView = () => {
                 sessionName || 'Active Session',
                 'Choose an action',
                 [
-                    { text: 'Session Info', onPress: () => { } },
-                    { text: isParty ? 'Share QR' : 'Share Join Code', onPress: handleShare },
+                    { text: 'Session Info', onPress: () => { Alert.alert('Session Info', `Session ID: ${sessionId}\nHost: ${hostUsername}\nMode: ${sessionMode}`); } },
+                    { text: 'Share Join Code', onPress: handleShare },
+                    { text: 'Share QR Code', onPress: handleShare },
                     { text: 'End Session', style: 'destructive', onPress: handleEndSession },
                     { text: 'Cancel', style: 'cancel' }
                 ]
