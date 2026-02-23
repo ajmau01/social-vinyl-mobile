@@ -41,10 +41,6 @@ class ListeningBinSyncService {
             useSessionStore.getState().setHostUsername(hostUsername);
         }
 
-        if (hostUsername) {
-            useSessionStore.getState().setHostUsername(hostUsername);
-        }
-
         const { setBin } = useListeningBinStore.getState();
 
         // Map backend items to frontend structure
@@ -59,6 +55,11 @@ class ListeningBinSyncService {
                 ...item,
                 id: id,
                 status: 'synced' as const,
+                // Map backend requestedBy to userId so isInBin works correctly
+                userId: item.userId || item.requestedBy || (() => {
+                    logger.warn('[BinSync] Item missing userId and requestedBy — bin ownership checks may fail', item.releaseId);
+                    return '';
+                })(),
                 // Issue #126: Map backend coverImage to frontend thumb_url
                 thumb_url: item.coverImage || item.thumb_url || null,
                 // Use instanceId as frontendId for stability
@@ -131,8 +132,12 @@ class ListeningBinSyncService {
 
         if (!userId) return { success: false, error: new Error('User not logged in') };
 
-        // Output for revert if needed
-        const itemToRemove = items.find(i => i.id === releaseId && i.userId === userId);
+        // Find item by id (works for both Discogs releaseId and instanceId after confirmAdd).
+        // Note: callers should pass item.id, not the Discogs release ID, since after
+        // confirmAdd item.id is set to instanceId.
+        const itemToRemove = items.find(i =>
+            (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+        );
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
         // 1. Optimistic Update
@@ -239,13 +244,18 @@ class ListeningBinSyncService {
         if (userId !== hostUsername) return { success: false, error: new Error('Only the host can play albums') };
 
         // Ensure we have a valid ID
-        const releaseId = album.id || album.releaseId;
+        // IMPORTANT: Prefer album.releaseId (Discogs ID) over album.id.
+        // After confirmAdd, album.id is set to instanceId (a DB row ID like 1601),
+        // not the Discogs release ID (like 9173990). Using album.id first would
+        // cause the server to fail to find and remove the item from the queue.
+        const releaseId = album.releaseId || album.id;
         if (!releaseId) return { success: false, error: new Error('Invalid album ID') };
 
         try {
             await wsService.sendAction('play-album', {
                 album: {
                     releaseId: Number(releaseId),
+                    instanceId: album.instanceId || undefined,
                     title: album.title,
                     artist: album.artist,
                     coverImage: album.thumb_url || album.coverImage,

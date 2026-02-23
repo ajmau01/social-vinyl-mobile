@@ -43,7 +43,9 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         removeItem: (releaseId, userId) => {
             set((state) => ({
-                items: state.items.filter(item => !(item.id === releaseId && item.userId === userId)),
+                items: state.items.filter(item =>
+                    !((item.id === releaseId || item.releaseId === releaseId) && item.userId === userId)
+                ),
             }));
         },
 
@@ -58,7 +60,10 @@ export const useListeningBinStore = create<ListeningBinState>()(
         },
 
         isInBin: (releaseId, userId) => {
-            return get().items.some(item => item.id === releaseId && item.userId === userId);
+            return get().items.some(item =>
+                (item.id === releaseId || item.releaseId === releaseId) &&
+                (item.userId === userId || item.requestedBy === userId)
+            );
         },
 
         // Issue #126: Implementation
@@ -81,7 +86,9 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         removeAlbumOptimistic: (releaseId, userId) => {
             set((state) => ({
-                items: state.items.filter(item => !(item.id === releaseId && item.userId === userId))
+                items: state.items.filter(item =>
+                    !((item.id === releaseId || item.releaseId === releaseId) && item.userId === userId)
+                )
             }));
         },
 
