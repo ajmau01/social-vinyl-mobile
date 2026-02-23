@@ -36,7 +36,7 @@ export const useDailySpin = (username?: string | null): UseDailySpinResult => {
             } else {
                 // If error or no data, just show empty
                 if (!result.success && result.error) {
-                    logger.error('[useDailySpin] Error fetching history:', result.error);
+                    logger.warn('[useDailySpin] Error fetching history:', result.error);
                 }
                 setHistorySections([]);
             }

@@ -211,8 +211,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     }
                     if (rawState.isPermanent !== undefined) {
                         store.setIsPermanent(rawState.isPermanent);
-                        // Issue #146: Update sessionMode from state
-                        store.setSessionMode(rawState.isPermanent ? 'live' : 'party');
+                        // sessionMode is mobile-only — set by SessionService.createSession(), never from backend state (#167)
                     }
 
                     // Issue #154: Sync full history from state payload
