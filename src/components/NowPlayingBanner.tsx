@@ -100,6 +100,14 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
                     )}
                 </View>
 
+                <TouchableOpacity
+                    onPress={handlePlay}
+                    disabled={!hasItems}
+                    style={[styles.fullPlayButton, !hasItems && styles.playButtonDisabled]}
+                >
+                    <Ionicons name="play-circle" size={80} color={THEME.colors.primary} />
+                </TouchableOpacity>
+
                 <View style={styles.fullInfo}>
                     <Text style={styles.fullTrack} numberOfLines={2}>
                         {nowPlaying?.track || (hasItems ? 'Ready to play' : 'Waiting for album...')}
@@ -108,14 +116,6 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
                         {nowPlaying?.artist || (hasItems ? 'Tap drop the needle' : 'Add to your bin')}
                     </Text>
                 </View>
-
-                <TouchableOpacity
-                    onPress={handlePlay}
-                    disabled={!hasItems}
-                    style={[styles.playButton, !hasItems && styles.playButtonDisabled]}
-                >
-                    <Ionicons name="play-circle" size={72} color={THEME.colors.primary} />
-                </TouchableOpacity>
 
                 {nowPlaying && !hasItems && (
                     <Text style={styles.dropNeedleHint}>Ready to play — tap when you drop the needle</Text>
@@ -368,7 +368,8 @@ const styles = StyleSheet.create({
     // Full variant styles
     fullContainer: {
         alignItems: 'center',
-        paddingVertical: THEME.spacing.xl,
+        paddingTop: THEME.spacing.md,
+        paddingBottom: THEME.spacing.lg,
         width: '100%',
     },
     fullArtworkContainer: {
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     },
     fullInfo: {
         alignItems: 'center',
-        marginTop: THEME.spacing.xl,
+        marginTop: THEME.spacing.md,
         paddingHorizontal: THEME.spacing.xl,
     },
     fullTrack: {
@@ -409,8 +410,10 @@ const styles = StyleSheet.create({
         fontSize: 18,
         textAlign: 'center',
     },
-    playButton: {
-        marginTop: THEME.spacing.xl,
+    fullPlayButton: {
+        marginTop: -40, // Overlap artwork slightly for tight look
+        backgroundColor: THEME.colors.background,
+        borderRadius: 40,
     },
     playButtonDisabled: {
         opacity: 0.4,

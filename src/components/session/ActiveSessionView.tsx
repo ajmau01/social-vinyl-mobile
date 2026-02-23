@@ -228,11 +228,11 @@ const styles = StyleSheet.create({
         padding: THEME.spacing.xs,
     },
     nowPlayingSection: {
-        flex: 1,
+        flex: 1.5,
         justifyContent: 'center',
     },
     binSection: {
-        flex: 1.2,
+        flex: 1,
         backgroundColor: 'rgba(255, 255, 255, 0.03)',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,

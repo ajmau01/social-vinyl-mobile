@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
+import { useSessionStore } from '@/store/useSessionStore';
 import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
@@ -20,6 +21,7 @@ export default function TabLayout() {
 
     const binItems = useListeningBinStore((state) => state.items);
     const binCount = binItems.length;
+    const { sessionId, sessionRole } = useSessionStore();
 
     return (
         <View style={styles.container}>
@@ -63,9 +65,12 @@ export default function TabLayout() {
             </Tabs>
 
             {/* Now Playing Banner - sits above tab bar */}
-            <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
-                <NowPlayingBanner />
-            </View>
+            {/* Hide if host is in ActiveSessionView (Command View) */}
+            {!(sessionRole === 'host' && sessionId) && (
+                <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
+                    <NowPlayingBanner />
+                </View>
+            )}
         </View>
     );
 }
