@@ -1,9 +1,13 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { ConnectionState, NowPlaying, Result, LoginResult, WebSocketMessage } from '@/types';
 import { normalizeNowPlayingPayload } from '@/utils/normalization';
 import { logger } from '@/utils/logger';
+
+export interface UseWebSocketOptions {
+    isManager?: boolean;
+}
 
 export interface UseWebSocketResult {
     connectionState: ConnectionState;
@@ -25,7 +29,8 @@ export interface UseWebSocketResult {
  * Provides reactive access to the WebSocket service, including connection state,
  * session information, and actions for managing the connection.
  */
-export const useWebSocket = (): UseWebSocketResult => {
+export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketResult => {
+    const { isManager = false } = options;
     const { webSocketService, databaseService } = useServices();
     const {
         connectionState,
@@ -45,9 +50,12 @@ export const useWebSocket = (): UseWebSocketResult => {
         setError
     } = useSessionStore();
 
-
+    // Issue #146: Local playback deduplication 
+    const lastRecordedPlayRef = useRef<{ id: string, timestamp: number } | null>(null);
 
     useEffect(() => {
+        if (!isManager) return;
+
         const callbacks = {
             onConnectionStateChange: (state: ConnectionState) => {
                 setConnectionState(state);
@@ -58,6 +66,7 @@ export const useWebSocket = (): UseWebSocketResult => {
             onMessage: (message: WebSocketMessage) => {
                 const type = message.type || message.messageType;
                 const payload = message.payload || message;
+                const currentSessionId = useSessionStore.getState().sessionId;
 
                 if (type === 'SESSION_JOINED' || type === 'session-joined') {
                     // Check for sessionId in message first, then in payload
@@ -115,18 +124,26 @@ export const useWebSocket = (): UseWebSocketResult => {
                     setNowPlaying(normalized);
 
                     // Issue #154: Persist to local history
-                    const currentSessionId = useSessionStore.getState().sessionId;
                     if (currentSessionId && normalized && normalized.track) {
-                        const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
+                        const playId = `${currentSessionId}-${normalized.releaseId}`;
+                        const now = Date.now();
+
+                        // Deduplication: Don't record same track in same session within 30s
+                        if (lastRecordedPlayRef.current?.id === playId && (now - lastRecordedPlayRef.current.timestamp) < 30000) {
+                            return;
+                        }
+
                         logger.info(`[WebSocket] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
+                        lastRecordedPlayRef.current = { id: playId, timestamp: now };
+
                         databaseService.recordPlay({
-                            id: playId,
+                            id: `${playId}-${normalized.timestamp || now}`,
                             session_id: String(currentSessionId),
                             release_id: parseInt(normalized.releaseId || '0', 10),
                             release_title: normalized.album,
                             artist: normalized.artist,
                             album_art_url: normalized.albumArt || null,
-                            played_at: normalized.timestamp || Date.now(),
+                            played_at: normalized.timestamp || now,
                             picked_by_username: normalized.playedBy || null
                         }).catch(err => logger.error('[WebSocket] Failed to record play', err));
                     }
@@ -146,18 +163,26 @@ export const useWebSocket = (): UseWebSocketResult => {
                         setNowPlaying(normalized);
 
                         // Issue #154: Persist to local history
-                        const currentSessionId = useSessionStore.getState().sessionId;
                         if (currentSessionId && normalized && normalized.track) {
-                            const playId = `${currentSessionId}-${normalized.timestamp || Date.now()}`;
+                            const playId = `${currentSessionId}-${normalized.releaseId}`;
+                            const now = Date.now();
+
+                            // Deduplication: Don't record same track in same session within 30s
+                            if (lastRecordedPlayRef.current?.id === playId && (now - lastRecordedPlayRef.current.timestamp) < 30000) {
+                                return;
+                            }
+
                             logger.info(`[WebSocket:State] Recording play: ${normalized.track} by ${normalized.artist} in session ${currentSessionId}`);
+                            lastRecordedPlayRef.current = { id: playId, timestamp: now };
+
                             databaseService.recordPlay({
-                                id: playId,
+                                id: `${playId}-${normalized.timestamp || now}`,
                                 session_id: String(currentSessionId),
                                 release_id: parseInt(normalized.releaseId || '0', 10),
                                 release_title: normalized.album,
                                 artist: normalized.artist,
                                 album_art_url: normalized.albumArt || null,
-                                played_at: normalized.timestamp || Date.now(),
+                                played_at: normalized.timestamp || now,
                                 picked_by_username: normalized.playedBy || null
                             }).catch(err => logger.error('[WebSocket:State] Failed to record play', err));
                         }
@@ -237,10 +262,9 @@ export const useWebSocket = (): UseWebSocketResult => {
         webSocketService.setCallbacks(callbacks);
 
         return () => {
-            // Fix memory leak by clearing callbacks on unmount
             webSocketService.clearCallbacks();
         };
-    }, [webSocketService, setConnectionState, setSessionId, setSessionSecret, setNowPlaying, setSessionRole, setError]);
+    }, [webSocketService, setConnectionState, setSessionId, setSessionSecret, setNowPlaying, setSessionRole, setError, isManager]);
 
     const connect = useCallback(() => {
         if (username) {

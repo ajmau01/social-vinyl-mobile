@@ -140,9 +140,13 @@ export default function WelcomeScreen() {
     });
 
     // Issue #146: Active Session Gate
-    // If we are a host and have a connected session, take over the screen.
-    // Moved here to follow all Hook declarations and avoid "Rendered fewer hooks" errors.
-    if (connectionState === 'connected' && sessionStoreId && sessionRole === 'host') {
+    // If we are a host and have an active session, take over the screen.
+    // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent 
+    // "Cannot find single active touch" errors by avoiding unmount/remount of the active view.
+    const isSessionActive = !!sessionStoreId && sessionRole === 'host' &&
+        (connectionState === 'connected' || connectionState === 'reconnecting');
+
+    if (isSessionActive) {
         return <ActiveSessionView />;
     }
 
