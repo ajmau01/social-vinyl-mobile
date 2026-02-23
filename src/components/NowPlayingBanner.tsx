@@ -61,6 +61,13 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
         await listeningBinSyncService.likeCurrentAlbum();
     };
 
+    const isSpinning = useMemo(() => {
+        if (!nowPlaying?.position || !nowPlaying?.duration) return false;
+        // Consider it spinning if we have a position and it's within the first 99% of the track
+        // (to avoid showing "Stop" for a track that just finished and is about to clear)
+        return nowPlaying.position > 0 && nowPlaying.position < (nowPlaying.duration * 0.99);
+    }, [nowPlaying?.position, nowPlaying?.duration]);
+
     const handleStop = async () => {
         if (!isHost) return;
 
@@ -74,51 +81,107 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
         }
     };
 
-    const handlePlay = async () => {
-        if (!isHost || binItems.length === 0) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        await listeningBinSyncService.playAlbum(binItems[0]);
+    const handleMainAction = async () => {
+        if (!isHost) return;
+
+        if (isSpinning) {
+            await handleStop();
+            return;
+        }
+
+        // If something is staged (Now Playing but not spinning), play it
+        if (nowPlaying) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            await listeningBinSyncService.playAlbum(nowPlaying);
+            return;
+        }
+
+        // Otherwise play the next item in the bin
+        if (binItems.length > 0) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            await listeningBinSyncService.playAlbum(binItems[0]);
+        }
     };
 
     if (variant === 'compact' && !nowPlaying && !isConnecting && !isConnected) return null;
 
     if (variant === 'full') {
         const hasItems = binItems.length > 0;
+        const canPlay = !!nowPlaying || hasItems;
+
         return (
             <View style={styles.fullContainer}>
                 <View style={styles.fullArtworkContainer}>
-                    {nowPlaying?.albumArt ? (
-                        <Image
-                            source={{ uri: nowPlaying.albumArt }}
-                            style={styles.fullArtworkImage}
-                            resizeMode="cover"
+                    {/* Ring size matches style + stroke (200 + 16 = 216) */}
+                    <View style={styles.fullRingWrapper}>
+                        <ProgressRing
+                            size={216}
+                            strokeWidth={6}
+                            position={nowPlaying?.position || 0}
+                            duration={nowPlaying?.duration || 0}
+                            playedAt={nowPlaying?.playedAt}
+                            color={THEME.colors.primary}
                         />
-                    ) : (
-                        <View style={styles.fullArtworkPlaceholder}>
-                            <Ionicons name="disc-outline" size={100} color={THEME.colors.textMuted} />
-                        </View>
+                    </View>
+                    <View style={styles.fullArtworkWrapper}>
+                        {nowPlaying?.albumArt ? (
+                            <Image
+                                source={{ uri: nowPlaying.albumArt }}
+                                style={styles.fullArtworkImage}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <View style={styles.fullArtworkPlaceholder}>
+                                <Ionicons name="disc-outline" size={100} color={THEME.colors.textMuted} />
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                <View style={styles.fullControls}>
+                    <TouchableOpacity
+                        onPress={handleMainAction}
+                        disabled={!canPlay && !isSpinning}
+                        style={[styles.fullPlayButton, (!canPlay && !isSpinning) && styles.playButtonDisabled]}
+                    >
+                        <Ionicons
+                            name={isSpinning ? "stop-circle" : "play-circle"}
+                            size={80}
+                            color={isSpinning ? THEME.colors.textDim : THEME.colors.primary}
+                        />
+                    </TouchableOpacity>
+
+                    {hasItems && (
+                        <TouchableOpacity
+                            onPress={async () => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                await listeningBinSyncService.playAlbum(binItems[0]);
+                            }}
+                            style={styles.fullSkipButton}
+                        >
+                            <View style={styles.skipIconWrapper}>
+                                <Ionicons name="play-skip-forward" size={32} color={THEME.colors.textDim} />
+                            </View>
+                            <Text style={styles.skipLabel}>Next</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
 
-                <TouchableOpacity
-                    onPress={handlePlay}
-                    disabled={!hasItems}
-                    style={[styles.fullPlayButton, !hasItems && styles.playButtonDisabled]}
-                >
-                    <Ionicons name="play-circle" size={80} color={THEME.colors.primary} />
-                </TouchableOpacity>
-
                 <View style={styles.fullInfo}>
                     <Text style={styles.fullTrack} numberOfLines={2}>
-                        {nowPlaying?.track || (hasItems ? 'Ready to play' : 'Waiting for album...')}
+                        {nowPlaying?.track || (hasItems ? 'Staging Next Album' : 'Waiting for album...')}
                     </Text>
                     <Text style={styles.fullArtist} numberOfLines={1}>
-                        {nowPlaying?.artist || (hasItems ? 'Tap drop the needle' : 'Add to your bin')}
+                        {nowPlaying?.artist || (hasItems ? 'Tap to drop the needle' : 'Add to your bin')}
                     </Text>
                 </View>
 
-                {nowPlaying && !hasItems && (
-                    <Text style={styles.dropNeedleHint}>Ready to play — tap when you drop the needle</Text>
+                {nowPlaying && (
+                    <Text style={styles.dropNeedleHint}>
+                        {isSpinning
+                            ? "Now spinning — tap to stop"
+                            : "Ready to play — tap when you drop the needle"}
+                    </Text>
                 )}
             </View>
         );
@@ -373,6 +436,22 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     fullArtworkContainer: {
+        width: 216,
+        height: 216,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    fullRingWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    fullArtworkWrapper: {
         width: 200,
         height: 200,
         borderRadius: THEME.radius.lg,
@@ -410,8 +489,38 @@ const styles = StyleSheet.create({
         fontSize: 18,
         textAlign: 'center',
     },
+    fullSkipButton: {
+        position: 'absolute',
+        right: -80,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    skipIconWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    skipLabel: {
+        color: THEME.colors.textMuted,
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        marginTop: 4,
+    },
+    fullControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        width: '100%',
+        marginTop: -40,
+    },
     fullPlayButton: {
-        marginTop: -40, // Overlap artwork slightly for tight look
         backgroundColor: THEME.colors.background,
         borderRadius: 40,
     },
