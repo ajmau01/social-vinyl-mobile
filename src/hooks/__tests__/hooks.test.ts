@@ -62,7 +62,7 @@ describe('Phase 2 Hooks', () => {
                 callback = cb;
             });
 
-            const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
+            const { result } = renderHook(() => useWebSocket({ isManager: true }), { wrapper: TestWrapper });
 
             expect(result.current.connectionState).toBe('disconnected');
 
@@ -82,7 +82,7 @@ describe('Phase 2 Hooks', () => {
                 callback = cb;
             });
 
-            const { result } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
+            const { result } = renderHook(() => useWebSocket({ isManager: true }), { wrapper: TestWrapper });
 
             const nowPlayingPayload = { track: 'Help!', artist: 'The Beatles', album: 'Help!' };
             const expected = {
@@ -120,7 +120,7 @@ describe('Phase 2 Hooks', () => {
         });
 
         it('should clean up callbacks on unmount', () => {
-            const { unmount } = renderHook(() => useWebSocket(), { wrapper: TestWrapper });
+            const { unmount } = renderHook(() => useWebSocket({ isManager: true }), { wrapper: TestWrapper });
             unmount();
             expect(wsService.clearCallbacks).toHaveBeenCalled();
         });

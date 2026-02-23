@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
+import { useSessionStore } from '@/store/useSessionStore';
 import { NowPlayingBanner } from '@/components/NowPlayingBanner';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
 export default function TabLayout() {
+    const pathname = usePathname();
     const insets = useSafeAreaInsets();
     // Add extra padding for bottom safe area, or default to 10 if none (non-X iPhones/Android)
     const bottomPadding = Math.max(insets.bottom, 10);
@@ -20,6 +22,7 @@ export default function TabLayout() {
 
     const binItems = useListeningBinStore((state) => state.items);
     const binCount = binItems.length;
+    const { sessionId, sessionRole } = useSessionStore();
 
     return (
         <View style={styles.container}>
@@ -63,9 +66,12 @@ export default function TabLayout() {
             </Tabs>
 
             {/* Now Playing Banner - sits above tab bar */}
-            <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
-                <NowPlayingBanner />
-            </View>
+            {/* Suppress on the Bin tab for Host because BinScreen renders ActiveSessionView (Command View) */}
+            {sessionId && !(sessionRole === 'host' && pathname === '/bin') && (
+                <View style={[styles.bannerContainer, { bottom: tabBarHeight }]}>
+                    <NowPlayingBanner />
+                </View>
+            )}
         </View>
     );
 }

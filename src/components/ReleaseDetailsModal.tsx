@@ -8,6 +8,7 @@ import { Release, Track } from '@/types';
 import { syncService } from '@/services/CollectionSyncService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
+import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/utils/logger';
 import { TrackListSchema } from '@/types/schemas';
@@ -22,9 +23,10 @@ interface ReleaseDetailsModalProps {
 export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }: ReleaseDetailsModalProps) => {
     const [tracks, setTracks] = useState<Track[] | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
 
     const { username } = useSessionStore();
-    const { addItem, isInBin } = useListeningBinStore();
+    const { isInBin } = useListeningBinStore();
     const isAlreadyInBin = (release && username) ? isInBin(release.id, username) : false;
 
     // ... (useEffect remains the same) ... 
@@ -65,10 +67,20 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
         setLoading(false);
     };
 
-    const handleAddToBin = () => {
-        if (release && username) {
-            addItem(release, username);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const handleAddToBin = async () => {
+        if (!release || !username || isAdding) return;
+        setIsAdding(true);
+        try {
+            const result = await listeningBinSyncService.addAlbum(release);
+            if (!result.success) {
+                logger.error('[Details] Failed to add album to bin:', result.error);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onClose();
+            }
+        } finally {
+            setIsAdding(false);
         }
     };
 
@@ -166,13 +178,13 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
                                 style={({ pressed }) => [
                                     styles.secondaryButton,
                                     pressed && styles.pressed,
-                                    isAlreadyInBin && styles.disabledButton
+                                    (isAlreadyInBin || isAdding) && styles.disabledButton
                                 ]}
                                 onPress={handleAddToBin}
-                                disabled={isAlreadyInBin}
+                                disabled={isAlreadyInBin || isAdding}
                             >
                                 <Text style={styles.secondaryButtonText}>
-                                    {isAlreadyInBin ? 'In Bin ✓' : '+ Listening Bin'}
+                                    {isAlreadyInBin ? 'In Bin ✓' : isAdding ? 'Adding...' : '+ Listening Bin'}
                                 </Text>
                             </Pressable>
                         </View>

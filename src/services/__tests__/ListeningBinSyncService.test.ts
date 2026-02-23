@@ -72,10 +72,14 @@ describe('ListeningBinSyncService', () => {
         expect(result.success).toBe(true);
         expect(mockActions.addAlbumOptimistic).toHaveBeenCalledWith(mockRelease, 'testuser', expect.any(String));
         expect(wsService.sendAction).toHaveBeenCalledWith('add', expect.objectContaining({
-            releaseId: 1,
-            instanceId: 101
+            album: expect.objectContaining({
+                releaseId: 1,
+                title: 'Test Album',
+                artist: 'Test Artist',
+            }),
+            displayName: 'testuser',
         }));
-        expect(mockActions.confirmAdd).toHaveBeenCalledWith(expect.any(String), 1, 1234567890);
+        expect(mockActions.confirmAdd).toHaveBeenCalledWith(expect.any(String), 1, 1234567890, undefined);
     });
 
     it('should revert add album on failure', async () => {
@@ -106,7 +110,9 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(mockActions.removeAlbumOptimistic).toHaveBeenCalledWith(1, 'testuser');
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove', { releaseId: 1 });
+        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+            instanceId: 101,
+        }));
     });
 
     it('should revert remove album on failure', async () => {
@@ -137,7 +143,7 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(wsService.sendAction).toHaveBeenCalledWith('reorder', {
-            releaseIds: [1, 2, 3]
+            instanceIds: [1, 2, 3]
         });
     });
 });

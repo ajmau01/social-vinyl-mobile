@@ -37,7 +37,7 @@ if (shouldInitSentry) {
  */
 function WebSocketManager() {
   const { username, authToken } = useSessionStore();
-  const { connect, disconnect } = useWebSocket();
+  const { connect, disconnect } = useWebSocket({ isManager: true });
 
   // Debug Auth Flow (Removed noise)
   /*

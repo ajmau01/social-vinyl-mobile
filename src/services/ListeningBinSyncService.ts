@@ -33,14 +33,12 @@ class ListeningBinSyncService {
      * Handles incoming bin state from server
      */
     private handleBinState({ items, hostUsername }: { items: BinItem[], hostUsername?: string }) {
-        logger.log('[BinSync] Received bin state update. Items:', items?.length || 0);
+        if (!items) {
+            return;
+        }
 
         if (hostUsername) {
             useSessionStore.getState().setHostUsername(hostUsername);
-        }
-
-        if (items && items.length > 0) {
-            logger.log('[BinSync] First item:', JSON.stringify(items[0]));
         }
 
         const { setBin } = useListeningBinStore.getState();
@@ -50,20 +48,24 @@ class ListeningBinSyncService {
         // Backend currently only sends releaseId, which causes duplicate key errors
         // if the same album is added twice.
         const syncedItems = items.map((item, index) => {
-            // Ensure we have a valid ID for frontend components
-            const releaseId = item.id || item.releaseId || 0;
+            // Priority: instanceId > database id > releaseId
+            const id = item.instanceId || item.id || item.releaseId || 0;
 
             return {
                 ...item,
-                id: releaseId,
+                id: id,
                 status: 'synced' as const,
+                // Map backend requestedBy to userId so isInBin works correctly
+                userId: item.userId || item.requestedBy || (() => {
+                    logger.warn('[BinSync] Item missing userId and requestedBy — bin ownership checks may fail', item.releaseId);
+                    return '';
+                })(),
                 // Issue #126: Map backend coverImage to frontend thumb_url
                 thumb_url: item.coverImage || item.thumb_url || null,
-                // Use instanceId if available, otherwise generate a stable unique key
-                // combining releaseId, timestamp, and index to guarantee uniqueness
+                // Use instanceId as frontendId for stability
                 frontendId: item.instanceId
                     ? item.instanceId.toString()
-                    : `${releaseId}-${item.addedTimestamp}-${index}`
+                    : `${item.releaseId}-${item.addedTimestamp}-${index}`
             };
         });
 
@@ -87,14 +89,30 @@ class ListeningBinSyncService {
 
         try {
             // 2. Send Action
-            // Payload should match what backend expects for 'add' action
-            const result = await wsService.sendAction<{ success: boolean, releaseId: number, addedTimestamp: number }>('add', {
-                releaseId: release.id,
-                instanceId: release.instanceId
+            // Payload MUST match backend expectations (wrapped in "album" object)
+            const result = await wsService.sendAction<{
+                success: boolean,
+                releaseId: number,
+                addedTimestamp: number,
+                instanceId?: number
+            }>('add', {
+                album: {
+                    releaseId: release.id,
+                    masterId: 0, // Not currently available on mobile Release type
+                    title: release.title,
+                    artist: release.artist,
+                    year: release.year || '',
+                    format: release.format || '',
+                    label: release.label || '',
+                    coverImage: release.thumb_url || '',
+                    totalDuration: release.totalDuration || 0,
+                },
+                clientUUID: tempId,
+                displayName: userId
             });
 
             // 3. Confirm success
-            confirmAdd(tempId, result.releaseId, result.addedTimestamp);
+            confirmAdd(tempId, result.releaseId, result.addedTimestamp, result.instanceId);
             return { success: true, data: undefined };
 
         } catch (error) {
@@ -114,8 +132,12 @@ class ListeningBinSyncService {
 
         if (!userId) return { success: false, error: new Error('User not logged in') };
 
-        // Output for revert if needed
-        const itemToRemove = items.find(i => i.id === releaseId && i.userId === userId);
+        // Find item by id (works for both Discogs releaseId and instanceId after confirmAdd).
+        // Note: callers should pass item.id, not the Discogs release ID, since after
+        // confirmAdd item.id is set to instanceId.
+        const itemToRemove = items.find(i =>
+            (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+        );
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
         // 1. Optimistic Update
@@ -124,7 +146,8 @@ class ListeningBinSyncService {
         try {
             // 2. Send Action
             await wsService.sendAction('remove', {
-                releaseId: releaseId
+                releaseId: itemToRemove.releaseId,
+                instanceId: itemToRemove.instanceId
             });
 
             // 3. Success (no specific confirm action needed as state is already gone)
@@ -141,13 +164,13 @@ class ListeningBinSyncService {
     /**
      * Reorders albums in the bin
      */
-    public async reorderAlbums(releaseIds: number[]): Promise<Result<void>> {
+    public async reorderAlbums(ids: number[]): Promise<Result<void>> {
         // Optimistic reorder is handled by UI/Store directly before calling this
         // So we just send the new order
 
         try {
             await wsService.sendAction('reorder', {
-                releaseIds
+                instanceIds: ids
             });
             return { success: true, data: undefined };
         } catch (error) {
@@ -221,19 +244,23 @@ class ListeningBinSyncService {
         if (userId !== hostUsername) return { success: false, error: new Error('Only the host can play albums') };
 
         // Ensure we have a valid ID
-        const releaseId = album.id || album.releaseId;
+        // IMPORTANT: Prefer album.releaseId (Discogs ID) over album.id.
+        // After confirmAdd, album.id is set to instanceId (a DB row ID like 1601),
+        // not the Discogs release ID (like 9173990). Using album.id first would
+        // cause the server to fail to find and remove the item from the queue.
+        const releaseId = album.releaseId || album.id;
         if (!releaseId) return { success: false, error: new Error('Invalid album ID') };
 
         try {
             await wsService.sendAction('play-album', {
                 album: {
-                    releaseId: releaseId,
+                    releaseId: Number(releaseId),
+                    instanceId: album.instanceId || undefined,
                     title: album.title,
                     artist: album.artist,
                     coverImage: album.thumb_url || album.coverImage,
-                    year: album.year,
+                    year: String(album.year || ''),
                     totalDuration: album.totalDuration || 0
-                    // Add other fields as needed by backend Album.fromJson
                 }
             });
             return { success: true, data: undefined };
@@ -257,6 +284,24 @@ class ListeningBinSyncService {
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Stop playback failed', error);
+            return { success: false, error: error as Error };
+        }
+    }
+
+    /**
+     * Ends the current session (Host only)
+     */
+    public async endSession(): Promise<Result<void>> {
+        const { username: userId, hostUsername } = useSessionStore.getState();
+
+        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (userId !== hostUsername) return { success: false, error: new Error('Only the host can end sessions') };
+
+        try {
+            await wsService.sendAction('archive-session', {});
+            return { success: true, data: undefined };
+        } catch (error) {
+            logger.error('[BinSync] End session failed', error);
             return { success: false, error: error as Error };
         }
     }

@@ -27,6 +27,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
+import { ActiveSessionView } from '@/components/session/ActiveSessionView';
 
 type EntryPath = 'none' | 'invited' | 'explore';
 
@@ -43,7 +44,8 @@ export default function WelcomeScreen() {
         familyPassCode,
         displayName,
         connectionState,
-        sessionId: sessionStoreId
+        sessionId: sessionStoreId,
+        sessionRole
     } = useSessionStore();
 
     const { sessionService } = useServices();
@@ -57,7 +59,6 @@ export default function WelcomeScreen() {
 
     // Issue #142 V3: Auto-logging loading guard (includes connecting states to prevent flicker)
     // Now gated by hasInteracted to prevent trapping users who explicitly cancel a manual path.
-    // Also checks for legacy lastMode values to avoid "dead zones" where it spins but never redirects.
     const isAutoLogging = !hasInteracted &&
         (connectionState === 'connected' || connectionState === 'connecting' || connectionState === 'reconnecting') &&
         !!sessionStoreId &&
@@ -81,7 +82,6 @@ export default function WelcomeScreen() {
                         useListeningBinStore.getState().clearBin();
                         router.replace('/(tabs)/bin');
                     } else {
-                        // Failed to rejoin (maybe session ended), clear the family pass
                         useSessionStore.getState().setFamilyPassCode(null);
                     }
                 } catch (e) {
@@ -98,6 +98,10 @@ export default function WelcomeScreen() {
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
+        // NEW: Don't redirect if we should be showing the Active Session View
+        const isHostWithActiveSession = connectionState === 'connected' && !!sessionStoreId && sessionRole === 'host';
+        if (isHostWithActiveSession) return;
+
         // Only redirect if we have a session, are connected, and haven't selected a path manually
         if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
             const mode = lastMode as any;
@@ -105,7 +109,7 @@ export default function WelcomeScreen() {
                 router.replace('/(tabs)/collection');
             }
         }
-    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted]);
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted, sessionRole]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -134,6 +138,17 @@ export default function WelcomeScreen() {
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
     });
+
+    // Issue #146: Active Session Gate
+    // If we are a host and have an active session, take over the screen.
+    // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent 
+    // "Cannot find single active touch" errors by avoiding unmount/remount of the active view.
+    const isSessionActive = !!sessionStoreId && sessionRole === 'host' &&
+        (connectionState === 'connected' || connectionState === 'reconnecting');
+
+    if (isSessionActive) {
+        return <ActiveSessionView />;
+    }
 
     const handleBack = () => {
         setEntryPath('none');

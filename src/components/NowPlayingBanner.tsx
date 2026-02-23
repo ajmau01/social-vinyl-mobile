@@ -19,34 +19,27 @@ import * as Haptics from 'expo-haptics';
 import { THEME } from '@/constants/theme';
 import { useWebSocket } from '@/hooks';
 import { useSessionStore } from '@/store/useSessionStore';
+import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { logger } from '@/utils/logger';
 import { ProgressRing } from './ProgressRing';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
-export const NowPlayingBanner = () => {
+export const NowPlayingBanner: React.FC = () => {
     const { nowPlaying, isConnected, isConnecting } = useWebSocket();
     const { username, hostUsername } = useSessionStore();
     const isHost = !!username && username === hostUsername;
 
-    // Fix Issue #126: Move shared values and styles to top level to avoid conditional hook errors
     const heartScale = useSharedValue(1);
 
     const heartStyle = useAnimatedStyle(() => ({
         transform: [{ scale: heartScale.value }]
     }));
 
-    const progress = useMemo(() => {
-        if (!nowPlaying?.duration || !nowPlaying?.position) return 0;
-        return Math.min(nowPlaying.position / nowPlaying.duration, 1);
-    }, [nowPlaying?.position, nowPlaying?.duration]);
-
     const handleLike = async () => {
         if (!nowPlaying) return;
 
-        // Haptic feedback
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-        // Animate heart
         heartScale.value = withSequence(
             withTiming(1.4, { duration: 100 }),
             withTiming(1, { duration: 100 })
@@ -55,10 +48,14 @@ export const NowPlayingBanner = () => {
         await listeningBinSyncService.likeCurrentAlbum();
     };
 
+    const isSpinning = useMemo(() => {
+        if (!nowPlaying?.position || !nowPlaying?.duration) return false;
+        return nowPlaying.position > 0 && nowPlaying.position < (nowPlaying.duration * 0.99);
+    }, [nowPlaying?.position, nowPlaying?.duration]);
+
     const handleStop = async () => {
         if (!isHost) return;
 
-        // Haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         try {
@@ -204,7 +201,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: THEME.radius.lg,
         borderTopWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        paddingBottom: 4, // Leave space for home indicator on some LPs
+        paddingBottom: 4,
     },
     container: {
         paddingVertical: 12,
@@ -224,9 +221,9 @@ const styles = StyleSheet.create({
     },
     artworkWrapper: {
         position: 'absolute',
-        width: 34,
-        height: 34,
-        borderRadius: 17, // Circular
+        width: 32,
+        height: 32,
+        borderRadius: 4, // Square with rounded corners
         overflow: 'hidden',
         backgroundColor: THEME.colors.surfaceLight,
     },

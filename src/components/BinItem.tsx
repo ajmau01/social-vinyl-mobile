@@ -19,7 +19,6 @@ export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true, onPl
     return (
         <ScaleDecorator>
             <Pressable
-                onLongPress={drag}
                 disabled={isActive}
                 style={[
                     styles.card,
@@ -28,9 +27,9 @@ export const BinItem = ({ item, isActive, drag, onRemove, canDelete = true, onPl
             >
                 <View style={styles.contentContainer}>
                     {/* Drag Handle */}
-                    <View style={styles.dragHandle}>
+                    <Pressable onPressIn={drag} hitSlop={15} style={styles.dragHandle}>
                         <Ionicons name="reorder-two" size={24} color={THEME.colors.textDim} />
-                    </View>
+                    </Pressable>
 
                     <Image source={{ uri: item.thumb_url || '' }} style={styles.thumbnail} />
                     <View style={styles.info}>

@@ -15,7 +15,7 @@ interface ListeningBinState {
     // Issue #126: Optimistic Updates & Sync
     addAlbumOptimistic: (release: Release, userId: string, tempId: string) => void;
     removeAlbumOptimistic: (releaseId: number, userId: string) => void;
-    confirmAdd: (tempId: string, realId: number, timestamp: number) => void;
+    confirmAdd: (tempId: string, realId: number, timestamp: number, instanceId?: number) => void;
     revertAdd: (tempId: string) => void;
     confirmRemove: (releaseId: number) => void;
     revertRemove: (release: Release, userId: string, timestamp: number) => void;
@@ -28,8 +28,9 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         addItem: (release, userId) => {
             const { items } = get();
-            // SCOPING: Check if item already exists FOR THIS USER
-            if (items.some(item => item.id === release.id && item.userId === userId)) return;
+            // SCOPING: Check if item already exists FOR THIS USER.
+            // Check both id and releaseId since after confirmAdd item.id becomes instanceId.
+            if (items.some(item => (item.id === release.id || item.releaseId === release.id) && item.userId === userId)) return;
 
             const newItem: BinItem = {
                 ...release,
@@ -43,7 +44,9 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         removeItem: (releaseId, userId) => {
             set((state) => ({
-                items: state.items.filter(item => !(item.id === releaseId && item.userId === userId)),
+                items: state.items.filter(item =>
+                    !((item.id === releaseId || item.releaseId === releaseId) && item.userId === userId)
+                ),
             }));
         },
 
@@ -58,7 +61,10 @@ export const useListeningBinStore = create<ListeningBinState>()(
         },
 
         isInBin: (releaseId, userId) => {
-            return get().items.some(item => item.id === releaseId && item.userId === userId);
+            return get().items.some(item =>
+                (item.id === releaseId || item.releaseId === releaseId) &&
+                (item.userId === userId || item.requestedBy === userId)
+            );
         },
 
         // Issue #126: Implementation
@@ -81,15 +87,25 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         removeAlbumOptimistic: (releaseId, userId) => {
             set((state) => ({
-                items: state.items.filter(item => !(item.id === releaseId && item.userId === userId))
+                items: state.items.filter(item =>
+                    !((item.id === releaseId || item.releaseId === releaseId) && item.userId === userId)
+                )
             }));
         },
 
-        confirmAdd: (tempId, realId, timestamp) => {
+        confirmAdd: (tempId, realId, timestamp, instanceId) => {
             set((state) => ({
                 items: state.items.map(item =>
                     item.tempId === tempId
-                        ? { ...item, status: 'synced', id: realId, addedTimestamp: timestamp, tempId: undefined }
+                        ? {
+                            ...item,
+                            status: 'synced',
+                            id: instanceId || realId,
+                            releaseId: realId,
+                            instanceId: instanceId,
+                            addedTimestamp: timestamp,
+                            tempId: undefined
+                        }
                         : item
                 )
             }));
