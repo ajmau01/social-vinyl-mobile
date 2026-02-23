@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { THEME } from '@/constants/theme';
 import { logger } from '@/utils/logger';
+import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { BinList } from '../BinList';
@@ -17,6 +18,7 @@ import { NowPlayingHero } from '../NowPlayingHero';
 
 export const ActiveSessionView = () => {
     const router = useRouter();
+    const { sessionService } = useServices();
     const {
         sessionId,
         sessionName,
@@ -60,6 +62,26 @@ export const ActiveSessionView = () => {
         );
     };
 
+    const handleLeaveSession = () => {
+        Alert.alert(
+            'Leave Session',
+            'Leave this session? You can rejoin later with the join code.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Leave',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const result = await sessionService.leaveSession();
+                        if (!result.success) {
+                            Alert.alert('Error', 'Could not leave session. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const handleShare = () => {
         Alert.alert('Share', `Join Code: ${joinCode}`);
     };
@@ -80,26 +102,25 @@ export const ActiveSessionView = () => {
     }, [nowPlaying?.position, nowPlaying?.duration]);
 
     const showMenu = () => {
-        const options = ['Session Info', 'Share Join Code', 'Share QR Code', 'Stop Current', 'End Session', 'Cancel'];
-
-        const destructiveButtonIndex = 4;
-        const cancelButtonIndex = 5;
-
-        const handleMenuPress = (buttonIndex: number) => {
-            if (buttonIndex === 0) {
-                Alert.alert('Session Info', `Session ID: ${sessionId}\nHost: ${hostUsername}\nMode: ${sessionMode}`);
-            } else if (buttonIndex === 1) {
-                handleShare();
-            } else if (buttonIndex === 2) {
-                handleShare();
-            } else if (buttonIndex === 3) {
-                handleStopPlayback();
-            } else if (buttonIndex === 4) {
-                handleEndSession();
-            }
-        };
+        // ActiveSessionView is host-only; isPartyHost distinguishes End vs Leave behaviour
+        const isPartyHost = sessionMode === 'party';
 
         if (Platform.OS === 'ios') {
+            const options: string[] = [
+                'Session Info',
+                'Share Join Code',
+                'Share QR Code',
+                'Stop Current',
+                'Leave Session',
+            ];
+            if (isPartyHost) options.push('End Session');
+            options.push('Cancel');
+
+            const cancelButtonIndex = options.length - 1;
+            const destructiveButtonIndex = isPartyHost
+                ? options.length - 2  // End Session
+                : options.indexOf('Leave Session');
+
             ActionSheetIOS.showActionSheetWithOptions(
                 {
                     options,
@@ -107,20 +128,34 @@ export const ActiveSessionView = () => {
                     cancelButtonIndex,
                     title: sessionName || 'Active Session',
                 },
-                handleMenuPress
+                (buttonIndex) => {
+                    const label = options[buttonIndex];
+                    if (label === 'Session Info') {
+                        Alert.alert('Session Info', `Session ID: ${sessionId}\nHost: ${hostUsername}\nMode: ${sessionMode}`);
+                    } else if (label === 'Share Join Code' || label === 'Share QR Code') {
+                        handleShare();
+                    } else if (label === 'Stop Current') {
+                        handleStopPlayback();
+                    } else if (label === 'Leave Session') {
+                        handleLeaveSession();
+                    } else if (label === 'End Session') {
+                        handleEndSession();
+                    }
+                }
             );
         } else {
-            // Android Alert truncates long button lists — keep to 4 max (Cancel must be first)
-            Alert.alert(
-                sessionName || 'Active Session',
-                'Choose an action',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Share Join Code', onPress: () => handleMenuPress(1) },
-                    { text: 'Stop Current', onPress: () => handleMenuPress(3) },
-                    { text: 'End Session', style: 'destructive', onPress: () => handleMenuPress(4) },
-                ]
-            );
+            // Android Alert — keep to 4 buttons max (Cancel must be first)
+            // Party host: Cancel | Stop Current | Leave Session | End Session
+            // Solo/live:  Cancel | Stop Current | Leave Session
+            const buttons: any[] = [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Stop Current', onPress: handleStopPlayback },
+                { text: 'Leave Session', style: 'destructive', onPress: handleLeaveSession },
+            ];
+            if (isPartyHost) {
+                buttons.push({ text: 'End Session', style: 'destructive', onPress: handleEndSession });
+            }
+            Alert.alert(sessionName || 'Active Session', 'Choose an action', buttons);
         }
     };
 
