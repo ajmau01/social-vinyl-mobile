@@ -574,6 +574,7 @@ const styles = StyleSheet.create({
     },
     authActions: {
         flexDirection: 'row',
+        justifyContent: 'center',
         gap: 10,
         marginTop: 30,
     },
