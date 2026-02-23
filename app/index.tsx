@@ -46,7 +46,8 @@ export default function WelcomeScreen() {
         displayName,
         connectionState,
         sessionId: sessionStoreId,
-        sessionRole
+        sessionRole,
+        isPermanent
     } = useSessionStore();
 
     const { sessionService } = useServices();
@@ -107,11 +108,12 @@ export default function WelcomeScreen() {
         // Only redirect if we have a session, are connected, and haven't selected a path manually
         if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
             const mode = lastMode as any;
-            if (mode === 'collector' || mode === 'explore' || mode === 'host' || mode === 'solo') {
+            // 'host' intentionally excluded: authenticated hosts are handled by the isIdleHost gate above
+            if (mode === 'collector' || mode === 'explore' || mode === 'solo') {
                 router.replace('/(tabs)/collection');
             }
         }
-    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted, sessionRole]);
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted, sessionRole, authToken]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
@@ -146,7 +148,7 @@ export default function WelcomeScreen() {
     // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent
     // "Cannot find single active touch" errors by avoiding unmount/remount of the active view.
     // authToken guard: prevents the gate from firing if host credentials were cleared (e.g. voyeur mode).
-    const isSessionActive = !!sessionStoreId && sessionRole === 'host' && !!authToken &&
+    const isSessionActive = !!sessionStoreId && sessionRole === 'host' && !!authToken && !isPermanent &&
         (connectionState === 'connected' || connectionState === 'reconnecting');
 
     if (isSessionActive) {
