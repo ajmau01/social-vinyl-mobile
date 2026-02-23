@@ -13,7 +13,7 @@ import { logger } from '@/utils/logger';
 
 export class SessionService implements ISessionService {
 
-    public async createSession(name: string, permanent: boolean): Promise<AsyncResult<SessionCreatedMessage>> {
+    public async createSession(name: string, permanent: boolean, mode?: 'party' | 'live' | 'solo'): Promise<AsyncResult<SessionCreatedMessage>> {
         return new Promise((resolve) => {
             const listener = (response: SessionCreatedMessage) => {
                 wsService.removeListener('session-created', listener);
@@ -27,6 +27,9 @@ export class SessionService implements ISessionService {
                 store.setIsPermanent(permanent);
                 store.setSessionRole('host');
 
+                const resolvedMode = mode ?? (permanent ? 'live' : 'party');
+                store.setSessionMode(resolvedMode);
+
                 // Issue #154: Persist local history
                 dbService.createSession({
                     id: String(response.sessionId),
@@ -34,7 +37,7 @@ export class SessionService implements ISessionService {
                     host_username: store.username || 'unknown',
                     started_at: Date.now(),
                     ended_at: null,
-                    mode: permanent ? 'live' : 'party',
+                    mode: resolvedMode,
                     guest_count: 0
                 }).catch(err => logger.error('[SessionService] Failed to record session history', err));
 
