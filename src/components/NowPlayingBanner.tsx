@@ -24,7 +24,7 @@ import { logger } from '@/utils/logger';
 import { ProgressRing } from './ProgressRing';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 
-interface NowPlayingBannerProps {
+export interface NowPlayingBannerProps {
     variant?: 'compact' | 'full';
 }
 
@@ -112,10 +112,10 @@ export const NowPlayingBanner: React.FC<NowPlayingBannerProps> = ({ variant = 'c
         return (
             <View style={styles.fullContainer}>
                 <View style={styles.fullArtworkContainer}>
-                    {/* Ring size matches style + stroke (200 + 16 = 216) */}
+                    {/* Ring size matches style + stroke (200 + 12 = 212) */}
                     <View style={styles.fullRingWrapper}>
                         <ProgressRing
-                            size={216}
+                            size={212}
                             strokeWidth={6}
                             position={nowPlaying?.position || 0}
                             duration={nowPlaying?.duration || 0}
@@ -428,33 +428,30 @@ const styles = StyleSheet.create({
     statusDisconnected: {
         backgroundColor: THEME.colors.textMuted,
     },
-    // Full variant styles
+
+    // --- Full Variant Styles (Issue #146) ---
     fullContainer: {
-        alignItems: 'center',
-        paddingTop: THEME.spacing.md,
-        paddingBottom: THEME.spacing.lg,
         width: '100%',
+        alignItems: 'center',
+        paddingVertical: THEME.spacing.xl,
+        gap: THEME.spacing.lg,
     },
     fullArtworkContainer: {
-        width: 216,
-        height: 216,
+        position: 'relative',
+        width: 212,
+        height: 212,
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
     },
     fullRingWrapper: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: 212,
+        height: 212,
     },
     fullArtworkWrapper: {
         width: 200,
         height: 200,
-        borderRadius: THEME.radius.lg,
+        borderRadius: 100, // Circular platter look
         overflow: 'hidden',
         backgroundColor: THEME.colors.surfaceLight,
         shadowColor: '#000',
@@ -471,66 +468,61 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: THEME.colors.surfaceLight,
+    },
+    fullControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: THEME.spacing.xl,
+        width: '100%',
+    },
+    fullPlayButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playButtonDisabled: {
+        opacity: 0.3,
+    },
+    fullSkipButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    skipIconWrapper: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    skipLabel: {
+        color: THEME.colors.textDim,
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
     },
     fullInfo: {
         alignItems: 'center',
-        marginTop: THEME.spacing.md,
         paddingHorizontal: THEME.spacing.xl,
     },
     fullTrack: {
         color: THEME.colors.white,
         fontSize: 24,
-        fontWeight: '700',
+        fontWeight: 'bold',
         textAlign: 'center',
-        marginBottom: THEME.spacing.xs,
+        marginBottom: 4,
     },
     fullArtist: {
         color: THEME.colors.textDim,
         fontSize: 18,
         textAlign: 'center',
     },
-    fullSkipButton: {
-        position: 'absolute',
-        right: -80,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    skipIconWrapper: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    skipLabel: {
-        color: THEME.colors.textMuted,
-        fontSize: 10,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        marginTop: 4,
-    },
-    fullControls: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        width: '100%',
-        marginTop: -40,
-    },
-    fullPlayButton: {
-        backgroundColor: THEME.colors.background,
-        borderRadius: 40,
-    },
-    playButtonDisabled: {
-        opacity: 0.4,
-    },
     dropNeedleHint: {
         color: THEME.colors.textMuted,
-        fontSize: 14,
-        marginTop: THEME.spacing.md,
-        textAlign: 'center',
+        fontSize: 12,
+        fontStyle: 'italic',
+        marginTop: -THEME.spacing.sm,
     },
 });
