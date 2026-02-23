@@ -28,6 +28,7 @@ import { StatusBar } from 'expo-status-bar';
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
 import { ActiveSessionView } from '@/components/session/ActiveSessionView';
+import { HostHomeScreen } from '@/components/HostHomeScreen';
 
 type EntryPath = 'none' | 'invited' | 'explore';
 
@@ -101,6 +102,7 @@ export default function WelcomeScreen() {
         // NEW: Don't redirect if we should be showing the Active Session View
         const isHostWithActiveSession = connectionState === 'connected' && !!sessionStoreId && sessionRole === 'host';
         if (isHostWithActiveSession) return;
+        if (authToken) return; // Authenticated hosts handled by isIdleHost gate above
 
         // Only redirect if we have a session, are connected, and haven't selected a path manually
         if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
@@ -149,6 +151,12 @@ export default function WelcomeScreen() {
 
     if (isSessionActive) {
         return <ActiveSessionView />;
+    }
+
+    const isIdleHost = !!authToken && sessionRole === 'host' && !isSessionActive;
+
+    if (isIdleHost) {
+        return <HostHomeScreen />;
     }
 
     const handleBack = () => {
