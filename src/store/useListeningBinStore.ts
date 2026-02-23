@@ -28,8 +28,9 @@ export const useListeningBinStore = create<ListeningBinState>()(
 
         addItem: (release, userId) => {
             const { items } = get();
-            // SCOPING: Check if item already exists FOR THIS USER
-            if (items.some(item => item.id === release.id && item.userId === userId)) return;
+            // SCOPING: Check if item already exists FOR THIS USER.
+            // Check both id and releaseId since after confirmAdd item.id becomes instanceId.
+            if (items.some(item => (item.id === release.id || item.releaseId === release.id) && item.userId === userId)) return;
 
             const newItem: BinItem = {
                 ...release,
