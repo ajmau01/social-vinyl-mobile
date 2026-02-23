@@ -98,13 +98,18 @@ export default function WelcomeScreen() {
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
+        // NEW: Don't redirect if we should be showing the Active Session View
+        const isHostWithActiveSession = connectionState === 'connected' && !!sessionStoreId && sessionRole === 'host';
+        if (isHostWithActiveSession) return;
+
+        // Only redirect if we have a session, are connected, and haven't selected a path manually
         if (sessionStoreId && entryPath === 'none' && !loading && !autoRejoined && connectionState === 'connected' && !hasInteracted) {
             const mode = lastMode as any;
             if (mode === 'collector' || mode === 'explore' || mode === 'host' || mode === 'solo') {
                 router.replace('/(tabs)/collection');
             }
         }
-    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted]);
+    }, [sessionStoreId, entryPath, loading, autoRejoined, connectionState, lastMode, router, hasInteracted, sessionRole]);
 
     // Vinyl Rotation Animation
     const rotateAnim = React.useRef(new Animated.Value(0)).current;

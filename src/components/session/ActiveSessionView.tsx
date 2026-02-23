@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useShallow } from 'zustand/shallow';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,7 @@ import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { BinItem } from '@/types';
 
 export const ActiveSessionView = () => {
+    const router = useRouter();
     const {
         sessionId,
         sessionName,
@@ -140,9 +142,17 @@ export const ActiveSessionView = () => {
                             {/* TODO: #145 - Implement session duration display using sessionStartTime */}
                         </Text>
                     </View>
-                    <Pressable testID="session-menu-button" onPress={showMenu} style={styles.menuButton}>
-                        <Ionicons name="ellipsis-horizontal" size={24} color={THEME.colors.white} />
-                    </Pressable>
+                    <View style={styles.headerRight}>
+                        <Pressable
+                            onPress={() => router.push('/(tabs)/collection')}
+                            style={styles.headerIconButton}
+                        >
+                            <Ionicons name="library-outline" size={24} color={THEME.colors.white} />
+                        </Pressable>
+                        <Pressable testID="session-menu-button" onPress={showMenu} style={styles.menuButton}>
+                            <Ionicons name="ellipsis-horizontal" size={24} color={THEME.colors.white} />
+                        </Pressable>
+                    </View>
                 </View>
 
                 {/* Now Playing Section */}
@@ -205,6 +215,14 @@ const styles = StyleSheet.create({
         color: THEME.colors.textDim,
         fontSize: 14,
         fontWeight: '500',
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: THEME.spacing.md,
+    },
+    headerIconButton: {
+        padding: THEME.spacing.xs,
     },
     menuButton: {
         padding: THEME.spacing.xs,

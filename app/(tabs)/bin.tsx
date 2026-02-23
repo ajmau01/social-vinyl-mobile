@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BinList } from '@/components/BinList';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { SessionInfoModal } from '@/components/session/SessionInfoModal';
+import { ActiveSessionView } from '@/components/session/ActiveSessionView';
 
 export default function BinScreen() {
     const {
@@ -82,6 +83,11 @@ export default function BinScreen() {
             <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
         </View>
     );
+
+    // Issue #146: For hosts, the Bin tab IS the Command View
+    if (sessionRole === 'host' && sessionId) {
+        return <ActiveSessionView />;
+    }
 
     return (
         <View style={styles.container}>
