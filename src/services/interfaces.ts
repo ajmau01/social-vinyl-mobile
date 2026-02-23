@@ -74,7 +74,7 @@ export interface IDatabaseService {
  * Coordinates session lifecycles for Issue #128 parity.
  */
 export interface ISessionService {
-    createSession(name: string, permanent: boolean): Promise<AsyncResult<SessionCreatedMessage>>;
+    createSession(name: string, permanent: boolean, mode?: 'party' | 'live' | 'solo'): Promise<AsyncResult<SessionCreatedMessage>>;
     joinSession(code: string, username: string): Promise<AsyncResult<SessionJoinedMessage>>;
     leaveSession(): Promise<AsyncResult<void>>;
     archiveSession(sessionId: number): Promise<AsyncResult<void>>;
