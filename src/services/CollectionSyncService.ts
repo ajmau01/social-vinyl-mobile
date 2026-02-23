@@ -385,7 +385,11 @@ class CollectionSyncService implements ISyncService {
                 throw new Error(`API Error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const text = await response.text();
+            if (!text || !text.trim()) {
+                return { success: true, data: [] };
+            }
+            const data = JSON.parse(text);
             if (data && data.tracks && Array.isArray(data.tracks)) {
                 // Map history entries to Release objects
                 const historyReleases: Release[] = data.tracks.map((track: any) => ({
@@ -409,7 +413,7 @@ class CollectionSyncService implements ISyncService {
 
             return { success: true, data: [] };
         } catch (error) {
-            logger.error('[Sync] Failed to fetch daily spin history:', error);
+            logger.warn('[Sync] Failed to fetch daily spin history:', error);
             return { success: false, error: error instanceof Error ? error : new Error('Unknown error') };
         }
     }
