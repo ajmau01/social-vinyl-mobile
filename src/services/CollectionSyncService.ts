@@ -389,7 +389,13 @@ class CollectionSyncService implements ISyncService {
             if (!text || !text.trim()) {
                 return { success: true, data: [] };
             }
-            const data = JSON.parse(text);
+            let data: any;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                logger.warn('[Sync] Daily spin response contained malformed JSON — skipping');
+                return { success: true, data: [] };
+            }
             if (data && data.tracks && Array.isArray(data.tracks)) {
                 // Map history entries to Release objects
                 const historyReleases: Release[] = data.tracks.map((track: any) => ({

@@ -132,6 +132,8 @@ export class SessionService implements ISessionService {
             store.setIsBroadcast(false);
             store.setSessionName(null);
             store.setHostUsername(null);
+            store.setSessionMode(null);
+            store.setNowPlaying(null);
 
             return { success: true, data: undefined };
         } catch (error: any) {
