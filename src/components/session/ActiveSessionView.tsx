@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Alert, ActionSheetIOS, Platform, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ActionSheetIOS, Platform, Image, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useShallow } from 'zustand/shallow';
@@ -109,16 +110,15 @@ export const ActiveSessionView = () => {
                 handleMenuPress
             );
         } else {
+            // Android Alert truncates long button lists — keep to 4 max (Cancel must be first)
             Alert.alert(
                 sessionName || 'Active Session',
                 'Choose an action',
                 [
-                    { text: 'Session Info', onPress: () => handleMenuPress(0) },
+                    { text: 'Cancel', style: 'cancel' },
                     { text: 'Share Join Code', onPress: () => handleMenuPress(1) },
-                    { text: 'Share QR Code', onPress: () => handleMenuPress(2) },
                     { text: 'Stop Current', onPress: () => handleMenuPress(3) },
                     { text: 'End Session', style: 'destructive', onPress: () => handleMenuPress(4) },
-                    { text: 'Cancel', style: 'cancel' }
                 ]
             );
         }

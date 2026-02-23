@@ -36,5 +36,21 @@ export const COPY = {
     CREATE_ACCOUNT: 'Create Account',
     DISPLAY_NAME: 'Display Name',
     WELCOME_BACK: 'Welcome Back',
+
+    // Issue #144 + #145: Session Mode Selector & Host Home Screen
+    MODE_PARTY_TITLE: 'Listening Party',
+    MODE_PARTY_DESC: "Invite friends with a QR code. Guests pick from your bin.",
+    MODE_LIVE_TITLE: 'Go Live',
+    MODE_LIVE_DESC: "Your turntable is public. Anyone can see what's spinning.",
+    MODE_SOLO_TITLE: 'Just Play',
+    MODE_SOLO_DESC: 'Private session. Just track what you play tonight.',
+    CTA_START_PARTY: 'Start Party',
+    CTA_GO_LIVE: 'Go Live',
+    CTA_START_PLAYING: 'Start Playing',
+    HOST_HOME_HISTORY_EMPTY: 'No sessions yet. Start your first listening party.',
+    HOST_HOME_LAST_SESSION: 'Last session',
+    HOST_HOME_SEE_ALL: 'See all history \u2192',
+    HOST_HOME_START_SOMETHING: 'Start something',
+    HOST_HOME_COLLECTION: 'Your Collection',
 } as const;
 

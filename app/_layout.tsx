@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/react-native';
 import { CONFIG } from '@/config';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, UIManager } from 'react-native';
@@ -67,10 +67,24 @@ function RootLayout() {
   const { hydrateCredentials, updateLastInteraction } = useSessionStore();
   const router = useRouter();
   const url = Linking.useURL();
+  const hasRouted = useRef(false);
 
-  // Hydrate token from SecureStore on app start
+  // Hydrate token from SecureStore on app start.
+  // If the user is authenticated, always route through / so the isIdleHost
+  // and isSessionActive gates in index.tsx can evaluate — even if Expo Router
+  // restored navigation state to a tab on a previous session.
   useEffect(() => {
-    hydrateCredentials();
+    const init = async () => {
+      await hydrateCredentials();
+      const { authToken } = useSessionStore.getState();
+      if (!hasRouted.current) {
+        hasRouted.current = true;
+        if (authToken) {
+          router.replace('/');
+        }
+      }
+    };
+    init();
     // Issue #126: Initialize Listening Bin Sync Service
     listeningBinSyncService.init();
   }, []);
