@@ -11,6 +11,7 @@ import {
     ScrollView,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,21 +81,21 @@ export default function CreateSessionScreen() {
     };
 
     return (
+        <SafeAreaView style={styles.container}>
+            <Stack.Screen options={{ headerShown: false }} />
+            {/* Custom header row */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+                    <Ionicons name="close" size={24} color={THEME.colors.text} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Start a Session</Text>
+                <View style={styles.headerButton} />
+            </View>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
-            <Stack.Screen
-                options={{
-                    title: 'Start a Session',
-                    headerLeft: () => (
-                        <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-                            <Ionicons name="close" size={24} color={THEME.colors.text} />
-                        </TouchableOpacity>
-                    ),
-                }}
-            />
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.sectionLabel}>Choose a mode</Text>
@@ -177,6 +178,7 @@ export default function CreateSessionScreen() {
                 </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
@@ -185,8 +187,23 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: THEME.colors.background,
     },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderBottomWidth: 1,
+        borderBottomColor: THEME.colors.glassBorder,
+    },
+    headerTitle: {
+        color: THEME.colors.text,
+        fontSize: 17,
+        fontWeight: '600',
+    },
     headerButton: {
         padding: 8,
+        width: 40,
     },
     content: {
         padding: 24,
