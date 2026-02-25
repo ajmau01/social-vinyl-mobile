@@ -2,6 +2,7 @@ import { ISessionService } from './interfaces';
 import { wsService } from './WebSocketService';
 import { dbService } from './DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
+import { secureStorage } from '@/utils/storage';
 import {
     AsyncResult,
     SessionCreatedMessage,
@@ -60,6 +61,9 @@ export class SessionService implements ISessionService {
     }
 
     public async joinSession(code: string, name: string): Promise<AsyncResult<SessionJoinedMessage>> {
+        // NB-6: Resolve token BEFORE starting the timeout to prevent spurious errors
+        const token = await secureStorage.getAuthToken();
+
         return new Promise((resolve) => {
             const listener = (response: SessionJoinedMessage) => {
                 wsService.removeListener('session-joined', listener);
@@ -98,23 +102,22 @@ export class SessionService implements ISessionService {
 
             wsService.addListener('session-joined', listener);
 
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 wsService.removeListener('session-joined', listener);
                 resolve({ success: false, error: new Error('join-session timed out') });
             }, 5000);
 
-            const { secureStorage } = require('@/utils/storage');
-            secureStorage.getAuthToken().then((token: string | null) => {
-                wsService.joinSession(code, name, token || undefined).then(result => {
-                    if (!result.success) {
-                        wsService.removeListener('session-joined', listener);
-                        resolve(result);
-                    }
-                }).catch(error => {
-                    logger.error('[SessionService] joinSession failed:', error.message || error);
+            wsService.joinSession(code, name, token || undefined).then(result => {
+                if (!result.success) {
+                    clearTimeout(timeoutId);
                     wsService.removeListener('session-joined', listener);
-                    resolve({ success: false, error });
-                });
+                    resolve(result);
+                }
+            }).catch(error => {
+                clearTimeout(timeoutId);
+                logger.error('[SessionService] joinSession failed:', error.message || error);
+                wsService.removeListener('session-joined', listener);
+                resolve({ success: false, error });
             });
         });
     }

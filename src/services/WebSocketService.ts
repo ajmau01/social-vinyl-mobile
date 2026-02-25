@@ -56,7 +56,7 @@ class WebSocketService implements IWebSocketService {
 
 
     public connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string) {
-        // Issue #126: Handle re-authentication if credentials change while connected
+        // BLOCK-1: Always update currentConfig when connect is called to ensure guards reflect latest intent
         const prevConfig = this.currentConfig;
         this.currentConfig = { username, authToken, sessionId, sessionSecret };
         this.shouldReconnect = true;

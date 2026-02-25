@@ -1,10 +1,16 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, screen } from '@testing-library/react-native';
 import { GuestJoinModal } from '../GuestJoinModal';
 import { COPY } from '@/constants/copy';
 
 jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',
+}));
+
+jest.mock('@/store/useSessionStore', () => ({
+    useSessionStore: (selector: any) => selector({
+        setJoinCode: jest.fn(),
+    }),
 }));
 
 describe('GuestJoinModal', () => {
@@ -42,7 +48,7 @@ describe('GuestJoinModal', () => {
     });
 
     it('shows Create Account tab as disabled', () => {
-        const { getByText } = render(
+        render(
             <GuestJoinModal
                 visible={true}
                 onSubmit={jest.fn()}
@@ -50,9 +56,9 @@ describe('GuestJoinModal', () => {
             />
         );
 
-        const accountTabText = getByText(COPY.CREATE_ACCOUNT);
-        // Navigate up to the TouchableOpacity
-        // Note: This is a bit brittle without testIDs, but works for this structure
+        const accountTab = screen.getByTestId('create-account-tab');
+        // console.log(JSON.stringify(accountTab.props, null, 2));
+        expect(accountTab.props.accessibilityState.disabled).toBe(true);
     });
 
     it('calls onCancel when close button is pressed', () => {

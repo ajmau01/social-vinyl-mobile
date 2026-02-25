@@ -239,6 +239,7 @@ export default function JoinSessionScreen() {
                 onCancel={() => {
                     setShowJoinModal(false);
                     setLoading(false);
+                    setStoreJoinCode(null); // NB-2: Clear join code on cancel
                 }}
                 loading={loading}
             />

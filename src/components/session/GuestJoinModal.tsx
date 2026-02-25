@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, KeyboardAvo
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { COPY } from '@/constants/copy';
-import { useSessionStore } from '@/store/useSessionStore';
 
 interface GuestJoinModalProps {
     visible: boolean;
@@ -15,7 +14,6 @@ interface GuestJoinModalProps {
 export function GuestJoinModal({ visible, onSubmit, onCancel, loading = false }: GuestJoinModalProps) {
     const [name, setName] = useState('');
     const [tab, setTab] = useState<'skip' | 'account'>('skip');
-    const setJoinCode = useSessionStore(state => state.setJoinCode);
 
     const handleSubmit = () => {
         const trimmed = name.trim();
@@ -24,18 +22,12 @@ export function GuestJoinModal({ visible, onSubmit, onCancel, loading = false }:
         }
     };
 
-    const handleCancel = () => {
-        // NB-2: Clear join code on cancel
-        setJoinCode(null);
-        onCancel();
-    };
-
     return (
         <Modal
             visible={visible}
             transparent
             animationType="slide"
-            onRequestClose={handleCancel}
+            onRequestClose={onCancel}
         >
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -45,7 +37,7 @@ export function GuestJoinModal({ visible, onSubmit, onCancel, loading = false }:
                     <TouchableOpacity 
                         testID="modal-close-button"
                         style={styles.closeButton} 
-                        onPress={handleCancel} 
+                        onPress={onCancel} 
                         disabled={loading}
                     >
                         <Ionicons name="close" size={24} color={THEME.colors.textDim} />
@@ -67,6 +59,7 @@ export function GuestJoinModal({ visible, onSubmit, onCancel, loading = false }:
                             <Text style={[styles.tabText, tab === 'skip' && styles.activeTabText]}>{COPY.QUICK_JOIN}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
+                            testID="create-account-tab"
                             style={[styles.tab, tab === 'account' && styles.activeTab, styles.disabledTab]} 
                             onPress={() => {}}
                             disabled={true}
