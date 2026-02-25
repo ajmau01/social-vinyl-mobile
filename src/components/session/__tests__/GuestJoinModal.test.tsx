@@ -57,7 +57,6 @@ describe('GuestJoinModal', () => {
         );
 
         const accountTab = screen.getByTestId('create-account-tab');
-        // console.log(JSON.stringify(accountTab.props, null, 2));
         expect(accountTab.props.accessibilityState.disabled).toBe(true);
     });
 
