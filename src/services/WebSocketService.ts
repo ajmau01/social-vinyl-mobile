@@ -277,8 +277,18 @@ class WebSocketService implements IWebSocketService {
      */
     public async joinSession(joinCode: string, username: string, authToken?: string): AsyncResult<any> {
         try {
-            this.disconnect();
-            this.connect(username, authToken);
+            // BLOCK-1 FIX: If already connected with matching credentials, skip reconnect
+            const isAlreadyConnected = this.socket?.readyState === WebSocket.OPEN && 
+                                     this.currentConfig?.username === username &&
+                                     this.currentConfig?.authToken === authToken;
+
+            if (!isAlreadyConnected) {
+                if (CONFIG.DEBUG_WS) logger.log('[WS] joinSession: Reconnecting with guest credentials');
+                this.disconnect();
+                this.connect(username, authToken);
+            } else {
+                if (CONFIG.DEBUG_WS) logger.log('[WS] joinSession: Already connected with matching credentials, skipping reconnect');
+            }
 
             await new Promise<void>((resolve, reject) => {
                 const timeout = setTimeout(() => {
@@ -287,17 +297,19 @@ class WebSocketService implements IWebSocketService {
                 }, 10000);
 
                 const interval = setInterval(() => {
+                    // Check actual socket state AND protocol handshake readiness
                     if (this.socket?.readyState === WebSocket.OPEN) {
-                        // Ensure PROTOCOL_ACK or basic connection flag is ready.
-                        // We check if connectionState is 'connected' to ensure handleOpen finished
                         const { useSessionStore } = require('@/store/useSessionStore');
                         const state = useSessionStore.getState().connectionState;
+                        
+                        // We are 'connected' only after successful protocol handshake or auth
                         if (state === 'connected') {
                             clearInterval(interval);
                             clearTimeout(timeout);
                             resolve();
                         }
-                    } else if (this.socket?.readyState === WebSocket.CLOSED) {
+                    } else if (this.socket?.readyState === WebSocket.CLOSED && !isAlreadyConnected) {
+                        // Only fail if we were actually trying to connect
                         clearInterval(interval);
                         clearTimeout(timeout);
                         reject(new Error('WebSocket closed during connection'));

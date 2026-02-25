@@ -10,18 +10,20 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { QRScanner } from '@/components/session/QRScanner';
 import { GuestJoinModal } from '@/components/session/GuestJoinModal';
 import { COPY } from '@/constants/copy';
+import { sanitizeSearchQuery } from '@/utils/validation';
+import { secureStorage } from '@/utils/storage';
 
 export default function JoinSessionScreen() {
     const router = useRouter();
     const { code } = useLocalSearchParams<{ code?: string }>();
     const { sessionService } = useServices();
     
-    const { displayName, setDisplayName, authToken, username, joinCode: storedJoinCode } = useSessionStore(useShallow(state => ({
+    const { displayName, setDisplayName, username, joinCode: storedJoinCode, setJoinCode: setStoreJoinCode } = useSessionStore(useShallow(state => ({
         displayName: state.displayName,
         setDisplayName: state.setDisplayName,
-        authToken: state.authToken,
         username: state.username,
-        joinCode: state.joinCode
+        joinCode: state.joinCode,
+        setJoinCode: state.setJoinCode
     })));
 
     const [joinCode, setJoinCode] = useState(code || storedJoinCode || '');
@@ -30,18 +32,34 @@ export default function JoinSessionScreen() {
     const [error, setError] = useState<string | null>(null);
     const [showJoinModal, setShowJoinModal] = useState(false);
     
+    // NB-3: Track the target code across modal opens
+    const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
+    
     const hasAttemptedAutoJoin = useRef(false);
 
-    // If a code was passed via deep link or params, try joining immediately
+    // NB-1: Gate auto-join on imperative credential read to avoid hydrate race
     useEffect(() => {
-        const targetCode = code || storedJoinCode;
-        if (targetCode && targetCode.length === 5 && !hasAttemptedAutoJoin.current) {
-            hasAttemptedAutoJoin.current = true;
-            handleJoinClick(targetCode);
-        }
-    }, [code, storedJoinCode]);
+        const attemptAutoJoin = async () => {
+            const targetCode = code || storedJoinCode;
+            if (targetCode && targetCode.length === 5 && !hasAttemptedAutoJoin.current) {
+                hasAttemptedAutoJoin.current = true;
+                
+                // Read from secure storage directly to avoid hydrate race
+                const token = await secureStorage.getAuthToken();
+                const nameToUse = username || displayName;
+                
+                if (token && nameToUse) {
+                    executeJoin(targetCode, nameToUse);
+                } else {
+                    setPendingJoinCode(targetCode);
+                    setShowJoinModal(true);
+                }
+            }
+        };
+        attemptAutoJoin();
+    }, [code, storedJoinCode, username, displayName]);
 
-    const handleJoinClick = (overrideCode?: string) => {
+    const handleJoinClick = async (overrideCode?: string) => {
         const targetCode = (overrideCode || joinCode).trim().toUpperCase();
 
         if (targetCode.length !== 5) {
@@ -51,33 +69,42 @@ export default function JoinSessionScreen() {
 
         setError(null);
 
-        // Returning user check: has authToken + (username or displayName)
+        // Read from secure storage directly
+        const token = await secureStorage.getAuthToken();
         const nameToUse = username || displayName;
         
-        if (authToken && nameToUse) {
+        if (token && nameToUse) {
             executeJoin(targetCode, nameToUse);
         } else {
-            // New user or missing info, prompt for name/onboard
+            // NB-3: Ensure override code is used even if local joinCode state is stale
+            setPendingJoinCode(targetCode);
             setShowJoinModal(true);
         }
     };
 
     const handleGuestSubmit = (name: string) => {
-        setDisplayName(name);
+        // BLOCK-2: Sanitize name
+        const sanitizedName = sanitizeSearchQuery(name);
+        setDisplayName(sanitizedName);
         setShowJoinModal(false);
-        executeJoin(joinCode.trim().toUpperCase(), name);
+        
+        // NB-3: Use pendingJoinCode if available
+        const targetCode = pendingJoinCode || joinCode.trim().toUpperCase();
+        executeJoin(targetCode, sanitizedName);
     };
 
-    const handleScanSuccess = (scannedCode: string) => {
+    const handleScanSuccess = async (scannedCode: string) => {
         setIsScanning(false);
         setJoinCode(scannedCode);
 
         // Auto-join after short delay to let scanner close smoothly
-        setTimeout(() => {
+        setTimeout(async () => {
+            const token = await secureStorage.getAuthToken();
             const nameToUse = username || displayName;
-            if (authToken && nameToUse) {
+            if (token && nameToUse) {
                 executeJoin(scannedCode, nameToUse);
             } else {
+                setPendingJoinCode(scannedCode);
                 setShowJoinModal(true);
             }
         }, 300);
@@ -88,13 +115,16 @@ export default function JoinSessionScreen() {
         setError(null);
 
         try {
-            const result = await sessionService.joinSession(targetCode, name);
+            // BLOCK-2: Sanitize just in case
+            const sanitizedName = sanitizeSearchQuery(name);
+            const result = await sessionService.joinSession(targetCode, sanitizedName);
             if (result.success) {
+                // NB-2: Clear join code on success
+                setStoreJoinCode(null);
                 // Success - navigate to bin
                 router.replace('/(tabs)/collection');
             } else {
                 setError(result.error?.message || 'Failed to join party. Please check the code and try again.');
-                // If it failed and we were trying to auto-join, show the modal so they can fix it
                 setShowJoinModal(true);
             }
         } catch (err: any) {
