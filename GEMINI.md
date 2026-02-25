@@ -2,59 +2,51 @@
 
 > **Project**: Social Vinyl Mobile (React Native)
 > **Your Role**: Development & Implementation
-> **Current Assignment**: v1.0 Party Core — Issues #144 + #145 (Host Home Screen & Session Mode Selector)
-> **Branch**: `feature/144-145-host-home-session-modes`
+> **Current Assignment**: v1.0 Party Core — Issue #147 (Guest Onboarding)
+> **Branch**: `feature/147-guest-onboarding`
 > **Status**: Ready to implement
-> **Last Updated**: 2026-02-23
+> **Last Updated**: 2026-02-24
 
 ---
 
-## 🎯 Current Assignment: Issues #144 + #145
+## 🎯 Current Assignment: Issue #147 — Guest Onboarding
 
-**These two issues ship together in one PR.**
+**One issue, one PR.**
 
 Read the full implementation plan before starting:
-- `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/GEMINI-HANDOFF.md` — **complete implementation guide with code**
-- `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-23-issue-144-145-plan.md` — architecture decisions
-- GitHub [#144](https://github.com/ajmau01/social-vinyl-mobile/issues/144) — Host Home Screen spec
-- GitHub [#145](https://github.com/ajmau01/social-vinyl-mobile/issues/145) — Session Mode Selector spec
+- `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/GEMINI-HANDOFF.md` — **complete implementation guide** ⭐
+- GitHub [#147](https://github.com/ajmau01/social-vinyl-mobile/issues/147) — full spec with acceptance criteria
 
 ### What You're Building
 
-**#145 — Session Mode Selector** (builds first, used by #144):
-1. New copy strings in `src/constants/copy.ts`
-2. `mode` param added to `SessionService.createSession()`
-3. New component `src/components/session/SessionModeSelector.tsx`
-4. Rewrite `app/create-session.tsx` with mode-aware flow
+A guest arrives at a party, scans a QR code, and needs to be in the host's collection in under 30 seconds. This issue redesigns the join flow to hit that target.
 
-**#144 — Host Home Screen** (builds on top of #145):
-5. New component `src/components/HostHomeScreen.tsx`
-6. Routing gate additions in `app/index.tsx`
+**Three paths, one screen** (`GuestJoinModal.tsx`):
+1. **Returning user** — has `authToken` in SecureStore → auto-joins, zero friction
+2. **New user "Skip"** — enters display name only → joins immediately, no account
+3. **New user with account** — display name + email + password → ⚠️ **STUB ONLY** (see below)
 
-### Key Architecture Decision (IMPORTANT)
+### ⚠️ Scope Boundary — Read This First
 
-`sessionMode` is **mobile-only**. Never sent to backend. All three modes call:
-- `create-session { name, permanent: false }` (same for all modes)
-- Go Live additionally: `set-broadcast { sessionId }` after creation
+The full account creation flow (email + password) depends on Backend #272 (Guest Registration endpoint) which is **not yet built**. Do NOT implement a non-functional form.
 
-| Mode | Backend calls |
-|------|---------------|
-| Listening Party | `create-session` only |
-| Go Live | `create-session` + `set-broadcast` |
-| Just Play | `create-session` only |
+**Build in this session**:
+- Deep link handling + pre-population of join code
+- Background WebSocket pre-connection before UI renders
+- Returning user auto-join (stored `authToken`)
+- "Skip for now" path — display name only, joins immediately
+- The `GuestJoinModal` component with the full UX chrome
 
-### Pre-condition
-
-Issue #154 (History & Setlist DB) must be merged first — `dbService.getSessionsHistory()` must exist. **Verify this before starting `HostHomeScreen.tsx`.**
+**Stub only — do not implement**:
+- The email + password account creation form
+- Replace with a "Create Account (Coming Soon)" placeholder, styled consistently
 
 ### Implementation Order
 
-1. `src/constants/copy.ts` — add new strings
-2. `src/services/SessionService.ts` — add mode param
-3. `src/components/session/SessionModeSelector.tsx` — new component
-4. `app/create-session.tsx` — full rewrite
-5. `src/components/HostHomeScreen.tsx` — new component
-6. `app/index.tsx` — routing gate additions
+1. `app/_layout.tsx` — deep link handler: pre-populate join code, kick off background WS join
+2. `src/components/session/GuestJoinModal.tsx` — NEW modal overlay component
+3. `app/join-session.tsx` — wire `GuestJoinModal`, handle returning user auto-join
+4. `src/constants/copy.ts` — add new copy strings
 
 ---
 
@@ -65,18 +57,17 @@ Issue #154 (History & Setlist DB) must be merged first — `dbService.getSession
 - #142 Cold Start Screen Redesign (PR #160)
 - #143 Account & Identity Model (PR #163)
 
-**Group 2 — Host Experience**:
-- [ ] **#144** Host Home Screen ← YOU ARE HERE
-- [ ] **#145** Session Mode Selector ← YOU ARE HERE
-- [x] **#146** Active Session Command View ✅ (PR #164 merged Feb 23)
+**Group 2 — Host Experience**: ALL COMPLETE ✅
+- #144 Host Home Screen ✅ (PR #166 merged Feb 23)
+- #145 Session Mode Selector ✅ (PR #166 merged Feb 23)
+- #146 Active Session Command View ✅ (PR #164 merged Feb 23)
+- #154 History & Setlist View ✅ (closed Feb 23)
+- #168 Leave Session ✅ (closed Feb 23)
 
-**Group 3 — Guest Experience** (after #144/#145):
-- [ ] #147 Guest Onboarding
-- [ ] #148 Guest Collection View
-- [ ] #149 Bookmark-to-Buy
-
-**Shared**:
-- [x] **#154** History & Setlist View ✅ (must be merged before HostHomeScreen)
+**Group 3 — Guest Experience** ← YOU ARE HERE:
+- [ ] **#147** Guest Onboarding ← START HERE
+- [ ] **#148** Guest Collection View
+- [ ] **#149** Bookmark-to-Buy
 
 ---
 
@@ -124,7 +115,7 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 ## Workflow Rules (Non-Negotiable)
 
 - **NEVER commit directly to `main`**
-- **ALWAYS work in the feature branch**: `feature/144-145-host-home-session-modes`
+- **ALWAYS work in the feature branch**: `feature/147-guest-onboarding`
 - **ALWAYS create a PR** — never merge locally
 - **NEVER merge a PR** — that's the user's job
 - **ALWAYS use** "Andrew Mauer" (`ajmauer@gmail.com`) for commits
@@ -133,9 +124,9 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 
 1. `npx tsc --noEmit` — verify no TypeScript errors
 2. `npm test` — all tests pass
-3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-23-issue-144-145-complete.md`
-4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md`
-5. Create PR against `main` with title: `feat(host): host home screen + session mode selector (#144 #145)`
+3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-24-issue-147-complete.md`
+4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md` — mark #147 complete
+5. Create PR against `main` with title: `feat(guest): guest onboarding — deep link join + skip path (#147)`
 
 ---
 
@@ -143,23 +134,19 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 
 ```
 app/
-├── index.tsx              ← routing gates (modify in step 6)
-├── create-session.tsx     ← full rewrite (step 4)
+├── _layout.tsx            ← deep link handler (modify in step 1)
+├── join-session.tsx       ← wire GuestJoinModal, auto-join (modify in step 3)
 └── (tabs)/
     └── collection.tsx
 
 src/
 ├── components/
-│   ├── HostHomeScreen.tsx         ← NEW (step 5)
 │   └── session/
-│       ├── ActiveSessionView.tsx  ← existing, do NOT modify
-│       └── SessionModeSelector.tsx ← NEW (step 3)
+│       └── GuestJoinModal.tsx     ← NEW (step 2)
 ├── constants/
-│   └── copy.ts                    ← add strings (step 1)
-├── services/
-│   └── SessionService.ts          ← add mode param (step 2)
+│   └── copy.ts                    ← add strings (step 4)
 └── store/
-    └── useSessionStore.ts         ← sessionMode already added in #146
+    └── useSessionStore.ts         ← read lastMode/authToken for returning user check
 ```
 
 ---
@@ -168,33 +155,26 @@ src/
 
 ### ServiceContext / useServices()
 ```tsx
-const { sessionService, databaseService } = useServices();
+const { sessionService, webSocketService } = useServices();
 ```
 
-### Session Store
+### Session Store — returning user check
 ```tsx
-const { username, authToken, sessionRole, lastSyncTime } = useSessionStore();
-// sessionMode: 'party' | 'live' | 'solo' | null — already in store from #146
+const { authToken, sessionRole, lastMode } = useSessionStore();
+// returning guest = lastMode === 'guest' && authToken exists in SecureStore
 ```
 
-### Existing SessionService.createSession() signature (current)
+### Existing SessionService.joinSession()
 ```typescript
-public async createSession(name: string, permanent: boolean): Promise<AsyncResult<SessionCreatedMessage>>
+public async joinSession(joinCode: string, displayName: string): Promise<AsyncResult<SessionJoinedMessage>>
 ```
-→ Add `mode?: 'party' | 'live' | 'solo'` as third param.
+This is the call made when the guest taps "Join Party" on the skip path.
 
-### Existing SessionService.setBroadcast()
-```typescript
-public async setBroadcast(sessionId: number): Promise<AsyncResult<void>>
+### Deep link URL format
 ```
-Already exists — use it for Go Live mode.
-
-### DatabaseService.getSessionsHistory()
-```typescript
-// Returns array of session records from SQLite sessions table
-// Each record has: id, session_name, host_username, started_at, ended_at, mode, guest_count
-await databaseService.getSessionsHistory(10);
+socialvinyl://join?code=RQLA4
 ```
+Extract `code` in `_layout.tsx` Linking handler and pass as param to `join-session` route.
 
 ---
 
@@ -215,7 +195,6 @@ npm test -- SessionMode    # Test specific file
 
 **Key files for this task**:
 - `Projects/Mobile-App/GEMINI-HANDOFF.md` — full implementation guide ⭐
-- `Projects/Mobile-App/Implementation-Notes/2026-02-23-issue-144-145-plan.md` — architecture
 - `_Dashboard/Current-Sprint.md` — sprint status
 
 ---

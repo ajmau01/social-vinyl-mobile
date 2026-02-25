@@ -275,10 +275,10 @@ class WebSocketService implements IWebSocketService {
      * Joins a session as a guest.
      * Establishes a persistent connection and sends the join-session action.
      */
-    public async joinSession(joinCode: string, username: string): AsyncResult<any> {
+    public async joinSession(joinCode: string, username: string, authToken?: string): AsyncResult<any> {
         try {
             this.disconnect();
-            this.connect(username);
+            this.connect(username, authToken);
 
             await new Promise<void>((resolve, reject) => {
                 const timeout = setTimeout(() => {
@@ -306,7 +306,7 @@ class WebSocketService implements IWebSocketService {
             });
 
             // Connection successful, now send join action
-            const response = await this.sendAction('join-session', { joinCode });
+            const response = await this.sendAction('join-session', { joinCode, username });
             return { success: true, data: response };
 
         } catch (err: any) {

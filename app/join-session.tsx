@@ -1,55 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
+
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { QRScanner } from '@/components/session/QRScanner';
-import { LobbyModal } from '@/components/session/LobbyModal';
+import { GuestJoinModal } from '@/components/session/GuestJoinModal';
 import { COPY } from '@/constants/copy';
 
 export default function JoinSessionScreen() {
     const router = useRouter();
     const { code } = useLocalSearchParams<{ code?: string }>();
     const { sessionService } = useServices();
-    const { displayName, setDisplayName } = useSessionStore();
+    
+    const { displayName, setDisplayName, authToken, username, joinCode: storedJoinCode } = useSessionStore(useShallow(state => ({
+        displayName: state.displayName,
+        setDisplayName: state.setDisplayName,
+        authToken: state.authToken,
+        username: state.username,
+        joinCode: state.joinCode
+    })));
 
-    const [joinCode, setJoinCode] = useState(code || '');
+    const [joinCode, setJoinCode] = useState(code || storedJoinCode || '');
     const [isScanning, setIsScanning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showLobbyModal, setShowLobbyModal] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
+    
+    const hasAttemptedAutoJoin = useRef(false);
 
     // If a code was passed via deep link or params, try joining immediately
     useEffect(() => {
-        if (code && code.length === 5) {
-            handleJoinClick();
+        const targetCode = code || storedJoinCode;
+        if (targetCode && targetCode.length === 5 && !hasAttemptedAutoJoin.current) {
+            hasAttemptedAutoJoin.current = true;
+            handleJoinClick(targetCode);
         }
-    }, [code]);
+    }, [code, storedJoinCode]);
 
-    const handleJoinClick = () => {
-        const trimmedCode = joinCode.trim().toUpperCase();
+    const handleJoinClick = (overrideCode?: string) => {
+        const targetCode = (overrideCode || joinCode).trim().toUpperCase();
 
-        if (trimmedCode.length !== 5) {
+        if (targetCode.length !== 5) {
             setError('Please enter a 5-character join code');
             return;
         }
 
         setError(null);
 
-        // If user already has a display name, join directly
-        if (displayName) {
-            executeJoin(trimmedCode, displayName);
+        // Returning user check: has authToken + (username or displayName)
+        const nameToUse = username || displayName;
+        
+        if (authToken && nameToUse) {
+            executeJoin(targetCode, nameToUse);
         } else {
-            // Otherwise, prompt for a name
-            setShowLobbyModal(true);
+            // New user or missing info, prompt for name/onboard
+            setShowJoinModal(true);
         }
     };
 
-    const handleLobbySubmit = (name: string) => {
+    const handleGuestSubmit = (name: string) => {
         setDisplayName(name);
-        setShowLobbyModal(false);
+        setShowJoinModal(false);
         executeJoin(joinCode.trim().toUpperCase(), name);
     };
 
@@ -59,10 +74,11 @@ export default function JoinSessionScreen() {
 
         // Auto-join after short delay to let scanner close smoothly
         setTimeout(() => {
-            if (displayName) {
-                executeJoin(scannedCode, displayName);
+            const nameToUse = username || displayName;
+            if (authToken && nameToUse) {
+                executeJoin(scannedCode, nameToUse);
             } else {
-                setShowLobbyModal(true);
+                setShowJoinModal(true);
             }
         }, 300);
     };
@@ -73,15 +89,18 @@ export default function JoinSessionScreen() {
 
         try {
             const result = await sessionService.joinSession(targetCode, name);
-            if (result) {
+            if (result.success) {
                 // Success - navigate to bin
-                router.replace('/(tabs)/bin');
+                router.replace('/(tabs)/collection');
             } else {
-                setError('Failed to join party. Please check the code and try again.');
+                setError(result.error?.message || 'Failed to join party. Please check the code and try again.');
+                // If it failed and we were trying to auto-join, show the modal so they can fix it
+                setShowJoinModal(true);
             }
         } catch (err: any) {
             console.error('Join session error:', err);
             setError(err.message || 'An unexpected error occurred while joining.');
+            setShowJoinModal(true);
         } finally {
             setLoading(false);
         }
@@ -158,7 +177,7 @@ export default function JoinSessionScreen() {
 
                 <TouchableOpacity
                     style={[styles.joinButton, (joinCode.length !== 5 || loading) && styles.disabledButton]}
-                    onPress={handleJoinClick}
+                    onPress={() => handleJoinClick()}
                     disabled={joinCode.length !== 5 || loading}
                 >
                     {loading ? (
@@ -184,13 +203,14 @@ export default function JoinSessionScreen() {
 
             </ScrollView>
 
-            <LobbyModal
-                visible={showLobbyModal}
-                onSubmit={handleLobbySubmit}
+            <GuestJoinModal
+                visible={showJoinModal}
+                onSubmit={handleGuestSubmit}
                 onCancel={() => {
-                    setShowLobbyModal(false);
+                    setShowJoinModal(false);
                     setLoading(false);
                 }}
+                loading={loading}
             />
         </KeyboardAvoidingView>
     );

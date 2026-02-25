@@ -103,7 +103,13 @@ export class SessionService implements ISessionService {
                 resolve({ success: false, error: new Error('join-session timed out') });
             }, 5000);
 
-            wsService.sendAction('join-session', { joinCode: code, username: name }).catch(error => {
+            const { authToken } = useSessionStore.getState();
+            wsService.joinSession(code, name, authToken || undefined).then(result => {
+                if (!result.success) {
+                    wsService.removeListener('session-joined', listener);
+                    resolve(result);
+                }
+            }).catch(error => {
                 logger.error('[SessionService] joinSession failed:', error.message || error);
                 wsService.removeListener('session-joined', listener);
                 resolve({ success: false, error });

@@ -37,6 +37,16 @@ export const COPY = {
     DISPLAY_NAME: 'Display Name',
     WELCOME_BACK: 'Welcome Back',
 
+    // Issue #147: Guest Onboarding
+    GUEST_JOIN_TITLE: 'Welcome to the Party!',
+    GUEST_JOIN_SUBTITLE: 'Join the party to start picking records.',
+    QUICK_JOIN: 'Quick Join',
+    QUICK_JOIN_HINT: 'No account needed to join and browse.',
+    JOIN_AS_GUEST: 'Join as Guest',
+    CREATE_ACCOUNT_STUB_TITLE: 'Coming Soon',
+    CREATE_ACCOUNT_STUB_DESC: 'Accounts will let you save your favorite records and follow hosts across parties.',
+    USE_QUICK_JOIN: 'Use Quick Join Instead',
+
     // Issue #144 + #145: Session Mode Selector & Host Home Screen
     MODE_PARTY_TITLE: 'Listening Party',
     MODE_PARTY_DESC: "Invite friends with a QR code. Guests pick from your bin.",
