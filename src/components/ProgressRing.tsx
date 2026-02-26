@@ -5,7 +5,6 @@ import Animated, {
     useSharedValue,
     withTiming,
     Easing,
-    interpolate
 } from 'react-native-reanimated';
 import { COLORS } from '../constants/theme';
 
@@ -47,7 +46,6 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     };
 
     const animatedProgress = useSharedValue(getInitialProgress());
-    const lastPlayedAt = useSharedValue(playedAt || 0);
 
     const BROADCAST_INTERVAL_MS = 5000;
 
@@ -61,28 +59,17 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
         // If off by more than 5%, instant reset (no animation) to avoid catching up lag
         if (delta > 0.05) {
             animatedProgress.value = currentProgress;
-            lastPlayedAt.value = playedAt || 0;
-        } else if (playedAt && playedAt !== lastPlayedAt.value) {
-            // New album detected
-            animatedProgress.value = 0;
-            lastPlayedAt.value = playedAt;
         }
 
-        // Use playedAt-derived position for projection when available — it is more
-        // accurate than the server-reported position (which can lag by up to 5s).
-        // Without this, getInitialProgress() sets the ring ahead of `position`, and
-        // the first withTiming call projects to a target already reached, causing a
-        // visible stall of one broadcast interval.
-        const truePositionMs = playedAt
-            ? Math.min(Date.now() - playedAt, duration)
-            : position;
-
         // Issue #3: Progress Ring Track End Overshoot prevention
-        const timeRemaining = duration - truePositionMs;
+        // Use server-reported position for projection — reliable and advances correctly
+        // each broadcast regardless of whether playedAt is a fixed start-time or
+        // a per-broadcast timestamp.
+        const timeRemaining = Math.max(duration - position, 0);
         const projectionWindow = Math.min(timeRemaining, BROADCAST_INTERVAL_MS);
 
         // Project where we SHOULD be in the next window to eliminate lag
-        const projectedProgress = Math.min((truePositionMs + projectionWindow) / duration, 1);
+        const projectedProgress = Math.min((position + projectionWindow) / duration, 1);
 
         // Animate towards that projection over the interval window
         animatedProgress.value = withTiming(projectedProgress, {

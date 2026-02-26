@@ -23,9 +23,11 @@ describe('ProgressRing', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        (useSharedValue as jest.Mock)
-            .mockReturnValueOnce(mockAnimatedValue)
-            .mockReturnValueOnce(mockLastPlayedAt);
+        mockAnimatedValue.value = 0;
+        mockLastPlayedAt.value = 0;
+        // mockReturnValue (not Once) ensures re-renders always get the same stable reference,
+        // simulating the real useSharedValue behaviour.
+        (useSharedValue as jest.Mock).mockReturnValue(mockAnimatedValue);
     });
 
     it('projects progress by exactly 5 seconds when enough time remains', () => {
