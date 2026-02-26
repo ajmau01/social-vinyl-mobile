@@ -37,7 +37,16 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
 }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
-    const animatedProgress = useSharedValue(0);
+
+    // Initialize from playedAt so remounts (e.g. host switching tabs) don't
+    // flash back to 0 while waiting for the first server position broadcast.
+    const getInitialProgress = () => {
+        if (!duration) return 0;
+        if (playedAt) return Math.min(Math.max((Date.now() - playedAt) / duration, 0), 1);
+        return Math.min(position / duration, 1);
+    };
+
+    const animatedProgress = useSharedValue(getInitialProgress());
     const lastPlayedAt = useSharedValue(playedAt || 0);
 
     const BROADCAST_INTERVAL_MS = 5000;
