@@ -82,7 +82,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const handleAddToBin = async () => {
         if (!release || !username || isAdding) return;
         if (isNowPlaying) {
-            setValidationToast({ message: "That one's playing right now — add it after it finishes?", visible: true });
+            setValidationToast({ message: "It appears that this title is currently playing - choose another?", visible: true });
             return;
         }
         if (isGuest && release) {
