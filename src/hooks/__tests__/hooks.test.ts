@@ -92,8 +92,9 @@ describe('Phase 2 Hooks', () => {
                 albumArt: '',
                 releaseId: '',
                 timestamp: undefined,
+                playedAt: undefined,
                 duration: 0,
-                position: undefined,
+                position: 0, // normalizeDuration(undefined) → 0
                 userHasLiked: undefined,
                 playedBy: undefined,
                 likeCount: undefined

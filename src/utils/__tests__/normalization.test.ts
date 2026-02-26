@@ -52,8 +52,9 @@ describe('normalizeNowPlayingPayload', () => {
             albumArt: 'http://example.com/art.jpg',
             releaseId: '12345',
             timestamp: undefined,
+            playedAt: undefined,
             duration: 180000, // normalized to ms
-            position: 10,
+            position: 10000, // normalized: 10s → 10000ms
             userHasLiked: true,
             playedBy: 'User1',
             likeCount: 5
@@ -90,8 +91,9 @@ describe('normalizeNowPlayingPayload', () => {
             albumArt: 'http://example.com/art.jpg',
             releaseId: '67890',
             timestamp: undefined,
+            playedAt: undefined,
             duration: 200000,
-            position: undefined,
+            position: 0, // normalizeDuration(undefined) → 0
             userHasLiked: undefined,
             playedBy: undefined,
             likeCount: 10 // handled thumbCount alias

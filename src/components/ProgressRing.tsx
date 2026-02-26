@@ -13,17 +13,25 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 interface ProgressRingProps {
     size: number;
     strokeWidth: number;
-    position: number; // in ms
+    position: number; // in ms (fallback when playedAt unavailable)
     duration: number; // in ms
-    playedAt?: number; // timestamp in ms
+    playedAt?: number; // unix ms timestamp when playback started
     color?: string;
     backgroundColor?: string;
 }
 
 /**
- * A circular progress indicator meant for the Now Playing banner.
- * Uses react-native-reanimated to smooth out the 5s interval updates
- * from the backend.
+ * A circular progress indicator for the Now Playing banner.
+ *
+ * Primary path: uses a 1-second setInterval with Date.now() - playedAt, mirroring
+ * the webapp implementation. This is immune to server-broadcast lag and produces
+ * smooth, accurate progress regardless of how frequently the server sends updates.
+ *
+ * Fallback path: when playedAt is unavailable, advances to the server-reported
+ * position on each prop update.
+ *
+ * Both paths use withTiming(1100ms) for a CSS-transition-like smooth advance,
+ * just as the webapp uses `transition: stroke-dashoffset 1s linear`.
  */
 export const ProgressRing: React.FC<ProgressRingProps> = ({
     size,
@@ -38,7 +46,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     const circumference = radius * 2 * Math.PI;
 
     // Initialize from playedAt so remounts (e.g. host switching tabs) don't
-    // flash back to 0 while waiting for the first server position broadcast.
+    // flash back to 0 while waiting for the first interval tick.
     const getInitialProgress = () => {
         if (!duration) return 0;
         if (playedAt) return Math.min(Math.max((Date.now() - playedAt) / duration, 0), 1);
@@ -47,45 +55,39 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
 
     const animatedProgress = useSharedValue(getInitialProgress());
 
-    const BROADCAST_INTERVAL_MS = 5000;
-
+    // Primary: clock-based setInterval — mirrors webapp's startProgressTimer.
+    // Recalculates from playedAt every second so the ring advances continuously
+    // between server broadcasts without any lag or projection math.
     useEffect(() => {
-        if (!duration) return;
+        if (!duration || !playedAt) return;
 
-        const currentProgress = Math.min(position / duration, 1);
-        const delta = Math.abs(currentProgress - (animatedProgress.value || 0));
+        const tick = () => {
+            const progress = Math.min(Math.max((Date.now() - playedAt) / duration, 0), 1);
+            animatedProgress.value = withTiming(progress, {
+                duration: 1100, // slightly over 1s — mirrors CSS `transition: 1s linear`
+                easing: Easing.linear,
+            });
+        };
 
-        // Issue #4: Progress Ring Reconnection Snap
-        // If off by more than 5%, instant reset (no animation) to avoid catching up lag
-        if (delta > 0.05) {
-            animatedProgress.value = currentProgress;
-        }
+        tick(); // Immediately jump to the correct position
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [playedAt, duration]);
 
-        // Issue #3: Progress Ring Track End Overshoot prevention
-        // Use server-reported position for projection — reliable and advances correctly
-        // each broadcast regardless of whether playedAt is a fixed start-time or
-        // a per-broadcast timestamp.
-        const timeRemaining = Math.max(duration - position, 0);
-        const projectionWindow = Math.min(timeRemaining, BROADCAST_INTERVAL_MS);
-
-        // Project where we SHOULD be in the next window to eliminate lag
-        const projectedProgress = Math.min((position + projectionWindow) / duration, 1);
-
-        // Animate towards that projection over the interval window
-        animatedProgress.value = withTiming(projectedProgress, {
-            duration: BROADCAST_INTERVAL_MS,
+    // Fallback: no playedAt — animate to server-reported position on each update.
+    useEffect(() => {
+        if (!duration || playedAt) return;
+        const progress = Math.min(Math.max(position / duration, 0), 1);
+        animatedProgress.value = withTiming(progress, {
+            duration: 1000,
             easing: Easing.linear,
         });
     }, [position, duration, playedAt]);
 
     const animatedProps = useAnimatedProps(() => {
-        // Clamp progress between 0 and 1 to prevent SVG dash bugs
         const clampedProgress = Math.min(Math.max(animatedProgress.value, 0), 1);
         const strokeDashoffset = circumference * (1 - clampedProgress);
-
-        return {
-            strokeDashoffset,
-        };
+        return { strokeDashoffset };
     });
 
     return (

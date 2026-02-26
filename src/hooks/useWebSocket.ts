@@ -128,7 +128,8 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     }
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     // Normalize backend message to frontend NowPlaying interface
-                    const normalized = normalizeNowPlayingPayload(payload);
+                    // Pass existing nowPlaying so playedAt is preserved if backend omits it
+                    const normalized = normalizeNowPlayingPayload(payload, useSessionStore.getState().nowPlaying);
                     setNowPlaying(normalized);
 
                     // Issue #154: Persist to local history
@@ -167,7 +168,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
                     if (rawState.nowPlaying) {
-                        const normalized = normalizeNowPlayingPayload(rawState.nowPlaying);
+                        const normalized = normalizeNowPlayingPayload(rawState.nowPlaying, useSessionStore.getState().nowPlaying);
                         setNowPlaying(normalized);
 
                         // Issue #154: Persist to local history
