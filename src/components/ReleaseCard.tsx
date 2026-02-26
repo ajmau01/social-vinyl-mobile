@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, Pressable, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
@@ -9,9 +9,12 @@ interface ReleaseCardProps {
     onPress?: () => void;
     onLongPress?: () => void;
     style?: StyleProp<ViewStyle>;
+    guestMode?: boolean;
+    isWanted?: boolean;
+    onWantList?: () => void;
 }
 
-export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCardProps) => {
+export const ReleaseCard = ({ release, onPress, onLongPress, style, guestMode, isWanted, onWantList }: ReleaseCardProps) => {
     return (
         <Pressable
             style={({ pressed }) => [
@@ -37,7 +40,7 @@ export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCar
                     </View>
                 )}
 
-                {release.isSaved && (
+                {!guestMode && release.isSaved && (
                     <Animated.View
                         entering={ZoomIn.duration(200)}
                         exiting={ZoomOut.duration(200)}
@@ -47,6 +50,21 @@ export const ReleaseCard = ({ release, onPress, onLongPress, style }: ReleaseCar
                             <Ionicons name="bookmark" size={14} color={THEME.colors.gold} />
                         </View>
                     </Animated.View>
+                )}
+                {guestMode && (
+                    <TouchableOpacity
+                        style={styles.wantListOverlay}
+                        onPress={(e) => { e.stopPropagation(); onWantList?.(); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <View style={styles.wantListBackground}>
+                            <Ionicons
+                                name={isWanted ? 'pricetag' : 'pricetag-outline'}
+                                size={14}
+                                color={isWanted ? THEME.colors.primary : THEME.colors.textDim}
+                            />
+                        </View>
+                    </TouchableOpacity>
                 )}
             </View>
 
@@ -124,5 +142,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    wantListOverlay: {
+        position: 'absolute',
+        bottom: THEME.spacing.xs,
+        right: THEME.spacing.xs,
+        zIndex: 10,
+    },
+    wantListBackground: {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        width: 24, height: 24, borderRadius: 12,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)',
     },
 });

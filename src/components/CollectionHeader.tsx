@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { THEME } from '@/constants/theme';
@@ -20,6 +20,8 @@ export interface CollectionHeaderProps {
     onMenuPress: () => void;
     onInfoPress?: () => void;
     onViewModeChange: (mode: ViewMode) => void;
+    hideViewModes?: ViewMode[];
+    onWantListPress?: () => void;
 }
 
 const VIEW_MODE_MAP: Record<string, ViewMode> = {
@@ -57,6 +59,8 @@ function isCacheStale(lastSyncTime: number | null): boolean {
     return Date.now() - lastSyncTime > 6 * 60 * 60 * 1000; // 6 hours
 }
 
+const ALL_VIEW_OPTIONS = ['Genre', 'A-Z', 'Decade', 'N&N', 'Spin', 'Saved'];
+
 export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     title,
     syncStatus,
@@ -69,7 +73,9 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
     onRandomPress,
     onMenuPress,
     onInfoPress,
-    onViewModeChange
+    onViewModeChange,
+    hideViewModes,
+    onWantListPress,
 }) => {
     const getSegmentedValue = useCallback(() => {
         return REVERSE_VIEW_MODE_MAP[viewMode] || 'Genre';
@@ -83,6 +89,12 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
             logger.error(`[CollectionHeader] Unknown view mode: ${val}`);
         }
     }, [onViewModeChange]);
+
+    const filteredOptions = useMemo(() => {
+        if (!hideViewModes || hideViewModes.length === 0) return ALL_VIEW_OPTIONS;
+        const hiddenLabels = new Set(hideViewModes.map(m => REVERSE_VIEW_MODE_MAP[m]).filter(Boolean));
+        return ALL_VIEW_OPTIONS.filter(o => !hiddenLabels.has(o));
+    }, [hideViewModes]);
 
     const isSyncing = syncStatus === 'syncing';
     const stale = isCacheStale(lastSyncTime);
@@ -135,6 +147,17 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
                     >
                         <Ionicons name="dice-outline" size={22} color={THEME.colors.white} />
                     </TouchableOpacity>
+                    {onWantListPress && (
+                        <TouchableOpacity
+                            testID="collection-header-wantlist-button"
+                            style={styles.iconBtn}
+                            onPress={onWantListPress}
+                            accessibilityRole="button"
+                            accessibilityLabel="Your want list"
+                        >
+                            <Ionicons name="pricetag-outline" size={22} color={THEME.colors.primary} />
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         testID="collection-header-menu-button"
                         style={styles.iconBtnGlass}
@@ -149,7 +172,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
 
             <View style={styles.segmentedControlContainer}>
                 <SegmentedControl
-                    options={['Genre', 'A-Z', 'Decade', 'N&N', 'Spin', 'Saved']}
+                    options={filteredOptions}
                     selected={getSegmentedValue()}
                     onChange={handleSegmentedChange}
                 />
