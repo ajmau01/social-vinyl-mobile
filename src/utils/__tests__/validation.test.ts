@@ -68,7 +68,7 @@ describe('Validation Utilities', () => {
     describe('sanitizeDisplayName', () => {
         it('should strip HTML sensitive characters', () => {
             expect(sanitizeDisplayName('<Disco Dave>')).toBe('Disco Dave');
-            expect(sanitizeDisplayName('Fish & Chips')).toBe('Fish  Chips');
+            expect(sanitizeDisplayName('Fish & Chips')).toBe('Fish and Chips');
         });
 
         it('should truncate to 20 characters', () => {

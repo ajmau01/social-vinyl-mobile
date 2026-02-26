@@ -61,9 +61,13 @@ export class SessionService implements ISessionService {
     }
 
     public async joinSession(code: string, name: string): Promise<AsyncResult<SessionJoinedMessage>> {
-        // NB-6: Resolve token BEFORE starting the join logic to prevent spurious errors
-        return new Promise(async (resolve) => {
+        const token = await secureStorage.getAuthToken();
+        
+        return new Promise((resolve) => {
+            let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
             const listener = (response: SessionJoinedMessage) => {
+                if (timeoutHandle) clearTimeout(timeoutHandle);
                 wsService.removeListener('session-joined', listener);
 
                 // Store session context
@@ -100,14 +104,20 @@ export class SessionService implements ISessionService {
 
             wsService.addListener('session-joined', listener);
 
-            const token = await secureStorage.getAuthToken();
+            timeoutHandle = setTimeout(() => {
+                wsService.removeListener('session-joined', listener);
+                resolve({ success: false, error: new Error('join-session timed out') });
+            }, 10000);
+
             wsService.joinSession(code, name, token || undefined).then(result => {
                 if (!result.success) {
+                    if (timeoutHandle) clearTimeout(timeoutHandle);
                     wsService.removeListener('session-joined', listener);
                     resolve(result);
                 }
             }).catch(error => {
                 logger.error('[SessionService] joinSession failed:', error.message || error);
+                if (timeoutHandle) clearTimeout(timeoutHandle);
                 wsService.removeListener('session-joined', listener);
                 resolve({ success: false, error });
             });

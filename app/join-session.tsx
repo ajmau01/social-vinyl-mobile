@@ -57,7 +57,7 @@ export default function JoinSessionScreen() {
             }
         };
         attemptAutoJoin();
-    }, [code, storedJoinCode, username, displayName]);
+    }, [code, storedJoinCode]);
 
     const handleJoinClick = async (overrideCode?: string) => {
         const targetCode = (overrideCode || joinCode).trim().toUpperCase();
@@ -99,13 +99,17 @@ export default function JoinSessionScreen() {
 
         // Auto-join after short delay to let scanner close smoothly
         setTimeout(async () => {
-            const token = await secureStorage.getAuthToken();
-            const nameToUse = username || displayName;
-            if (token && nameToUse) {
-                executeJoin(scannedCode, nameToUse);
-            } else {
-                setPendingJoinCode(scannedCode);
-                setShowJoinModal(true);
+            try {
+                const token = await secureStorage.getAuthToken();
+                const nameToUse = username || displayName;
+                if (token && nameToUse) {
+                    executeJoin(scannedCode, nameToUse);
+                } else {
+                    setPendingJoinCode(scannedCode);
+                    setShowJoinModal(true);
+                }
+            } catch (err: any) {
+                setError(err.message || 'Failed to read credentials after scan.');
             }
         }, 300);
     };
