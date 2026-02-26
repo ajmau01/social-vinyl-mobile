@@ -14,6 +14,19 @@ jest.mock('@/hooks/useWebSocket', () => ({
     })),
 }));
 
+jest.mock('@/contexts/ServiceContext', () => ({
+    useServices: jest.fn(() => ({
+        sessionService: {
+            leaveSession: jest.fn(),
+            archiveSession: jest.fn(),
+            setBroadcast: jest.fn(),
+        },
+        databaseService: {
+            endSession: jest.fn(),
+        },
+    })),
+}));
+
 jest.mock('../../NowPlayingBanner', () => ({
     NowPlayingBanner: () => null,
 }));

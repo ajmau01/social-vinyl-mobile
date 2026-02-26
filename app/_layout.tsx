@@ -13,6 +13,7 @@ import { ServiceProvider } from '@/contexts/ServiceContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { LogBox } from 'react-native';
+import { validatePartyCode } from '@/utils/validation';
 
 if (CONFIG.IS_E2E) {
   LogBox.ignoreAllLogs();
@@ -95,9 +96,16 @@ function RootLayout() {
   useEffect(() => {
     if (url) {
       const parsed = Linking.parse(url);
-      if (parsed.path === 'join' || parsed.path === 'join-session') {
+      if (parsed.hostname === 'join' || parsed.path === 'join' || parsed.path === 'join-session') {
         const joinCode = parsed.queryParams?.code;
-        if (joinCode && typeof joinCode === 'string') {
+        if (joinCode && typeof joinCode === 'string' && validatePartyCode(joinCode)) {
+          // Pre-populate join code and kick off background WS if possible
+          const store = useSessionStore.getState();
+          store.setJoinCode(joinCode);
+
+          // If we have a username/token, WebSocketManager will handle connection.
+          // If not, we just navigate and let GuestJoinModal handle it.
+          
           // Slight delay to ensure router navigation hierarchy is completely mounted
           setTimeout(() => {
             router.push(`/join-session?code=${joinCode}`);

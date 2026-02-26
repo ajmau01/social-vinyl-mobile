@@ -33,3 +33,18 @@ export const sanitizeSearchQuery = (query: string): string => {
     sanitized = sanitized.replace(/[^\x20-\x7E]/g, '');
     return sanitized;
 };
+
+/**
+ * Sanitizes a display name for guest join.
+ * Strips HTML-sensitive characters (<, >, &) and limits to 20 chars.
+ */
+export const sanitizeDisplayName = (name: string): string => {
+    if (!name) return '';
+    // Replace & with and for better UX
+    let sanitized = name.replace(/&/g, 'and');
+    // Strip HTML characters and non-printable chars
+    sanitized = sanitized.replace(/[<>]/g, '');
+    sanitized = sanitized.replace(/[^\x20-\x7E]/g, '');
+    // Trim and then slice to ensure 20 chars of content
+    return sanitized.trim().slice(0, 20);
+};

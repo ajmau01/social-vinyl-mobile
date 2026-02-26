@@ -1,68 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
+
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useServices } from '@/contexts/ServiceContext';
 import { useSessionStore } from '@/store/useSessionStore';
 import { QRScanner } from '@/components/session/QRScanner';
-import { LobbyModal } from '@/components/session/LobbyModal';
+import { GuestJoinModal } from '@/components/session/GuestJoinModal';
 import { COPY } from '@/constants/copy';
+import { sanitizeDisplayName } from '@/utils/validation';
+import { secureStorage } from '@/utils/storage';
 
 export default function JoinSessionScreen() {
     const router = useRouter();
     const { code } = useLocalSearchParams<{ code?: string }>();
     const { sessionService } = useServices();
-    const { displayName, setDisplayName } = useSessionStore();
+    
+    const { displayName, setDisplayName, username, joinCode: storedJoinCode, setJoinCode: setStoreJoinCode } = useSessionStore(useShallow(state => ({
+        displayName: state.displayName,
+        setDisplayName: state.setDisplayName,
+        username: state.username,
+        joinCode: state.joinCode,
+        setJoinCode: state.setJoinCode
+    })));
 
-    const [joinCode, setJoinCode] = useState(code || '');
+    const [joinCode, setJoinCode] = useState(code || storedJoinCode || '');
     const [isScanning, setIsScanning] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showLobbyModal, setShowLobbyModal] = useState(false);
+    const [showJoinModal, setShowJoinModal] = useState(false);
+    
+    // NB-3: Track the target code across modal opens
+    const [pendingJoinCode, setPendingJoinCode] = useState<string | null>(null);
+    
+    const hasAttemptedAutoJoin = useRef(false);
 
-    // If a code was passed via deep link or params, try joining immediately
+    // NB-1: Gate auto-join on imperative credential read to avoid hydrate race
     useEffect(() => {
-        if (code && code.length === 5) {
-            handleJoinClick();
-        }
-    }, [code]);
+        const attemptAutoJoin = async () => {
+            const targetCode = code || storedJoinCode;
+            if (targetCode && targetCode.length === 5 && !hasAttemptedAutoJoin.current) {
+                hasAttemptedAutoJoin.current = true;
+                
+                // Read from secure storage directly to avoid hydrate race
+                const token = await secureStorage.getAuthToken();
+                const nameToUse = username || displayName;
+                
+                if (token && nameToUse) {
+                    executeJoin(targetCode, nameToUse);
+                } else {
+                    setPendingJoinCode(targetCode);
+                    setShowJoinModal(true);
+                }
+            }
+        };
+        attemptAutoJoin();
+    }, [code, storedJoinCode]);
 
-    const handleJoinClick = () => {
-        const trimmedCode = joinCode.trim().toUpperCase();
+    const handleJoinClick = async (overrideCode?: string) => {
+        const targetCode = (overrideCode || joinCode).trim().toUpperCase();
 
-        if (trimmedCode.length !== 5) {
+        if (targetCode.length !== 5) {
             setError('Please enter a 5-character join code');
             return;
         }
 
         setError(null);
 
-        // If user already has a display name, join directly
-        if (displayName) {
-            executeJoin(trimmedCode, displayName);
+        // Read from secure storage directly
+        const token = await secureStorage.getAuthToken();
+        const nameToUse = username || displayName;
+        
+        if (token && nameToUse) {
+            executeJoin(targetCode, nameToUse);
         } else {
-            // Otherwise, prompt for a name
-            setShowLobbyModal(true);
+            // NB-3: Ensure override code is used even if local joinCode state is stale
+            setPendingJoinCode(targetCode);
+            setShowJoinModal(true);
         }
     };
 
-    const handleLobbySubmit = (name: string) => {
-        setDisplayName(name);
-        setShowLobbyModal(false);
-        executeJoin(joinCode.trim().toUpperCase(), name);
+    const handleGuestSubmit = (name: string) => {
+        // BLOCK-2: Sanitize name
+        const sanitizedName = sanitizeDisplayName(name);
+        setDisplayName(sanitizedName);
+        setShowJoinModal(false);
+        
+        // NB-3: Use pendingJoinCode if available
+        const targetCode = pendingJoinCode || joinCode.trim().toUpperCase();
+        executeJoin(targetCode, sanitizedName);
     };
 
-    const handleScanSuccess = (scannedCode: string) => {
+    const handleScanSuccess = async (scannedCode: string) => {
         setIsScanning(false);
         setJoinCode(scannedCode);
 
         // Auto-join after short delay to let scanner close smoothly
-        setTimeout(() => {
-            if (displayName) {
-                executeJoin(scannedCode, displayName);
-            } else {
-                setShowLobbyModal(true);
+        setTimeout(async () => {
+            try {
+                const token = await secureStorage.getAuthToken();
+                const nameToUse = username || displayName;
+                if (token && nameToUse) {
+                    executeJoin(scannedCode, nameToUse);
+                } else {
+                    setPendingJoinCode(scannedCode);
+                    setShowJoinModal(true);
+                }
+            } catch (err: any) {
+                setError(err.message || 'Failed to read credentials after scan.');
             }
         }, 300);
     };
@@ -72,16 +119,22 @@ export default function JoinSessionScreen() {
         setError(null);
 
         try {
-            const result = await sessionService.joinSession(targetCode, name);
-            if (result) {
-                // Success - navigate to bin
+            // BLOCK-2: Sanitize just in case
+            const sanitizedName = sanitizeDisplayName(name);
+            const result = await sessionService.joinSession(targetCode, sanitizedName);
+            if (result.success) {
+                // NB-2: Clear join code on success
+                setStoreJoinCode(null);
+                // Success - navigate to bin (Guests have no collection)
                 router.replace('/(tabs)/bin');
             } else {
-                setError('Failed to join party. Please check the code and try again.');
+                setError(result.error?.message || 'Failed to join party. Please check the code and try again.');
+                setShowJoinModal(true);
             }
         } catch (err: any) {
             console.error('Join session error:', err);
             setError(err.message || 'An unexpected error occurred while joining.');
+            setShowJoinModal(true);
         } finally {
             setLoading(false);
         }
@@ -158,7 +211,7 @@ export default function JoinSessionScreen() {
 
                 <TouchableOpacity
                     style={[styles.joinButton, (joinCode.length !== 5 || loading) && styles.disabledButton]}
-                    onPress={handleJoinClick}
+                    onPress={() => handleJoinClick()}
                     disabled={joinCode.length !== 5 || loading}
                 >
                     {loading ? (
@@ -184,13 +237,16 @@ export default function JoinSessionScreen() {
 
             </ScrollView>
 
-            <LobbyModal
-                visible={showLobbyModal}
-                onSubmit={handleLobbySubmit}
+            <GuestJoinModal
+                visible={showJoinModal}
+                initialName={displayName || undefined}
+                onSubmit={handleGuestSubmit}
                 onCancel={() => {
-                    setShowLobbyModal(false);
+                    setShowJoinModal(false);
                     setLoading(false);
+                    setStoreJoinCode(null); // NB-2: Clear join code on cancel
                 }}
+                loading={loading}
             />
         </KeyboardAvoidingView>
     );

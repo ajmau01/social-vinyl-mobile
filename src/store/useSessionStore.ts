@@ -200,6 +200,7 @@ export const useSessionStore = create<SessionState>()(
                 hostUsername: null,
                 sessionMode: null,
                 sessionStartTime: null,
+                displayName: null,
             }),
         }),
         {

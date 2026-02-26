@@ -2,6 +2,7 @@ import { ISessionService } from './interfaces';
 import { wsService } from './WebSocketService';
 import { dbService } from './DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';
+import { secureStorage } from '@/utils/storage';
 import {
     AsyncResult,
     SessionCreatedMessage,
@@ -60,8 +61,13 @@ export class SessionService implements ISessionService {
     }
 
     public async joinSession(code: string, name: string): Promise<AsyncResult<SessionJoinedMessage>> {
+        const token = await secureStorage.getAuthToken();
+        
         return new Promise((resolve) => {
+            let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
             const listener = (response: SessionJoinedMessage) => {
+                if (timeoutHandle) clearTimeout(timeoutHandle);
                 wsService.removeListener('session-joined', listener);
 
                 // Store session context
@@ -98,13 +104,20 @@ export class SessionService implements ISessionService {
 
             wsService.addListener('session-joined', listener);
 
-            setTimeout(() => {
+            timeoutHandle = setTimeout(() => {
                 wsService.removeListener('session-joined', listener);
                 resolve({ success: false, error: new Error('join-session timed out') });
-            }, 5000);
+            }, 10000);
 
-            wsService.sendAction('join-session', { joinCode: code, username: name }).catch(error => {
+            wsService.joinSession(code, name, token || undefined).then(result => {
+                if (!result.success) {
+                    if (timeoutHandle) clearTimeout(timeoutHandle);
+                    wsService.removeListener('session-joined', listener);
+                    resolve(result);
+                }
+            }).catch(error => {
                 logger.error('[SessionService] joinSession failed:', error.message || error);
+                if (timeoutHandle) clearTimeout(timeoutHandle);
                 wsService.removeListener('session-joined', listener);
                 resolve({ success: false, error });
             });
