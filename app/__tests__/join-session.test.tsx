@@ -9,8 +9,9 @@ import { secureStorage } from '@/utils/storage';
 jest.mock('@/store/useSessionStore');
 jest.mock('@/contexts/ServiceContext');
 jest.mock('@/utils/storage');
+const mockRouter = { push: jest.fn(), replace: jest.fn() };
 jest.mock('expo-router', () => ({
-    useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+    useRouter: () => mockRouter,
     useLocalSearchParams: () => ({ code: undefined }),
     Stack: {
         Screen: () => null
@@ -51,6 +52,7 @@ describe('JoinSessionScreen', () => {
 
         await waitFor(() => {
             expect(mockSessionService.joinSession).toHaveBeenCalledWith('ABCDE', 'returning_user');
+            expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/bin');
         });
     });
 

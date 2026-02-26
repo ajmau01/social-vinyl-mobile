@@ -1,4 +1,4 @@
-import { validateUsername, validatePartyCode, sanitizeSearchQuery } from '../validation';
+import { validateUsername, validatePartyCode, sanitizeSearchQuery, sanitizeDisplayName } from '../validation';
 
 describe('Validation Utilities', () => {
     describe('validateUsername', () => {
@@ -62,6 +62,28 @@ describe('Validation Utilities', () => {
             expect(sanitizeSearchQuery('')).toBe('');
             // @ts-ignore
             expect(sanitizeSearchQuery(null)).toBe('');
+        });
+    });
+
+    describe('sanitizeDisplayName', () => {
+        it('should strip HTML sensitive characters', () => {
+            expect(sanitizeDisplayName('<Disco Dave>')).toBe('Disco Dave');
+            expect(sanitizeDisplayName('Fish & Chips')).toBe('Fish  Chips');
+        });
+
+        it('should truncate to 20 characters', () => {
+            const longName = 'This Is A Very Long Name That Should Be Truncated';
+            expect(sanitizeDisplayName(longName)).toHaveLength(20);
+            expect(sanitizeDisplayName(longName)).toBe('This Is A Very Long ');
+        });
+
+        it('should trim whitespace', () => {
+            expect(sanitizeDisplayName('  Dave  ')).toBe('Dave');
+        });
+
+        it('should remove non-printable characters', () => {
+            const dirtyName = 'Disco\nDave\u0000!';
+            expect(sanitizeDisplayName(dirtyName)).toBe('DiscoDave!');
         });
     });
 });

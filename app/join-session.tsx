@@ -10,7 +10,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { QRScanner } from '@/components/session/QRScanner';
 import { GuestJoinModal } from '@/components/session/GuestJoinModal';
 import { COPY } from '@/constants/copy';
-import { sanitizeSearchQuery } from '@/utils/validation';
+import { sanitizeDisplayName } from '@/utils/validation';
 import { secureStorage } from '@/utils/storage';
 
 export default function JoinSessionScreen() {
@@ -84,7 +84,7 @@ export default function JoinSessionScreen() {
 
     const handleGuestSubmit = (name: string) => {
         // BLOCK-2: Sanitize name
-        const sanitizedName = sanitizeSearchQuery(name);
+        const sanitizedName = sanitizeDisplayName(name);
         setDisplayName(sanitizedName);
         setShowJoinModal(false);
         
@@ -116,13 +116,13 @@ export default function JoinSessionScreen() {
 
         try {
             // BLOCK-2: Sanitize just in case
-            const sanitizedName = sanitizeSearchQuery(name);
+            const sanitizedName = sanitizeDisplayName(name);
             const result = await sessionService.joinSession(targetCode, sanitizedName);
             if (result.success) {
                 // NB-2: Clear join code on success
                 setStoreJoinCode(null);
-                // Success - navigate to bin
-                router.replace('/(tabs)/collection');
+                // Success - navigate to bin (Guests have no collection)
+                router.replace('/(tabs)/bin');
             } else {
                 setError(result.error?.message || 'Failed to join party. Please check the code and try again.');
                 setShowJoinModal(true);
@@ -235,6 +235,7 @@ export default function JoinSessionScreen() {
 
             <GuestJoinModal
                 visible={showJoinModal}
+                initialName={displayName || undefined}
                 onSubmit={handleGuestSubmit}
                 onCancel={() => {
                     setShowJoinModal(false);

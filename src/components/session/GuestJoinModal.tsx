@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { THEME } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,14 +6,22 @@ import { COPY } from '@/constants/copy';
 
 interface GuestJoinModalProps {
     visible: boolean;
+    initialName?: string;
     onSubmit: (displayName: string) => void;
     onCancel: () => void;
     loading?: boolean;
 }
 
-export function GuestJoinModal({ visible, onSubmit, onCancel, loading = false }: GuestJoinModalProps) {
-    const [name, setName] = useState('');
+export function GuestJoinModal({ visible, initialName = '', onSubmit, onCancel, loading = false }: GuestJoinModalProps) {
+    const [name, setName] = useState(initialName);
     const [tab, setTab] = useState<'skip' | 'account'>('skip');
+
+    // Sync name state with initialName prop when modal becomes visible or prop changes
+    useEffect(() => {
+        if (visible) {
+            setName(initialName);
+        }
+    }, [visible, initialName]);
 
     const handleSubmit = () => {
         const trimmed = name.trim();

@@ -75,4 +75,17 @@ describe('GuestJoinModal', () => {
 
         expect(onCancel).toHaveBeenCalled();
     });
+
+    it('pre-populates name field when initialName is provided', () => {
+        const { getByDisplayValue } = render(
+            <GuestJoinModal
+                visible={true}
+                initialName="Stored Name"
+                onSubmit={jest.fn()}
+                onCancel={jest.fn()}
+            />
+        );
+
+        expect(getByDisplayValue('Stored Name')).toBeTruthy();
+    });
 });

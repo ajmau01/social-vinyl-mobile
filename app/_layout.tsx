@@ -96,7 +96,7 @@ function RootLayout() {
   useEffect(() => {
     if (url) {
       const parsed = Linking.parse(url);
-      if (parsed.path === 'join' || parsed.path === 'join-session') {
+      if (parsed.hostname === 'join' || parsed.path === 'join' || parsed.path === 'join-session') {
         const joinCode = parsed.queryParams?.code;
         if (joinCode && typeof joinCode === 'string' && validatePartyCode(joinCode)) {
           // Pre-populate join code and kick off background WS if possible
