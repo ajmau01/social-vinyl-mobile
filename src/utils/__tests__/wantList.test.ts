@@ -153,21 +153,24 @@ describe('wantList utils', () => {
         });
 
         it('formats a single item with a known session correctly', () => {
+            // Use noon UTC to avoid timezone-offset date shifting
+            const addedAt = new Date('2024-01-15T12:00:00Z').getTime();
             const item = makeWantListItem({
                 hostUsername: 'djcool',
                 sessionId: 'sess_1',
                 sessionName: 'Cool Party',
-                addedAt: new Date('2024-01-15').getTime(),
+                addedAt,
                 artist: 'Miles Davis',
                 releaseTitle: 'Kind of Blue',
             });
 
             const text = buildShareText([item]);
+            const expectedDate = new Date(addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
             expect(text).toContain("Records I'm looking for:");
             expect(text).toContain("djcool's");
             expect(text).toContain('party');
-            expect(text).toContain('Jan 15');
+            expect(text).toContain(expectedDate);
             expect(text).toContain('• Miles Davis — Kind of Blue');
         });
 
