@@ -28,7 +28,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const [isAdding, setIsAdding] = useState(false);
     const [validationToast, setValidationToast] = useState({ message: '', visible: false });
 
-    const { username } = useSessionStore();
+    const { username, nowPlaying } = useSessionStore();
     const { isGuest, isReleaseInBin, isReleasePlayed } = useGuestCollectionContext();
     const { items: binItems } = useListeningBinStore();
     // Check ANY user's entry — the bin is shared; if someone already added this album
@@ -37,6 +37,9 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const isAlreadyInBin = release
         ? binItems.some(item => item.releaseId === release.id || item.id === release.id)
         : false;
+    // Guard against adding the currently playing album — it's already being enjoyed.
+    const isNowPlaying = !!(release && nowPlaying?.releaseId &&
+        parseInt(nowPlaying.releaseId, 10) === release.id);
 
     // ... (useEffect remains the same) ... 
     useEffect(() => {
@@ -78,6 +81,10 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
 
     const handleAddToBin = async () => {
         if (!release || !username || isAdding) return;
+        if (isNowPlaying) {
+            setValidationToast({ message: "That one's playing right now — add it after it finishes?", visible: true });
+            return;
+        }
         if (isGuest && release) {
             if (isReleaseInBin(release.id)) {
                 setValidationToast({ message: "Someone's already got that one — try another?", visible: true });
