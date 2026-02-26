@@ -40,9 +40,12 @@ export default function WantListScreen() {
     }, [items]);
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
             <Stack.Screen options={{
+                headerShown: true,
                 title: `Your Want List${items.length > 0 ? ` (${items.length})` : ''}`,
+                headerStyle: { backgroundColor: THEME.colors.background },
+                headerTitleStyle: { color: THEME.colors.text },
                 headerLeft: () => (
                     <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
                         <Ionicons name="close" size={24} color={THEME.colors.text} />
