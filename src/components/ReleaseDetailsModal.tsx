@@ -30,8 +30,13 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
 
     const { username } = useSessionStore();
     const { isGuest, isReleaseInBin, isReleasePlayed } = useGuestCollectionContext();
-    const { isInBin } = useListeningBinStore();
-    const isAlreadyInBin = (release && username) ? isInBin(release.id, username) : false;
+    const { items: binItems } = useListeningBinStore();
+    // Check ANY user's entry — the bin is shared; if someone already added this album
+    // (e.g. a guest added it, then the host opens the same album) the button should
+    // reflect the real shared state.
+    const isAlreadyInBin = release
+        ? binItems.some(item => item.releaseId === release.id || item.id === release.id)
+        : false;
 
     // ... (useEffect remains the same) ... 
     useEffect(() => {
@@ -85,8 +90,13 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
         try {
             const result = await listeningBinSyncService.addAlbum(release);
             if (!result.success) {
-                logger.error('[Details] Failed to add album to bin:', result.error);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errMsg = result.error?.message?.toLowerCase() ?? '';
+                if (errMsg.includes('already in the bin') || errMsg.includes('already in bin')) {
+                    setValidationToast({ message: "Someone's already got that one — try another?", visible: true });
+                } else {
+                    logger.error('[Details] Failed to add album to bin:', result.error);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                }
             } else {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 onClose();
