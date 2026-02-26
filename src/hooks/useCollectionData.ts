@@ -7,12 +7,21 @@ import { CONFIG } from '@/config';
 
 /**
  * useCollectionData Hook
- * 
+ *
  * Fetches entire collection from local SQLite database.
  * Supports search and auto-refresh on sync completion.
  */
 export const useCollectionData = () => {
-    const { username } = useSessionStore();
+    const { username, sessionRole, sessionId, hostUsername } = useSessionStore();
+
+    // In guest mode, load the HOST's collection — the guest username (e.g. 'Guest-456')
+    // has no local collection data. hostUsername is set by both join paths (SessionService
+    // and index.tsx handleGuestJoin).
+    const isGuestInSession =
+        (sessionRole === 'guest' || (!!username && username.startsWith('Guest-'))) &&
+        !!sessionId;
+    const effectiveUsername = isGuestInSession && hostUsername ? hostUsername : username;
+
     const [releases, setReleases] = useState<Release[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -21,11 +30,11 @@ export const useCollectionData = () => {
     const loadData = useCallback(async (isRefresh: boolean = false) => {
         // GUARD: Don't load while syncing to avoid database inconsistency
         const isSyncing = useSessionStore.getState().syncStatus === 'syncing';
-        logger.log(`[useCollectionData] loadData called. username: ${username}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
+        logger.log(`[useCollectionData] loadData called. effectiveUsername: ${effectiveUsername}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
 
         // Use ref for guard to avoid dependency loop
-        if (!username || loadingRef.current || (!isRefresh && isSyncing)) {
-            logger.log(`[useCollectionData] loadData guarded. username: ${username}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
+        if (!effectiveUsername || loadingRef.current || (!isRefresh && isSyncing)) {
+            logger.log(`[useCollectionData] loadData guarded. effectiveUsername: ${effectiveUsername}, loadingRef.current: ${loadingRef.current}, isRefresh: ${isRefresh}, isSyncing: ${isSyncing}`);
             return;
         }
 
@@ -40,10 +49,10 @@ export const useCollectionData = () => {
         try {
             // Fetch all releases at once (no pagination)
             // Search filtering is done client-side by useGroupedReleases hook
-            const items = await dbService.getReleases(username);
+            const items = await dbService.getReleases(effectiveUsername);
             setReleases(items);
 
-            logger.log(`[useCollectionData] Successfully loaded ${items.length} items for user: ${username}`);
+            logger.log(`[useCollectionData] Successfully loaded ${items.length} items for user: ${effectiveUsername}`);
         } catch (error) {
             logger.error('[useCollectionData] Load failed', error);
         } finally {
@@ -51,7 +60,7 @@ export const useCollectionData = () => {
             setRefreshing(false);
             loadingRef.current = false;
         }
-    }, [username]);
+    }, [effectiveUsername]);
 
     // Initial load
     useEffect(() => {
