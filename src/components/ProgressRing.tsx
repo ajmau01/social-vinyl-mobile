@@ -68,12 +68,21 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
             lastPlayedAt.value = playedAt;
         }
 
+        // Use playedAt-derived position for projection when available — it is more
+        // accurate than the server-reported position (which can lag by up to 5s).
+        // Without this, getInitialProgress() sets the ring ahead of `position`, and
+        // the first withTiming call projects to a target already reached, causing a
+        // visible stall of one broadcast interval.
+        const truePositionMs = playedAt
+            ? Math.min(Date.now() - playedAt, duration)
+            : position;
+
         // Issue #3: Progress Ring Track End Overshoot prevention
-        const timeRemaining = duration - position;
+        const timeRemaining = duration - truePositionMs;
         const projectionWindow = Math.min(timeRemaining, BROADCAST_INTERVAL_MS);
 
         // Project where we SHOULD be in the next window to eliminate lag
-        const projectedProgress = Math.min((position + projectionWindow) / duration, 1);
+        const projectedProgress = Math.min((truePositionMs + projectionWindow) / duration, 1);
 
         // Animate towards that projection over the interval window
         animatedProgress.value = withTiming(projectedProgress, {

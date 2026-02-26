@@ -35,7 +35,6 @@ describe('ProgressRing', () => {
                 strokeWidth={4}
                 position={10000} // 10s
                 duration={60000} // 60s
-                playedAt={12345}
             />
         );
 
@@ -69,7 +68,6 @@ describe('ProgressRing', () => {
                 strokeWidth={4}
                 position={12000} // 12s out of 60s = 20% (Delta = 10% > 5%)
                 duration={60000}
-                playedAt={12345}
             />
         );
 
