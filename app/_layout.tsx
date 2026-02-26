@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, UIManager } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Linking from 'expo-linking';
 
 import { THEME } from '@/constants/theme';
@@ -122,7 +123,7 @@ function RootLayout() {
     <ErrorBoundary>
       <ServiceProvider>
         <WebSocketManager />
-        <View
+        <GestureHandlerRootView
           style={styles.container}
           onStartShouldSetResponderCapture={() => {
             updateLastInteraction();
@@ -139,7 +140,7 @@ function RootLayout() {
             <Stack.Screen name="account-login" />
             <Stack.Screen name="want-list" />
           </Stack>
-        </View>
+        </GestureHandlerRootView>
       </ServiceProvider>
     </ErrorBoundary>
   );
