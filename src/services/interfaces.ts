@@ -18,7 +18,8 @@ import {
     SessionListMessage,
     SessionCard,
     SessionHistory,
-    SessionPlay
+    SessionPlay,
+    WantListItem
 } from '@/types';
 
 /**
@@ -67,6 +68,12 @@ export interface IDatabaseService {
     getSessionsHistory(limit?: number, offset?: number): Promise<SessionHistory[]>;
     getSessionById(sessionId: string): Promise<SessionHistory | null>;
     getSessionSetlist(sessionId: string): Promise<SessionPlay[]>;
+
+    // Want List methods (Issues #148/#149)
+    addToWantList(item: Omit<WantListItem, 'id'>): Promise<WantListItem>;
+    removeFromWantList(releaseId: number): Promise<void>;
+    isInWantList(releaseId: number): Promise<boolean>;
+    getWantList(): Promise<WantListItem[]>;
 }
 
 /**

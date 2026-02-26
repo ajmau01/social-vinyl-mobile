@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-import { Release, SessionHistory, SessionPlay } from '@/types';
+import { Release, SessionHistory, SessionPlay, WantListItem } from '@/types';
 import { logger } from '@/utils/logger';
 import { IDatabaseService } from './interfaces';
 
@@ -133,7 +133,40 @@ export class DatabaseService implements IDatabaseService {
                     );
                     
                     CREATE INDEX IF NOT EXISTS idx_session_plays_session_id ON session_plays(session_id);
+
+                    CREATE TABLE IF NOT EXISTS want_list (
+                        id TEXT PRIMARY KEY,
+                        release_id INTEGER NOT NULL,
+                        release_title TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        album_art_url TEXT,
+                        host_username TEXT,
+                        session_name TEXT,
+                        session_id TEXT,
+                        added_at INTEGER NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_want_list_release_id ON want_list(release_id);
                 `);
+
+                const wantListInfo = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(want_list)");
+                if (wantListInfo.length === 0) {
+                    logger.log('[DB] Migrating: Creating want_list table...');
+                    await this.db.execAsync(`
+                        CREATE TABLE IF NOT EXISTS want_list (
+                            id TEXT PRIMARY KEY,
+                            release_id INTEGER NOT NULL,
+                            release_title TEXT NOT NULL,
+                            artist TEXT NOT NULL,
+                            album_art_url TEXT,
+                            host_username TEXT,
+                            session_name TEXT,
+                            session_id TEXT,
+                            added_at INTEGER NOT NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_want_list_release_id ON want_list(release_id);
+                    `);
+                }
+
                 logger.log('[DB] Schema verified/initialized');
             } catch (error) {
                 logger.error('[DB] Failed to initialize', error);
@@ -404,6 +437,48 @@ export class DatabaseService implements IDatabaseService {
             logger.error('[DB] Failed to get session setlist', error);
             throw error;
         }
+    }
+
+    // --- Want List Methods (Issues #148/#149) ---
+
+    public async addToWantList(item: Omit<WantListItem, 'id'>): Promise<WantListItem> {
+        const db = await this.ensureDb();
+        const id = `wl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        await db.runAsync(
+            'INSERT OR REPLACE INTO want_list (id, release_id, release_title, artist, album_art_url, host_username, session_name, session_id, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, item.releaseId, item.releaseTitle, item.artist, item.albumArtUrl ?? null,
+             item.hostUsername ?? null, item.sessionName ?? null, item.sessionId ?? null, item.addedAt]
+        );
+        return { id, ...item };
+    }
+
+    public async removeFromWantList(releaseId: number): Promise<void> {
+        const db = await this.ensureDb();
+        await db.runAsync('DELETE FROM want_list WHERE release_id = ?', [releaseId]);
+    }
+
+    public async isInWantList(releaseId: number): Promise<boolean> {
+        const db = await this.ensureDb();
+        const row = await db.getFirstAsync<{ count: number }>(
+            'SELECT COUNT(*) as count FROM want_list WHERE release_id = ?', [releaseId]
+        );
+        return (row?.count ?? 0) > 0;
+    }
+
+    public async getWantList(): Promise<WantListItem[]> {
+        const db = await this.ensureDb();
+        const rows = await db.getAllAsync<any>('SELECT * FROM want_list ORDER BY added_at DESC');
+        return rows.map(row => ({
+            id: row.id,
+            releaseId: row.release_id,
+            releaseTitle: row.release_title,
+            artist: row.artist,
+            albumArtUrl: row.album_art_url,
+            hostUsername: row.host_username,
+            sessionName: row.session_name,
+            sessionId: row.session_id,
+            addedAt: row.added_at,
+        }));
     }
 
     // Only for testing

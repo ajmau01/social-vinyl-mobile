@@ -147,6 +147,18 @@ export interface SessionPlay {
     picked_by_username: string | null;
 }
 
+export interface WantListItem {
+    id: string;
+    releaseId: number;
+    releaseTitle: string;
+    artist: string;
+    albumArtUrl: string | null;
+    hostUsername: string | null;
+    sessionName: string | null;
+    sessionId: string | null;
+    addedAt: number; // unix ms timestamp
+}
+
 export interface SessionCreatedMessage {
     type: 'session-created';
     sessionId: number;
