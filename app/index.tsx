@@ -223,6 +223,7 @@ export default function WelcomeScreen() {
             .then(result => {
                 if (result.success) {
                     useSessionStore.getState().setDisplayName(guestUsername);
+                    useSessionStore.getState().setSessionRole('guest');
                     useSessionStore.getState().setLastMode('invited');
                     // Session ID and Name should be returned in result.data from join-session payload
                     if (result.data) {

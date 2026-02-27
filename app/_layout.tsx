@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Linking from 'expo-linking';
 
 import { THEME } from '@/constants/theme';
+import { logger } from '@/utils/logger';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useWebSocket, useSessionTimeout } from '@/hooks';
 import { ServiceProvider } from '@/contexts/ServiceContext';
@@ -51,6 +52,7 @@ function WebSocketManager() {
     } else if (sessionId && sessionRole === 'guest') {
       // Guest in active session — WS was established via the join flow directly.
       // Do NOT disconnect: that would kill the connection right after joining.
+      logger.log('[WebSocketManager] Skipping disconnect: guest in active session');
     } else {
       disconnect();
     }

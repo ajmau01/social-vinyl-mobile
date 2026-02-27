@@ -132,14 +132,15 @@ export default function CollectionScreen() {
         }
     }, [effectiveUsername, sync, refreshCollection, refreshHistory, isSpinMode]);
 
-    // Auto-sync host collection on first guest visit (no local data on fresh device)
-    const hasAutoSyncedRef = useRef(false);
+    // Auto-sync host collection on first guest visit (no local data on fresh device).
+    // Track by sessionId so the sync fires again if the guest joins a different session.
+    const autoSyncedSessionRef = useRef<string | number | null>(null);
     useEffect(() => {
-        if (isGuestInSession && hostUsername && releases.length === 0 && !loadingCollection && !hasAutoSyncedRef.current) {
-            hasAutoSyncedRef.current = true;
+        if (isGuestInSession && hostUsername && releases.length === 0 && !loadingCollection && autoSyncedSessionRef.current !== sessionId) {
+            autoSyncedSessionRef.current = sessionId;
             sync(hostUsername).then(() => refreshCollection());
         }
-    }, [isGuestInSession, hostUsername, releases.length, loadingCollection, sync, refreshCollection]);
+    }, [isGuestInSession, sessionId, hostUsername, releases.length, loadingCollection, sync, refreshCollection]);
 
     const handleRandomPress = useCallback(() => {
         const source = filteredReleases.length > 0 ? filteredReleases : releases;

@@ -28,7 +28,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const [isAdding, setIsAdding] = useState(false);
     const [validationToast, setValidationToast] = useState({ message: '', visible: false });
 
-    const { username, displayName, nowPlaying } = useSessionStore();
+    const { username, displayName, nowPlaying, sessionRole, hostUsername } = useSessionStore();
     const { isGuest, isReleaseInBin, isReleasePlayed } = useGuestCollectionContext();
     const { items: binItems } = useListeningBinStore();
     // Check ANY user's entry — the bin is shared; if someone already added this album
@@ -68,9 +68,10 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     }, [visible, release]);
 
     const fetchTracks = async () => {
-        if (!release || !username) return;
+        const trackUsername = sessionRole === 'guest' && hostUsername ? hostUsername : username;
+        if (!release || !trackUsername) return;
         setLoading(true);
-        const result = await syncService.fetchTracks(username, release.id);
+        const result = await syncService.fetchTracks(trackUsername, release.id);
         if (result.success) {
             setTracks(result.data);
         } else {

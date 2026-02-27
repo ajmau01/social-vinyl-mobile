@@ -160,10 +160,12 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     // Host explicitly stopped playback
                     setNowPlaying(null);
                 } else if (type === 'SESSION_ENDED' || type === 'session-ended') {
-                    const currentSessionId = useSessionStore.getState().sessionId;
-                    if (currentSessionId) {
-                        databaseService.endSession(String(currentSessionId), Date.now()).catch(err => logger.error('[WebSocket] Failed to mark session ended in DB', err));
+                    const store = useSessionStore.getState();
+                    if (store.sessionId) {
+                        databaseService.endSession(String(store.sessionId), Date.now()).catch(err => logger.error('[WebSocket] Failed to mark session ended in DB', err));
                     }
+                    store.setSessionId(null);
+                    store.setSessionRole(null);
                 } else if (type === 'STATE' || type === 'state') {
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
