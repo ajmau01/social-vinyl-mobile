@@ -3,36 +3,15 @@ export default {
         name: "social-vinyl-mobile",
         slug: "social-vinyl-mobile",
         version: "1.0.0",
-        orientation: "portrait",
-        icon: "./assets/images/icon.png",
-        scheme: "socialvinyl",
-        userInterfaceStyle: "automatic",
-        splash: {
-            image: "./assets/images/splash.png",
-            resizeMode: "contain",
-            backgroundColor: "#0a0a0a"
-        },
-        ios: {
-            supportsTablet: true,
-            bundleIdentifier: "com.socialvinyl.mobile"
-        },
-        android: {
-            adaptiveIcon: {
-                foregroundImage: "./assets/images/adaptive-icon.png",
-                backgroundColor: "#0a0a0a"
-            },
-            package: "com.socialvinyl.mobile"
-        },
+        // Note: orientation, icon, scheme, splash, ios, android, plugins are intentionally
+        // omitted here. This project uses the bare workflow (android/ directory checked in).
+        // Those native properties were applied via expo prebuild and live in the native
+        // directories. EAS Build uses the existing android/ directory directly.
         web: {
             bundler: "metro",
             output: "static",
             favicon: "./assets/images/favicon.png"
         },
-        plugins: [
-            "expo-router",
-            "expo-secure-store",
-            "@sentry/react-native/expo"
-        ],
         experiments: {
             typedRoutes: true
         },
@@ -45,6 +24,9 @@ export default {
             // Security flags
             sslPinningEnabled: process.env.SSL_PINNING_ENABLED === 'true',
             useMessageAuth: process.env.USE_MESSAGE_AUTH === 'true',
+            eas: {
+                projectId: 'ed2b880b-2dd6-4815-b52d-c213818f4e45'
+            }
         }
     }
 };
