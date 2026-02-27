@@ -36,7 +36,7 @@ export function SessionCodeDisplay({ joinCode, sessionName, isPermanent = false 
         <View style={styles.container}>
             <View style={styles.qrContainer}>
                 <QRCode
-                    value={inviteUrl}
+                    value={joinCode}
                     size={200}
                     color={THEME.colors.text}
                     backgroundColor={THEME.colors.surface}

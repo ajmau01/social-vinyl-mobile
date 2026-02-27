@@ -77,7 +77,8 @@ class ListeningBinSyncService {
      * Adds an album to the bin with optimistic update
      */
     public async addAlbum(release: Release): Promise<Result<void>> {
-        const { username: userId } = useSessionStore.getState();
+        const { username, displayName } = useSessionStore.getState();
+        const userId = username || displayName;
         const { addAlbumOptimistic, confirmAdd, revertAdd } = useListeningBinStore.getState();
 
         if (!userId) return { success: false, error: new Error('User not logged in') };
@@ -134,7 +135,8 @@ class ListeningBinSyncService {
      * Removes an album from the bin with optimistic update
      */
     public async removeAlbum(releaseId: number): Promise<Result<void>> {
-        const { username: userId } = useSessionStore.getState();
+        const { username, displayName } = useSessionStore.getState();
+        const userId = username || displayName;
         const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
 
         if (!userId) return { success: false, error: new Error('User not logged in') };

@@ -28,7 +28,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const [isAdding, setIsAdding] = useState(false);
     const [validationToast, setValidationToast] = useState({ message: '', visible: false });
 
-    const { username, nowPlaying } = useSessionStore();
+    const { username, displayName, nowPlaying } = useSessionStore();
     const { isGuest, isReleaseInBin, isReleasePlayed } = useGuestCollectionContext();
     const { items: binItems } = useListeningBinStore();
     // Check ANY user's entry — the bin is shared; if someone already added this album
@@ -80,7 +80,7 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     };
 
     const handleAddToBin = async () => {
-        if (!release || !username || isAdding) return;
+        if (!release || (!username && !displayName) || isAdding) return;
         if (isNowPlaying) {
             setValidationToast({ message: "It appears that this title is currently playing - choose another?", visible: true });
             return;
