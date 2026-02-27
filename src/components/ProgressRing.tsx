@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useEffect } from 'react';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { dbService } from '@/services/DatabaseService';
 import { useSessionStore } from '@/store/useSessionStore';

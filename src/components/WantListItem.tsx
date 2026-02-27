@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';

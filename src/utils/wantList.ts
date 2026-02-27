@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { Share } from 'react-native';
 import { DatabaseService } from '@/services/DatabaseService';
 import { Release, WantListItem } from '@/types';

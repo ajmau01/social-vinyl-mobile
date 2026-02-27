@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import * as SecureStore from 'expo-secure-store';
 // Mock logger before importing storage
 jest.mock('../logger', () => ({

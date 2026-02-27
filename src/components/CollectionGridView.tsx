@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useCallback } from 'react';
 import { FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { THEME } from '@/constants/theme';

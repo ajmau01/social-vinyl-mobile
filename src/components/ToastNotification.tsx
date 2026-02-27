@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useEffect, useRef } from 'react';
 import { Animated, Text, StyleSheet, Pressable } from 'react-native';
 import { THEME } from '@/constants/theme';

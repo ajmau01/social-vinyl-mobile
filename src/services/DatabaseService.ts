@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import * as SQLite from 'expo-sqlite';
 
 import { Release, SessionHistory, SessionPlay, WantListItem } from '@/types';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 export * from './useWebSocket';
 export * from './useSyncCollection';
 export * from './useCollectionData';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 /**
  * Canonical terminology map for Social Vinyl.
  * All user-facing strings should reference these constants — never hardcode brand vocabulary.

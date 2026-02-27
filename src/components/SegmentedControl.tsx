@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, StyleSheet, LayoutAnimation } from 'react-native';
 import { THEME } from '@/constants/theme';

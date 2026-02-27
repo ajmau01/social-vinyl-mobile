@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { by, device, element, expect } from 'detox';
 import { Auth } from './helpers/auth';
 import { waitForElement } from './helpers/waitFor';

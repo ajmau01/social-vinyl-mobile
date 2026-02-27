@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 export const COLORS = {
   background: '#0f1016', // Deep Night
   surface: '#12121e',

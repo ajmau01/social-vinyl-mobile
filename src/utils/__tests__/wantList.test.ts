@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { toggleWantList, buildShareText, shareWantList, getWantList } from '../wantList';
 import { DatabaseService } from '@/services/DatabaseService';
 import { Share } from 'react-native';

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { renderHook, act } from '@testing-library/react-native';
 import { useSessionTimeout } from '../useSessionTimeout';
 import { useSessionStore } from '@/store/useSessionStore';

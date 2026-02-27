@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 /**
  * Removes diacritics from a string (e.g., "Sigur Rós" -> "Sigur Ros").
  * Used for diacritic-insensitive search.

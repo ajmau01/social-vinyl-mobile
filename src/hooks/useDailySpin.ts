@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { useState, useCallback, useEffect } from 'react';
 import { Release } from '@/types';
 import { CollectionSection } from './useGroupedReleases';

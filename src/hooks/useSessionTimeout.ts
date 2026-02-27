@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useSessionStore } from '@/store/useSessionStore';

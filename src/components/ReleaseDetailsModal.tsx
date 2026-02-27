@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Image, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import * as Haptics from 'expo-haptics';

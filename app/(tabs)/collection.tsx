@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';

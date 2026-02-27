@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { validateUsername, validatePartyCode, sanitizeSearchQuery, sanitizeDisplayName } from '../validation';
 
 describe('Validation Utilities', () => {

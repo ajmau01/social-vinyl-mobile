@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import React, { useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';

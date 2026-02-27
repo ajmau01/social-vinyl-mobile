@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Andrew Mauer. All Rights Reserved.
+// Proprietary and confidential. Unauthorized use prohibited.
+
 import { act, renderHook } from '@testing-library/react-native';
 import { useListeningBinStore } from '../useListeningBinStore';
 import { Release, BinItem } from '@/types';
