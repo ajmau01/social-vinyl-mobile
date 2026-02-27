@@ -222,7 +222,7 @@ export default function WelcomeScreen() {
         wsService.joinSession(inputValue, guestUsername)
             .then(result => {
                 if (result.success) {
-                    useSessionStore.getState().setUsername(guestUsername);
+                    useSessionStore.getState().setDisplayName(guestUsername);
                     useSessionStore.getState().setLastMode('invited');
                     // Session ID and Name should be returned in result.data from join-session payload
                     if (result.data) {

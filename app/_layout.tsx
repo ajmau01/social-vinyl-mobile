@@ -38,20 +38,8 @@ if (shouldInitSentry) {
  * Must be inside ServiceProvider to access useWebSocket hook
  */
 function WebSocketManager() {
-  const { username, authToken } = useSessionStore();
+  const { username, authToken, sessionId, sessionRole } = useSessionStore();
   const { connect, disconnect } = useWebSocket({ isManager: true });
-
-  // Debug Auth Flow (Removed noise)
-  /*
-  if (username) {
-    console.log('[WebSocketManager] Auth State:', {
-      username,
-      hasToken: !!authToken,
-      tokenLength: authToken?.length,
-      useMessageAuth: CONFIG.USE_MESSAGE_AUTH
-    });
-  }
-  */
 
   useEffect(() => {
     // Manage Connection Lifecycle using the hook's actions.
@@ -60,10 +48,13 @@ function WebSocketManager() {
     // stale-token rejection loop will spin indefinitely.
     if (username && authToken) {
       connect();
+    } else if (sessionId && sessionRole === 'guest') {
+      // Guest in active session — WS was established via the join flow directly.
+      // Do NOT disconnect: that would kill the connection right after joining.
     } else {
       disconnect();
     }
-  }, [username, authToken, connect, disconnect]);
+  }, [username, authToken, sessionId, sessionRole, connect, disconnect]);
 
   return null; // This component only manages side effects
 }
