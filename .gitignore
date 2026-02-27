@@ -38,7 +38,11 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android
+# /android is intentionally NOT ignored — this project uses bare workflow with
+# custom Detox/E2E native configs that must be committed and shipped to EAS Build.
+/android/build
+/android/.gradle
+/android/app/build
 
 # test coverage
 /coverage
