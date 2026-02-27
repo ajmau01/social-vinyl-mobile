@@ -128,7 +128,8 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     }
                 } else if (type === 'NOW_PLAYING' || type === 'now-playing') {
                     // Normalize backend message to frontend NowPlaying interface
-                    const normalized = normalizeNowPlayingPayload(payload);
+                    // Pass existing nowPlaying so playedAt is preserved if backend omits it
+                    const normalized = normalizeNowPlayingPayload(payload, useSessionStore.getState().nowPlaying);
                     setNowPlaying(normalized);
 
                     // Issue #154: Persist to local history
@@ -167,7 +168,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                     // Handle state message which contains nowPlaying
                     const rawState = payload as any;
                     if (rawState.nowPlaying) {
-                        const normalized = normalizeNowPlayingPayload(rawState.nowPlaying);
+                        const normalized = normalizeNowPlayingPayload(rawState.nowPlaying, useSessionStore.getState().nowPlaying);
                         setNowPlaying(normalized);
 
                         // Issue #154: Persist to local history
@@ -253,6 +254,21 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
             onError: (err: Error) => {
                 setError(err.message);
                 setConnectionState('disconnected');
+                // If the server rejected our auth token as definitively stale/invalid,
+                // clear credentials so the login screen appears instead of looping.
+                // IMPORTANT: Keep this narrow — broad keywords like 'auth', 'invalid',
+                // 'expired' match too many transient/non-auth errors and cause the token
+                // to be erroneously wiped from SecureStore.
+                // Only clear credentials for definitive server-side token rejection.
+                // Transient failures (auth timeout, network error) should NOT clear
+                // the token — the reconnect logic will retry with the same credentials.
+                const isAuthFailure = err.message.includes('Invalid or stale auth token') ||
+                    err.message.includes('stale auth');
+                if (isAuthFailure) {
+                    const store = useSessionStore.getState();
+                    store.setAuthToken(null);
+                    store.resetSession();
+                }
             },
             onAccessLevel: (level: string) => {
                 // Map access levels to session roles
@@ -275,14 +291,19 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
 
     const connect = useCallback(() => {
         if (username) {
+            // Read sessionId/sessionSecret from store state directly so this callback
+            // does NOT change (and re-trigger WebSocketManager) when only session
+            // metadata updates (e.g. after a session-joined message). WebSocketManager
+            // should only reconnect when the auth credentials themselves change.
+            const state = useSessionStore.getState();
             webSocketService.connect(
                 username,
                 authToken || undefined,
-                sessionId ? sessionId.toString() : undefined,
-                sessionSecret || undefined
+                state.sessionId ? state.sessionId.toString() : undefined,
+                state.sessionSecret || undefined
             );
         }
-    }, [webSocketService, username, authToken, sessionId, sessionSecret]);
+    }, [webSocketService, username, authToken]);
 
     const disconnect = useCallback(() => {
         webSocketService.disconnect();

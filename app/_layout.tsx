@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, Platform, UIManager } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Linking from 'expo-linking';
 
 import { THEME } from '@/constants/theme';
@@ -53,8 +54,11 @@ function WebSocketManager() {
   */
 
   useEffect(() => {
-    // Manage Connection Lifecycle using the hook's actions
-    if (username) {
+    // Manage Connection Lifecycle using the hook's actions.
+    // Require BOTH username AND authToken before connecting — if authToken was
+    // deliberately cleared (e.g. auth failure), we must NOT reconnect or the
+    // stale-token rejection loop will spin indefinitely.
+    if (username && authToken) {
       connect();
     } else {
       disconnect();
@@ -122,7 +126,7 @@ function RootLayout() {
     <ErrorBoundary>
       <ServiceProvider>
         <WebSocketManager />
-        <View
+        <GestureHandlerRootView
           style={styles.container}
           onStartShouldSetResponderCapture={() => {
             updateLastInteraction();
@@ -137,8 +141,9 @@ function RootLayout() {
             <Stack.Screen name="join-session" />
             <Stack.Screen name="account-create" />
             <Stack.Screen name="account-login" />
+            <Stack.Screen name="want-list" />
           </Stack>
-        </View>
+        </GestureHandlerRootView>
       </ServiceProvider>
     </ErrorBoundary>
   );

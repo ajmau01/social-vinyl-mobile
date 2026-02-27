@@ -10,6 +10,9 @@ interface BrowseSectionProps {
     onPress?: (release: Release) => void;
     onLongPress?: (release: Release) => void;
     style?: StyleProp<ViewStyle>;
+    guestMode?: boolean;
+    wantedReleaseIds?: Set<number>;
+    onWantList?: (release: Release) => void;
 }
 
 export const BrowseSection: React.FC<BrowseSectionProps> = ({
@@ -17,6 +20,9 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
     releases,
     onPress,
     onLongPress,
+    guestMode,
+    wantedReleaseIds,
+    onWantList,
 }) => {
     if (releases.length === 0) return null;
 
@@ -27,9 +33,12 @@ export const BrowseSection: React.FC<BrowseSectionProps> = ({
                 onPress={() => onPress?.(item)}
                 onLongPress={() => onLongPress?.(item)}
                 style={{ maxWidth: '100%' }}
+                guestMode={guestMode}
+                isWanted={wantedReleaseIds?.has(item.id) ?? false}
+                onWantList={onWantList ? () => onWantList(item) : undefined}
             />
         </View>
-    ), [onPress, onLongPress]);
+    ), [onPress, onLongPress, guestMode, wantedReleaseIds, onWantList]);
 
     return (
         <View style={styles.container}>

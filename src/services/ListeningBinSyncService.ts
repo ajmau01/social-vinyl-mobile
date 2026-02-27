@@ -112,7 +112,14 @@ class ListeningBinSyncService {
             });
 
             // 3. Confirm success
-            confirmAdd(tempId, result.releaseId, result.addedTimestamp, result.instanceId);
+            // Guard: some server configurations (e.g. guest sessions) ACK success
+            // without returning data. Fall back to release.id so the optimistic
+            // entry is confirmed rather than reverted.
+            if (result) {
+                confirmAdd(tempId, result.releaseId, result.addedTimestamp, result.instanceId);
+            } else {
+                confirmAdd(tempId, release.id, Date.now(), undefined);
+            }
             return { success: true, data: undefined };
 
         } catch (error) {

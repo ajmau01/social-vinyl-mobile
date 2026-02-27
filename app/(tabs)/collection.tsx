@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +17,11 @@ import { CollectionSectionView } from '@/components/CollectionSectionView';
 import { useCollectionData, useGroupedReleases, useSyncCollection, ViewMode, useDailySpin } from '@/hooks';
 import { DatabaseService } from '@/services/DatabaseService';
 import { syncService } from '@/services/CollectionSyncService';
+import { useRouter } from 'expo-router';
+import { useGuestCollectionContext } from '@/hooks/useGuestCollectionContext';
+import { BinSummaryBar } from '@/components/BinSummaryBar';
+import { ToastNotification } from '@/components/ToastNotification';
+import { toggleWantList, getWantList } from '@/utils/wantList';
 
 export default function CollectionScreen() {
     const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
@@ -52,6 +57,9 @@ export default function CollectionScreen() {
         isPermanent: state.isPermanent
     })));
 
+    const router = useRouter();
+    const guestCtx = useGuestCollectionContext();
+
     // Hooks for data and sync
     const { releases, loading: loadingCollection, refresh: refreshCollection } = useCollectionData();
 
@@ -73,6 +81,38 @@ export default function CollectionScreen() {
 
     // For random pick, use inventory (always pick from full collection, not history)
     const randomSource = releases;
+
+    const hasSetGuestDefault = useRef(false);
+    useEffect(() => {
+        if (sessionRole === 'guest' && sessionId && !hasSetGuestDefault.current) {
+            hasSetGuestDefault.current = true;
+            setViewMode('new');
+        }
+    }, [sessionRole, sessionId]);
+
+    const [wantedIds, setWantedIds] = useState<Set<number>>(new Set());
+    const [wlToast, setWlToast] = useState({ message: '', visible: false });
+
+    useEffect(() => {
+        if (sessionRole === 'guest') {
+            getWantList().then(list => setWantedIds(new Set(list.map(i => i.releaseId))));
+        }
+    }, [sessionRole]);
+
+    const handleWantList = useCallback(async (release: Release) => {
+        const added = await toggleWantList(release, {
+            sessionId: guestCtx.sessionId,
+            sessionName: guestCtx.sessionName,
+            hostUsername: guestCtx.hostUsername,
+        });
+        setWantedIds(prev => {
+            const next = new Set(prev);
+            if (added) next.add(release.id); else next.delete(release.id);
+            return next;
+        });
+        setWlToast({ message: added ? 'Added to your want list' : 'Removed from want list', visible: true });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }, [guestCtx]);
 
     const { sync } = useSyncCollection();
 
@@ -115,6 +155,7 @@ export default function CollectionScreen() {
     }, [isSearchVisible]);
 
     const handleReleaseLongPress = useCallback((release: Release) => {
+        if (sessionRole === 'guest') return;
         Alert.alert(
             "Highlight Album",
             "Select an action for this release:",
@@ -173,7 +214,7 @@ export default function CollectionScreen() {
                 }
             ]
         );
-    }, [refreshCollection, username]);
+    }, [refreshCollection, username, sessionRole]);
 
     return (
         <View style={styles.container}>
@@ -197,7 +238,16 @@ export default function CollectionScreen() {
                     onMenuPress={() => setIsMenuVisible(true)}
                     onInfoPress={sessionId && sessionRole !== 'voyeur' ? () => setInfoVisible(true) : undefined}
                     onViewModeChange={setViewMode}
+                    hideViewModes={sessionRole === 'guest' ? ['spin'] : undefined}
+                    onWantListPress={sessionRole === 'guest' && !!sessionId ? () => router.push('/want-list') : undefined}
                 />
+
+                {guestCtx.isGuest && guestCtx.isInSession && guestCtx.binItemCount > 0 && (
+                    <BinSummaryBar
+                        count={guestCtx.binItemCount}
+                        onPress={() => router.replace('/(tabs)/bin')}
+                    />
+                )}
 
                 {isSearchVisible && (
                     <Animated.View
@@ -222,6 +272,9 @@ export default function CollectionScreen() {
                     loading={isLoading}
                     isEmpty={isSpinMode ? historySections.length === 0 : isCollectionEmpty}
                     username={username}
+                    guestMode={sessionRole === 'guest'}
+                    wantedReleaseIds={sessionRole === 'guest' ? wantedIds : undefined}
+                    onWantList={sessionRole === 'guest' ? handleWantList : undefined}
                 />
 
                 <ReleaseDetailsModal
@@ -247,6 +300,14 @@ export default function CollectionScreen() {
                         onClose={() => setInfoVisible(false)}
                     />
                 )}
+
+                <ToastNotification
+                    message={wlToast.message}
+                    visible={wlToast.visible}
+                    variant="success"
+                    duration={2000}
+                    onDismiss={() => setWlToast(prev => ({ ...prev, visible: false }))}
+                />
             </SafeAreaView>
         </View>
     );

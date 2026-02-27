@@ -227,7 +227,10 @@ export const useGroupedReleases = ({
         return {
             filteredReleases: sorted,
             groupedReleases,
-            isEmpty: sorted.length === 0
+            // isEmpty reflects whether the current VIEW has anything to show.
+            // For filtered modes (N&N, Saved) this can be true even when releases
+            // are loaded — groupedReleases is the right signal.
+            isEmpty: groupedReleases.length === 0
         };
     }, [releases, groupBy, sortBy, searchQuery]);
 };

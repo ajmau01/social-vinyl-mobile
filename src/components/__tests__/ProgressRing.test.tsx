@@ -8,77 +8,81 @@ jest.mock('react-native-reanimated', () => {
     const ActualReanimated = jest.requireActual('react-native-reanimated');
     return {
         ...ActualReanimated,
-        withTiming: jest.fn((val, config) => val),
+        withTiming: jest.fn((val, _config) => val),
         useSharedValue: jest.fn((val) => ({ value: val })),
-        useAnimatedProps: jest.fn((cb) => ({})),
+        useAnimatedProps: jest.fn((_cb) => ({})),
         Easing: {
             linear: jest.fn(),
         },
     };
 });
 
+const NOW = 1_700_000_000_000; // Fixed "now" for deterministic tests
+
 describe('ProgressRing', () => {
     const mockAnimatedValue = { value: 0 };
-    const mockLastPlayedAt = { value: 0 };
 
     beforeEach(() => {
+        jest.useFakeTimers();
+        jest.spyOn(Date, 'now').mockReturnValue(NOW);
         jest.clearAllMocks();
-        (useSharedValue as jest.Mock)
-            .mockReturnValueOnce(mockAnimatedValue)
-            .mockReturnValueOnce(mockLastPlayedAt);
+        mockAnimatedValue.value = 0;
+        // Always return the same stable reference — simulates real useSharedValue behaviour
+        (useSharedValue as jest.Mock).mockReturnValue(mockAnimatedValue);
     });
 
-    it('projects progress by exactly 5 seconds when enough time remains', () => {
-        render(
-            <ProgressRing
-                size={40}
-                strokeWidth={4}
-                position={10000} // 10s
-                duration={60000} // 60s
-                playedAt={12345}
-            />
-        );
-
-        // Expected projection: (10000 + 5000) / 60000 = 0.25
-        expect(withTiming).toHaveBeenCalledWith(0.25, expect.any(Object));
-        expect(mockAnimatedValue.value).toBe(0.25);
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 
-    it('prevents overshooting at the end of a track', () => {
+    it('uses clock-based progress when playedAt is available', () => {
+        // playedAt = NOW - 60_000ms (60s ago), duration = 146_000ms (2:26)
+        // expected progress = 60_000 / 146_000 ≈ 0.411
+        const playedAt = NOW - 60_000;
         render(
-            <ProgressRing
-                size={40}
-                strokeWidth={4}
-                position={58000} // 58s (2s left)
-                duration={60000} // 60s
-                playedAt={12345}
-            />
+            <ProgressRing size={40} strokeWidth={4} position={0} duration={146_000} playedAt={playedAt} />
         );
 
-        // Expected projection: (58000 + 2000) / 60000 = 1.0 (clamped by timeRemaining)
+        expect(withTiming).toHaveBeenCalledWith(
+            expect.closeTo(60_000 / 146_000, 3),
+            expect.any(Object)
+        );
+    });
+
+    it('advances every second via setInterval', () => {
+        const playedAt = NOW - 60_000;
+        render(
+            <ProgressRing size={40} strokeWidth={4} position={0} duration={146_000} playedAt={playedAt} />
+        );
+
+        const callsBefore = (withTiming as jest.Mock).mock.calls.length;
+
+        // Advance fake clock by 3 seconds — should trigger 3 more setInterval ticks
+        jest.advanceTimersByTime(3000);
+
+        expect((withTiming as jest.Mock).mock.calls.length).toBe(callsBefore + 3);
+    });
+
+    it('clamps progress to 1.0 at end of track', () => {
+        // playedAt = NOW - 150_000ms (past a 146s track)
+        const playedAt = NOW - 150_000;
+        render(
+            <ProgressRing size={40} strokeWidth={4} position={0} duration={146_000} playedAt={playedAt} />
+        );
+
         expect(withTiming).toHaveBeenCalledWith(1.0, expect.any(Object));
-        expect(mockAnimatedValue.value).toBe(1.0);
     });
 
-    it('snaps to current position if drift is > 5%', () => {
-        mockAnimatedValue.value = 0.1; // Currently at 10%
-
+    it('falls back to position-based progress when playedAt is unavailable', () => {
+        // position = 73_000ms, duration = 146_000ms → 50%
         render(
-            <ProgressRing
-                size={40}
-                strokeWidth={4}
-                position={12000} // 12s out of 60s = 20% (Delta = 10% > 5%)
-                duration={60000}
-                playedAt={12345}
-            />
+            <ProgressRing size={40} strokeWidth={4} position={73_000} duration={146_000} />
         );
 
-        // Should snap to 20% immediately before starting 5s animation
-        // Note: In implementation, animatedProgress.value is updated directly
-        expect(mockAnimatedValue.value).toBe(0.2833333333333333); // position (12k) / duration (60k) = 0.2, then projection adds 5s (0.0833)
-        // Wait, if it snaps, it sets the value to currentProgress, THEN calculates projection.
-        // position/duration = 0.2. 
-        // Then withTiming(projectedProgress) where projectedProgress = (12k + 5k)/60k = 17k/60k = 0.2833
-        expect(withTiming).toHaveBeenCalledWith(0.2833333333333333, expect.any(Object));
+        expect(withTiming).toHaveBeenCalledWith(
+            expect.closeTo(0.5, 3),
+            expect.any(Object)
+        );
     });
 });

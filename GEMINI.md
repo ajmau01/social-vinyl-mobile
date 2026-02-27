@@ -2,51 +2,57 @@
 
 > **Project**: Social Vinyl Mobile (React Native)
 > **Your Role**: Development & Implementation
-> **Current Assignment**: v1.0 Party Core — Issue #147 (Guest Onboarding)
-> **Branch**: `feature/147-guest-onboarding`
+> **Current Assignment**: v1.0 Party Core — Issues #148 + #149 (Guest Collection Experience)
+> **Branch**: `feature/148-149-guest-experience`
 > **Status**: Ready to implement
-> **Last Updated**: 2026-02-24
+> **Last Updated**: 2026-02-26
 
 ---
 
-## 🎯 Current Assignment: Issue #147 — Guest Onboarding
+## 🎯 Current Assignment: Issues #148 + #149 — Guest Collection Experience
 
-**One issue, one PR.**
+**One PR for both issues.** See the rationale in the handoff doc.
 
 Read the full implementation plan before starting:
 - `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/GEMINI-HANDOFF.md` — **complete implementation guide** ⭐
-- GitHub [#147](https://github.com/ajmau01/social-vinyl-mobile/issues/147) — full spec with acceptance criteria
+- GitHub [#148](https://github.com/ajmau01/social-vinyl-mobile/issues/148) — Guest Collection View spec
+- GitHub [#149](https://github.com/ajmau01/social-vinyl-mobile/issues/149) — Bookmark-to-Buy spec
 
 ### What You're Building
 
-A guest arrives at a party, scans a QR code, and needs to be in the host's collection in under 30 seconds. This issue redesigns the join flow to hit that target.
+**#148 — Guest Collection View**: When a guest opens collection during an active session:
+1. Default view mode is **N&N** (`'new'`) instead of Genre
+2. **'Spin' chip hidden** — host-only, irrelevant for guests
+3. **Bin summary bar** above collection: "3 in the bin · Keep browsing" → taps to Bin tab
+4. **Pick validation toasts** in `ReleaseDetailsModal` at add-to-bin time (non-blocking nudges)
+5. **Guest long-press disabled** — no Notable/Saved actions for guests
 
-**Three paths, one screen** (`GuestJoinModal.tsx`):
-1. **Returning user** — has `authToken` in SecureStore → auto-joins, zero friction
-2. **New user "Skip"** — enters display name only → joins immediately, no account
-3. **New user with account** — display name + email + password → ⚠️ **STUB ONLY** (see below)
+**#149 — Bookmark-to-Buy (Guest Want List)**:
+1. `want_list` SQLite table — local-first, no backend sync
+2. `pricetag-outline` icon on ReleaseCard in guest mode (bottom-right, vs host bookmark top-left)
+3. Toast on add/remove
+4. **Want list screen** (`app/want-list.tsx`): grouped by party, album art, context
+5. **Share** via React Native built-in `Share.share()` — no new package needed
+6. Accessible from **CollectionHeader** (pricetag icon) and **SessionDrawer**
 
-### ⚠️ Scope Boundary — Read This First
+### Implementation Order (15 Steps)
 
-The full account creation flow (email + password) depends on Backend #272 (Guest Registration endpoint) which is **not yet built**. Do NOT implement a non-functional form.
-
-**Build in this session**:
-- Deep link handling + pre-population of join code
-- Background WebSocket pre-connection before UI renders
-- Returning user auto-join (stored `authToken`)
-- "Skip for now" path — display name only, joins immediately
-- The `GuestJoinModal` component with the full UX chrome
-
-**Stub only — do not implement**:
-- The email + password account creation form
-- Replace with a "Create Account (Coming Soon)" placeholder, styled consistently
-
-### Implementation Order
-
-1. `app/_layout.tsx` — deep link handler: pre-populate join code, kick off background WS join
-2. `src/components/session/GuestJoinModal.tsx` — NEW modal overlay component
-3. `app/join-session.tsx` — wire `GuestJoinModal`, handle returning user auto-join
-4. `src/constants/copy.ts` — add new copy strings
+Follow the handoff doc exactly. Summary:
+1. Types (`WantListItem` interface)
+2. DatabaseService (`want_list` table + 4 CRUD methods)
+3. `useGuestCollectionContext` hook
+4. `wantList.ts` utils
+5. `ToastNotification.tsx` component
+6. `BinSummaryBar.tsx` component
+7. `WantListItem.tsx` component
+8. `app/want-list.tsx` screen
+9. Modify `ReleaseCard.tsx`
+10. Modify `CollectionHeader.tsx`
+11. Modify `CollectionSectionView.tsx`
+12. Modify `ReleaseDetailsModal.tsx`
+13. Modify `app/(tabs)/collection.tsx`
+14. Register route in `app/_layout.tsx`
+15. Add want list entry to `SessionDrawer.tsx`
 
 ---
 
@@ -65,9 +71,9 @@ The full account creation flow (email + password) depends on Backend #272 (Guest
 - #168 Leave Session ✅ (closed Feb 23)
 
 **Group 3 — Guest Experience** ← YOU ARE HERE:
-- [ ] **#147** Guest Onboarding ← START HERE
-- [ ] **#148** Guest Collection View
-- [ ] **#149** Bookmark-to-Buy
+- [x] **#147** Guest Onboarding ✅ (PR #172 merged Feb 26)
+- [ ] **#148** Guest Collection View ← START HERE
+- [ ] **#149** Bookmark-to-Buy (same PR as #148)
 
 ---
 
@@ -115,7 +121,7 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 ## Workflow Rules (Non-Negotiable)
 
 - **NEVER commit directly to `main`**
-- **ALWAYS work in the feature branch**: `feature/147-guest-onboarding`
+- **ALWAYS work in the feature branch**: `feature/148-149-guest-experience`
 - **ALWAYS create a PR** — never merge locally
 - **NEVER merge a PR** — that's the user's job
 - **ALWAYS use** "Andrew Mauer" (`ajmauer@gmail.com`) for commits
@@ -124,9 +130,9 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 
 1. `npx tsc --noEmit` — verify no TypeScript errors
 2. `npm test` — all tests pass
-3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-24-issue-147-complete.md`
-4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md` — mark #147 complete
-5. Create PR against `main` with title: `feat(guest): guest onboarding — deep link join + skip path (#147)`
+3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-26-issues-148-149-complete.md`
+4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md` — mark #148 + #149 complete
+5. Create PR against `main` with title: `feat(guest): guest collection view + want list (#148, #149)`
 
 ---
 
@@ -134,19 +140,29 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 
 ```
 app/
-├── _layout.tsx            ← deep link handler (modify in step 1)
-├── join-session.tsx       ← wire GuestJoinModal, auto-join (modify in step 3)
+├── _layout.tsx            ← register want-list route (step 14)
+├── want-list.tsx          ← NEW want list screen (step 8)
 └── (tabs)/
-    └── collection.tsx
+    └── collection.tsx     ← modify: guest defaults, bin bar, want list (step 13)
 
 src/
 ├── components/
-│   └── session/
-│       └── GuestJoinModal.tsx     ← NEW (step 2)
-├── constants/
-│   └── copy.ts                    ← add strings (step 4)
-└── store/
-    └── useSessionStore.ts         ← read lastMode/authToken for returning user check
+│   ├── BinSummaryBar.tsx          ← NEW (step 6)
+│   ├── CollectionHeader.tsx       ← modify: hideViewModes, onWantListPress (step 10)
+│   ├── CollectionSectionView.tsx  ← modify: thread guest props (step 11)
+│   ├── ReleaseCard.tsx            ← modify: guestMode, isWanted, onWantList (step 9)
+│   ├── ReleaseDetailsModal.tsx    ← modify: pick validation toasts (step 12)
+│   ├── SessionDrawer.tsx          ← modify: want list menu entry (step 15)
+│   ├── ToastNotification.tsx      ← NEW (step 5)
+│   └── WantListItem.tsx           ← NEW (step 7)
+├── hooks/
+│   └── useGuestCollectionContext.ts  ← NEW (step 3)
+├── services/
+│   └── DatabaseService.ts         ← modify: want_list table + 4 methods (step 2)
+├── types/
+│   └── index.ts                   ← add WantListItem interface (step 1)
+└── utils/
+    └── wantList.ts                ← NEW (step 4)
 ```
 
 ---
@@ -158,23 +174,23 @@ src/
 const { sessionService, webSocketService } = useServices();
 ```
 
-### Session Store — returning user check
+### Session Store
 ```tsx
-const { authToken, sessionRole, lastMode } = useSessionStore();
-// returning guest = lastMode === 'guest' && authToken exists in SecureStore
+const { sessionRole, sessionId, sessionName, hostUsername } = useSessionStore(
+    useShallow(state => ({ ... }))
+);
 ```
 
-### Existing SessionService.joinSession()
+### DatabaseService — existing pattern for `getSessionSetlist`
+The `want_list` table follows the same schema and method pattern as `session_plays`. Look at how `getSessionSetlist()` is implemented and follow the same style for `getWantList()`.
+
+### Migration Guard Pattern
 ```typescript
-public async joinSession(joinCode: string, displayName: string): Promise<AsyncResult<SessionJoinedMessage>>
+const tableInfo = await this.db.getAllAsync<{ name: string }>("PRAGMA table_info(table_name)");
+if (tableInfo.length === 0) {
+    // run migration
+}
 ```
-This is the call made when the guest taps "Join Party" on the skip path.
-
-### Deep link URL format
-```
-socialvinyl://join?code=RQLA4
-```
-Extract `code` in `_layout.tsx` Linking handler and pass as param to `join-session` route.
 
 ---
 
@@ -184,7 +200,7 @@ Extract `code` in `_layout.tsx` Linking handler and pass as param to `join-sessi
 npm test                    # Run all tests
 npx tsc --noEmit           # Type check
 npx eslint src/            # Lint
-npm test -- SessionMode    # Test specific file
+npm test -- WantList       # Test specific file
 ```
 
 ---

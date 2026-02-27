@@ -12,6 +12,8 @@ import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/utils/logger';
 import { TrackListSchema } from '@/types/schemas';
+import { useGuestCollectionContext } from '@/hooks/useGuestCollectionContext';
+import { ToastNotification } from '@/components/ToastNotification';
 
 interface ReleaseDetailsModalProps {
     visible: boolean;
@@ -24,10 +26,20 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
     const [tracks, setTracks] = useState<Track[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
+    const [validationToast, setValidationToast] = useState({ message: '', visible: false });
 
-    const { username } = useSessionStore();
-    const { isInBin } = useListeningBinStore();
-    const isAlreadyInBin = (release && username) ? isInBin(release.id, username) : false;
+    const { username, nowPlaying } = useSessionStore();
+    const { isGuest, isReleaseInBin, isReleasePlayed } = useGuestCollectionContext();
+    const { items: binItems } = useListeningBinStore();
+    // Check ANY user's entry — the bin is shared; if someone already added this album
+    // (e.g. a guest added it, then the host opens the same album) the button should
+    // reflect the real shared state.
+    const isAlreadyInBin = release
+        ? binItems.some(item => item.releaseId === release.id || item.id === release.id)
+        : false;
+    // Guard against adding the currently playing album — it's already being enjoyed.
+    const isNowPlaying = !!(release && nowPlaying?.releaseId &&
+        parseInt(nowPlaying.releaseId, 10) === release.id);
 
     // ... (useEffect remains the same) ... 
     useEffect(() => {
@@ -69,12 +81,29 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
 
     const handleAddToBin = async () => {
         if (!release || !username || isAdding) return;
+        if (isNowPlaying) {
+            setValidationToast({ message: "It appears that this title is currently playing - choose another?", visible: true });
+            return;
+        }
+        if (isGuest && release) {
+            if (isReleaseInBin(release.id)) {
+                setValidationToast({ message: "Someone's already got that one — try another?", visible: true });
+            } else if (isReleasePlayed(release.id)) {
+                setValidationToast({ message: "That one's been played — pick something fresh?", visible: true });
+            }
+            // Note: we proceed regardless — the add still happens
+        }
         setIsAdding(true);
         try {
             const result = await listeningBinSyncService.addAlbum(release);
             if (!result.success) {
-                logger.error('[Details] Failed to add album to bin:', result.error);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                const errMsg = result.error?.message?.toLowerCase() ?? '';
+                if (errMsg.includes('already in the bin') || errMsg.includes('already in bin')) {
+                    setValidationToast({ message: "Someone's already got that one — try another?", visible: true });
+                } else {
+                    logger.error('[Details] Failed to add album to bin:', result.error);
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                }
             } else {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 onClose();
@@ -191,6 +220,12 @@ export const ReleaseDetailsModal = ({ visible, release, onClose, onRandomNext }:
                     </ScrollView>
                 </View>
             </View>
+            <ToastNotification
+                message={validationToast.message}
+                visible={validationToast.visible}
+                variant="warning"
+                onDismiss={() => setValidationToast(prev => ({ ...prev, visible: false }))}
+            />
         </Modal>
     );
 };

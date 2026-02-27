@@ -16,6 +16,9 @@ export interface CollectionSectionViewProps {
     loading: boolean;
     isEmpty: boolean;
     username: string | null;
+    guestMode?: boolean;
+    wantedReleaseIds?: Set<number>;
+    onWantList?: (release: Release) => void;
 }
 
 // Type for transformed sections
@@ -32,7 +35,10 @@ export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React
     refreshing,
     loading,
     isEmpty,
-    username
+    username,
+    guestMode,
+    wantedReleaseIds,
+    onWantList,
 }) => {
     // Fix Issue #3: Memoize section transformation to prevent recreation on every render
     const transformedSections = useMemo(
@@ -52,8 +58,11 @@ export const CollectionSectionView: React.FC<CollectionSectionViewProps> = React
             releases={item}
             onPress={onReleasePress}
             onLongPress={onReleaseLongPress}
+            guestMode={guestMode}
+            wantedReleaseIds={wantedReleaseIds}
+            onWantList={onWantList}
         />
-    ), [onReleasePress, onReleaseLongPress]);
+    ), [onReleasePress, onReleaseLongPress, guestMode, wantedReleaseIds, onWantList]);
 
     const renderSectionHeader = useCallback(() => null, []);
 

@@ -36,6 +36,7 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
         setAuthToken,
         sessionId,
         sessionName,
+        sessionRole,
         isBroadcast,
         setDisplayName,
         resetSession
@@ -171,6 +172,18 @@ export function SessionDrawer({ isVisible, onClose }: SessionDrawerProps) {
                                     </View>
                                     <View style={styles.optionLabelContainer}>
                                         <Text style={styles.optionLabel}>Listening History</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
+                                </TouchableOpacity>
+                            )}
+
+                            {sessionRole === 'guest' && (
+                                <TouchableOpacity testID="drawer-want-list-button" style={styles.optionItem} onPress={() => { onClose(); router.push('/want-list'); }}>
+                                    <View style={[styles.iconBox, { backgroundColor: 'rgba(124, 58, 237, 0.2)' }]}>
+                                        <Ionicons name="pricetag-outline" size={20} color={THEME.colors.primary} />
+                                    </View>
+                                    <View style={styles.optionLabelContainer}>
+                                        <Text style={styles.optionLabel}>Want List</Text>
                                     </View>
                                     <Ionicons name="chevron-forward" size={18} color={THEME.colors.textMuted} />
                                 </TouchableOpacity>
