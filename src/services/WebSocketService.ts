@@ -62,12 +62,13 @@ class WebSocketService implements IWebSocketService {
         this.shouldReconnect = true;
 
         if (this.socket?.readyState === WebSocket.OPEN) {
-            // Check if we need to upgrade auth
-            if (CONFIG.USE_MESSAGE_AUTH && (authToken || sessionSecret)) {
-                if (authToken !== prevConfig?.authToken || sessionSecret !== prevConfig?.sessionSecret) {
-                    if (CONFIG.DEBUG_WS) logger.log('[WS] Upgrading connection with new credentials');
-                    this.authenticate();
-                }
+            // Only re-authenticate if the AUTH TOKEN itself changed.
+            // Do NOT re-authenticate when sessionId/sessionSecret change reactively
+            // after a session-joined message — those are already confirmed by the server
+            // and re-authenticating would cascade into an authTimeout loop.
+            if (CONFIG.USE_MESSAGE_AUTH && authToken && authToken !== prevConfig?.authToken) {
+                if (CONFIG.DEBUG_WS) logger.log('[WS] Upgrading connection with new auth token');
+                this.authenticate();
             }
             return;
         }
@@ -216,7 +217,7 @@ class WebSocketService implements IWebSocketService {
             tempSocket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'admin-login-success' || data.type === 'session-joined') {
+                    if ((data.type === 'admin-login-success' || data.type === 'session-joined') && data.authToken) {
                         clearTimeout(timeout);
                         tempSocket.close();
                         resolve({

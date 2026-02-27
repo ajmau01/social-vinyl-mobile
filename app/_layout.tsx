@@ -54,8 +54,11 @@ function WebSocketManager() {
   */
 
   useEffect(() => {
-    // Manage Connection Lifecycle using the hook's actions
-    if (username) {
+    // Manage Connection Lifecycle using the hook's actions.
+    // Require BOTH username AND authToken before connecting — if authToken was
+    // deliberately cleared (e.g. auth failure), we must NOT reconnect or the
+    // stale-token rejection loop will spin indefinitely.
+    if (username && authToken) {
       connect();
     } else {
       disconnect();
