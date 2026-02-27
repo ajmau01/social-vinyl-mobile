@@ -116,18 +116,31 @@ export default function CollectionScreen() {
 
     const { sync } = useSyncCollection();
 
+    // Guests see the host's collection — use hostUsername as the sync/load target
+    const isGuestInSession = sessionRole === 'guest' && !!sessionId;
+    const effectiveUsername = isGuestInSession && hostUsername ? hostUsername : username;
+
     const handleSync = useCallback(async () => {
-        if (!username) return;
+        if (!effectiveUsername) return;
 
         if (isSpinMode) {
             // If in history view, just refresh history
             await refreshHistory();
         } else {
-            // standard full sync
-            await sync(username);
+            await sync(effectiveUsername);
             refreshCollection();
         }
-    }, [username, sync, refreshCollection, refreshHistory, isSpinMode]);
+    }, [effectiveUsername, sync, refreshCollection, refreshHistory, isSpinMode]);
+
+    // Auto-sync host collection on first guest visit (no local data on fresh device).
+    // Track by sessionId so the sync fires again if the guest joins a different session.
+    const autoSyncedSessionRef = useRef<string | number | null>(null);
+    useEffect(() => {
+        if (isGuestInSession && hostUsername && releases.length === 0 && !loadingCollection && autoSyncedSessionRef.current !== sessionId) {
+            autoSyncedSessionRef.current = sessionId;
+            sync(hostUsername).then(() => refreshCollection());
+        }
+    }, [isGuestInSession, sessionId, hostUsername, releases.length, loadingCollection, sync, refreshCollection]);
 
     const handleRandomPress = useCallback(() => {
         const source = filteredReleases.length > 0 ? filteredReleases : releases;
@@ -223,8 +236,8 @@ export default function CollectionScreen() {
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 <CollectionHeader
                     title={
-                        username?.startsWith('Guest-')
-                            ? (useSessionStore.getState().sessionName || (useSessionStore.getState().hostUsername ? `${useSessionStore.getState().hostUsername}'s Party` : 'Party Session'))
+                        sessionRole === 'guest'
+                            ? (sessionName || (hostUsername ? `${hostUsername}'s Party` : 'Party Session'))
                             : (username ? `${username}'s Crate` : 'The Crate')
                     }
                     syncStatus={syncStatus}

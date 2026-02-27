@@ -24,22 +24,12 @@ export function QRScanner({ onCodeScanned, onClose }: QRScannerProps) {
 
     const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
         setScanned(true);
-        // Ensure this is a social vinyl URL before passing it on
         let codeToPass = data;
-        try {
-            if (data.includes('socialvinyl://join') || data.includes('socialvinyl.app/join')) {
-                const url = new URL(data);
-                const codeParam = url.searchParams.get('code');
-                if (codeParam) {
-                    codeToPass = codeParam;
-                }
-            } else if (data.length === 5) {
-                codeToPass = data; // Direct 5-char code scan
-            }
-        } catch (e) {
-            // URL parse error
+        // Extract 5-char code from a URL (new URL() is unreliable in RN — use regex)
+        const urlMatch = data.match(/[?&](?:code|join)=([A-Z0-9]{5})/i);
+        if (urlMatch) {
+            codeToPass = urlMatch[1].toUpperCase();
         }
-
         onCodeScanned(codeToPass);
     };
 

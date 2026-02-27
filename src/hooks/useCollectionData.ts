@@ -14,12 +14,9 @@ import { CONFIG } from '@/config';
 export const useCollectionData = () => {
     const { username, sessionRole, sessionId, hostUsername } = useSessionStore();
 
-    // In guest mode, load the HOST's collection — the guest username (e.g. 'Guest-456')
-    // has no local collection data. hostUsername is set by both join paths (SessionService
-    // and index.tsx handleGuestJoin).
-    const isGuestInSession =
-        (sessionRole === 'guest' || (!!username && username.startsWith('Guest-'))) &&
-        !!sessionId;
+    // In guest mode, load the HOST's collection.
+    // hostUsername is set by both join paths (SessionService and index.tsx handleGuestJoin).
+    const isGuestInSession = sessionRole === 'guest' && !!sessionId;
     const effectiveUsername = isGuestInSession && hostUsername ? hostUsername : username;
 
     const [releases, setReleases] = useState<Release[]>([]);

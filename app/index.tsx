@@ -27,6 +27,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { validateUsername, validatePartyCode } from '@/utils/validation';
 import { COPY } from '@/constants/copy';
+import { Ionicons } from '@expo/vector-icons';
 import { ActiveSessionView } from '@/components/session/ActiveSessionView';
 import { HostHomeScreen } from '@/components/HostHomeScreen';
 
@@ -221,7 +222,8 @@ export default function WelcomeScreen() {
         wsService.joinSession(inputValue, guestUsername)
             .then(result => {
                 if (result.success) {
-                    useSessionStore.getState().setUsername(guestUsername);
+                    useSessionStore.getState().setDisplayName(guestUsername);
+                    useSessionStore.getState().setSessionRole('guest');
                     useSessionStore.getState().setLastMode('invited');
                     // Session ID and Name should be returned in result.data from join-session payload
                     if (result.data) {
@@ -416,6 +418,23 @@ export default function WelcomeScreen() {
                                         <Text style={styles.infoText}>
                                             First scan takes 5-10 mins. Subsequent visits load instantly.
                                         </Text>
+                                    )}
+
+                                    {entryPath === 'invited' && (
+                                        <>
+                                            <View style={styles.divider}>
+                                                <View style={styles.dividerLine} />
+                                                <Text style={styles.dividerText}>OR</Text>
+                                                <View style={styles.dividerLine} />
+                                            </View>
+                                            <TouchableOpacity
+                                                style={styles.qrButton}
+                                                onPress={() => router.push('/join-session')}
+                                            >
+                                                <Ionicons name="qr-code-outline" size={20} color={THEME.colors.primary} />
+                                                <Text style={styles.qrButtonText}>Scan QR Code</Text>
+                                            </TouchableOpacity>
+                                        </>
                                     )}
                                 </View>
                             )}
@@ -619,5 +638,37 @@ const styles = StyleSheet.create({
         color: THEME.colors.textMuted,
         fontSize: 14,
         marginTop: 40,
-    }
+    },
+    divider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    dividerText: {
+        color: THEME.colors.textMuted,
+        marginHorizontal: 12,
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    qrButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        borderWidth: 1,
+        borderColor: THEME.colors.primary + '50',
+        paddingVertical: 14,
+        borderRadius: 12,
+        gap: 10,
+    },
+    qrButtonText: {
+        color: THEME.colors.primary,
+        fontSize: 16,
+        fontWeight: '600',
+    },
 });
