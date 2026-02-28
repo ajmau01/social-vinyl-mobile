@@ -227,7 +227,7 @@ class WebSocketService implements IWebSocketService {
                         resolve({
                             success: true,
                             data: {
-                                sessionId: data.sessionId,
+                                sessionId: String(data.sessionId),
                                 token: data.authToken,
                                 userId: data.username,
                                 sessionSecret: data.sessionSecret,
@@ -311,7 +311,8 @@ class WebSocketService implements IWebSocketService {
     /**
      * Issues #136 + #138: Event-driven connection wait.
      * Subscribes to the store and resolves as soon as connectionState
-     * transitions to 'connected', or rejects after timeoutMs.
+     * transitions to 'connected'. Fast-fails on 'disconnected' (socket closed
+     * before handshake). Rejects after timeoutMs if neither occurs.
      * Replaces the previous 100ms polling loop.
      */
     private waitForConnection(timeoutMs: number): Promise<void> {
@@ -321,16 +322,24 @@ class WebSocketService implements IWebSocketService {
                 return;
             }
 
+            // Declare before setTimeout so the timeout callback can reference it
+            // without relying on const hoisting timing.
+            let unsubscribe: (() => void) | null = null;
+
             const timeout = setTimeout(() => {
-                unsubscribe();
+                unsubscribe?.();
                 reject(new Error('Connection timed out'));
             }, timeoutMs);
 
-            const unsubscribe = useSessionStore.subscribe((state) => {
+            unsubscribe = useSessionStore.subscribe((state) => {
                 if (state.connectionState === 'connected') {
                     clearTimeout(timeout);
-                    unsubscribe();
+                    unsubscribe?.();
                     resolve();
+                } else if (state.connectionState === 'disconnected') {
+                    clearTimeout(timeout);
+                    unsubscribe?.();
+                    reject(new Error('WebSocket closed during connection'));
                 }
             });
         });
