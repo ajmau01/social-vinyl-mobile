@@ -78,6 +78,10 @@ export default function WelcomeScreen() {
     useEffect(() => {
         if (CONFIG.IS_E2E) return;
 
+        // Guard: authenticated hosts must never auto-rejoin as a guest, even if stale
+        // familyPassCode is present in AsyncStorage from a previous guest session.
+        if (authToken) return;
+
         if (familyPassCode && displayName && entryPath === 'none' && !autoRejoined) {
             const tryAutoRejoin = async () => {
                 setLoading(true);
@@ -98,7 +102,7 @@ export default function WelcomeScreen() {
             };
             tryAutoRejoin();
         }
-    }, [familyPassCode, displayName, entryPath, autoRejoined, sessionService, router]);
+    }, [familyPassCode, displayName, entryPath, autoRejoined, sessionService, router, authToken]);
 
     // Issue #142 V2.1: Auto-redirect returning Users/Collectors
     useEffect(() => {
@@ -149,11 +153,12 @@ export default function WelcomeScreen() {
 
     // Issue #146: Active Session Gate
     // If we are a host and have an active session, take over the screen.
-    // HARDENING: Stay in ActiveSessionView during brief reconnection cycles to prevent
-    // "Cannot find single active touch" errors by avoiding unmount/remount of the active view.
+    // HARDENING: Stay in ActiveSessionView during initial connect and brief reconnection
+    // cycles to prevent "Cannot find single active touch" errors and to avoid a HostHomeScreen
+    // flash during the WS handshake phase that immediately follows login.
     // authToken guard: prevents the gate from firing if host credentials were cleared (e.g. voyeur mode).
     const isSessionActive = !!sessionStoreId && sessionRole === 'host' && !!authToken && !isPermanent &&
-        (connectionState === 'connected' || connectionState === 'reconnecting');
+        (connectionState === 'connected' || connectionState === 'reconnecting' || connectionState === 'connecting');
 
     if (isSessionActive) {
         return <ActiveSessionView />;
