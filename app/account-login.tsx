@@ -50,10 +50,11 @@ export default function AccountLoginScreen() {
 
                 store.setSessionRole('host');
                 store.setAvatarUrl(null); // Clear any stale voyeur avatar immediately
+                store.setFamilyPassCode(null); // Clear guest family pass — not relevant in host mode
                 useSessionStore.getState().setSyncStatus('syncing');
                 useListeningBinStore.getState().clearBin();
 
-                router.replace('/(tabs)/collection');
+                router.replace('/');
 
                 syncService.syncCollection(loggedInId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),

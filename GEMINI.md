@@ -2,57 +2,46 @@
 
 > **Project**: Social Vinyl Mobile (React Native)
 > **Your Role**: Development & Implementation
-> **Current Assignment**: STANDBY — v1.0 Party Core COMPLETE
+> **Current Assignment**: Issues #136 + #138 + #139 — Join Session Refactor
 > **Last Assignment**: Issues #148 + #149 ✅ (PR #174 merged)
-> **Status**: Awaiting next sprint planning from Claude
+> **Status**: Ready to implement
 > **Last Updated**: 2026-02-27
 
 ---
 
-## 🎯 Current Assignment: Issues #148 + #149 — Guest Collection Experience
+## 🎯 Current Assignment: Issues #136, #138, #139 — Join Session Cleanup
 
-**One PR for both issues.** See the rationale in the handoff doc.
+**One PR for all three issues.** Changes are tightly coupled.
 
 Read the full implementation plan before starting:
-- `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/GEMINI-HANDOFF.md` — **complete implementation guide** ⭐
-- GitHub [#148](https://github.com/ajmau01/social-vinyl-mobile/issues/148) — Guest Collection View spec
-- GitHub [#149](https://github.com/ajmau01/social-vinyl-mobile/issues/149) — Bookmark-to-Buy spec
+- `GEMINI-HANDOFF.md` in this repo root — **complete implementation guide with exact code snippets** ⭐
+- GitHub [#136](https://github.com/ajmau01/social-vinyl-mobile/issues/136) — fragile joinSession pattern
+- GitHub [#138](https://github.com/ajmau01/social-vinyl-mobile/issues/138) — polling loop → event-driven
+- GitHub [#139](https://github.com/ajmau01/social-vinyl-mobile/issues/139) — sessionId type normalization
 
-### What You're Building
+### What You're Changing
 
-**#148 — Guest Collection View**: When a guest opens collection during an active session:
-1. Default view mode is **N&N** (`'new'`) instead of Genre
-2. **'Spin' chip hidden** — host-only, irrelevant for guests
-3. **Bin summary bar** above collection: "3 in the bin · Keep browsing" → taps to Bin tab
-4. **Pick validation toasts** in `ReleaseDetailsModal` at add-to-bin time (non-blocking nudges)
-5. **Guest long-press disabled** — no Notable/Saved actions for guests
+**#139** — Normalize `sessionId` to `string` at the WebSocket message boundary. Update types in `useSessionStore` and `useWebSocket` from `string | number | null` → `string | null`. Remove redundant `.toString()` coercions.
 
-**#149 — Bookmark-to-Buy (Guest Want List)**:
-1. `want_list` SQLite table — local-first, no backend sync
-2. `pricetag-outline` icon on ReleaseCard in guest mode (bottom-right, vs host bookmark top-left)
-3. Toast on add/remove
-4. **Want list screen** (`app/want-list.tsx`): grouped by party, album art, context
-5. **Share** via React Native built-in `Share.share()` — no new package needed
-6. Accessible from **CollectionHeader** (pricetag icon) and **SessionDrawer**
+**#138** — Replace the 100ms polling loop in `joinSession()` with a new `waitForConnection()` private method that subscribes to the Zustand store and resolves event-driven on `connectionState === 'connected'`.
 
-### Implementation Order (15 Steps)
+**#136** — Remove `dynamic require('@/store/useSessionStore')` hack from inside the polling loop and the `PROTOCOL_ACK` handler. Replace with a static top-level import.
 
-Follow the handoff doc exactly. Summary:
-1. Types (`WantListItem` interface)
-2. DatabaseService (`want_list` table + 4 CRUD methods)
-3. `useGuestCollectionContext` hook
-4. `wantList.ts` utils
-5. `ToastNotification.tsx` component
-6. `BinSummaryBar.tsx` component
-7. `WantListItem.tsx` component
-8. `app/want-list.tsx` screen
-9. Modify `ReleaseCard.tsx`
-10. Modify `CollectionHeader.tsx`
-11. Modify `CollectionSectionView.tsx`
-12. Modify `ReleaseDetailsModal.tsx`
-13. Modify `app/(tabs)/collection.tsx`
-14. Register route in `app/_layout.tsx`
-15. Add want list entry to `SessionDrawer.tsx`
+### Files to Change (3 files only)
+
+1. `src/store/useSessionStore.ts` — sessionId type + remove `.toString()` coercions
+2. `src/hooks/useWebSocket.ts` — sessionId type + `String(sessionId)` normalization
+3. `src/services/WebSocketService.ts` — static import, `waitForConnection()`, replace polling
+
+### Implementation Order
+
+1. Step 1: Fix sessionId type in `useSessionStore.ts` (4 sub-changes)
+2. Step 2: Normalize sessionId in `useWebSocket.ts` (3 sub-changes)
+3. Step 3: Replace polling in `WebSocketService.ts` (4 sub-changes)
+4. Step 4: Verify — `npx tsc --noEmit` + `npm test`
+5. Step 5: Commit + open PR
+
+See `GEMINI-HANDOFF.md` for exact before/after code for every change.
 
 ---
 
@@ -121,7 +110,7 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 ## Workflow Rules (Non-Negotiable)
 
 - **NEVER commit directly to `main`**
-- **ALWAYS work in the feature branch**: `feature/148-149-guest-experience`
+- **ALWAYS work in the feature branch**: `refactor/136-138-139-join-session-cleanup`
 - **ALWAYS create a PR** — never merge locally
 - **NEVER merge a PR** — that's the user's job
 - **ALWAYS use** "Andrew Mauer" (`ajmauer@gmail.com`) for commits
@@ -130,9 +119,9 @@ const { fieldA, fieldB } = useStore(useShallow(state => ({
 
 1. `npx tsc --noEmit` — verify no TypeScript errors
 2. `npm test` — all tests pass
-3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-26-issues-148-149-complete.md`
-4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md` — mark #148 + #149 complete
-5. Create PR against `main` with title: `feat(guest): guest collection view + want list (#148, #149)`
+3. Create implementation note: `~/ObsidianVaults/SocialVinyl-Dev/Projects/Mobile-App/Implementation-Notes/2026-02-27-issues-136-138-139-complete.md`
+4. Update `~/ObsidianVaults/SocialVinyl-Dev/_Dashboard/Current-Sprint.md` — mark #136, #138, #139 in progress
+5. Create PR against `main` with title: `refactor: event-driven join session + sessionId type normalization (#136, #138, #139)`
 
 ---
 

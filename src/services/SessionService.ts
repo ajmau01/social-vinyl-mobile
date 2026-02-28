@@ -24,7 +24,7 @@ export class SessionService implements ISessionService {
 
                 // Store session context
                 const store = useSessionStore.getState();
-                store.setSessionId(response.sessionId);
+                store.setSessionId(String(response.sessionId));
                 store.setSessionName(response.name);
                 store.setJoinCode(response.joinCode);
                 store.setSessionSecret(response.sessionSecret);
@@ -75,7 +75,7 @@ export class SessionService implements ISessionService {
 
                 // Store session context
                 const store = useSessionStore.getState();
-                store.setSessionId(response.sessionId);
+                store.setSessionId(String(response.sessionId));
                 store.setSessionName(response.name);
                 store.setJoinCode(response.joinCode);
                 store.setSessionSecret(response.sessionSecret);
@@ -165,7 +165,7 @@ export class SessionService implements ISessionService {
 
             // Clear local session if we ended our active one
             const store = useSessionStore.getState();
-            if (store.sessionId === sessionId || store.sessionId === String(sessionId)) {
+            if (store.sessionId === String(sessionId)) {
                 // Issue #154: Terminate local history record
                 dbService.endSession(String(store.sessionId), Date.now())
                     .catch(err => logger.error('[SessionService] Failed to end session history', err));
