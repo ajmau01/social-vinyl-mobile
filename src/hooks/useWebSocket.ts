@@ -17,7 +17,7 @@ export interface UseWebSocketResult {
     connectionState: ConnectionState;
     isConnected: boolean;
     isConnecting: boolean;
-    sessionId: string | number | null;
+    sessionId: string | null;
     nowPlaying: NowPlaying | null;
     error: string | null;
     connect: () => void;
@@ -85,7 +85,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
                         useListeningBinStore.getState().setBin([]);
                     }
 
-                    if (sessionId) setSessionId(sessionId);
+                    if (sessionId) setSessionId(String(sessionId));
 
                     const secret = message.sessionSecret ||
                         (payload && typeof payload === 'object' && 'sessionSecret' in payload
@@ -304,7 +304,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}): UseWebSocketRes
             webSocketService.connect(
                 username,
                 authToken || undefined,
-                state.sessionId ? state.sessionId.toString() : undefined,
+                state.sessionId ?? undefined,
                 state.sessionSecret || undefined
             );
         }

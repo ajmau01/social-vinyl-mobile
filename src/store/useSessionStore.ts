@@ -10,7 +10,7 @@ import { NowPlaying, SyncStatus, ConnectionState, SessionRole } from '@/types';
 
 interface SessionState {
     connectionState: ConnectionState;
-    sessionId: string | number | null;
+    sessionId: string | null;
     nowPlaying: NowPlaying | null;
     username: string | null;
     avatarUrl: string | null;
@@ -23,7 +23,7 @@ interface SessionState {
 
     // Actions
     setConnectionState: (state: ConnectionState) => void;
-    setSessionId: (id: string | number | null) => void;
+    setSessionId: (id: string | null) => void;
     setNowPlaying: (track: NowPlaying | null) => void;
     setUsername: (username: string | null) => void;
     setAvatarUrl: (url: string | null) => void;
@@ -103,7 +103,7 @@ export const useSessionStore = create<SessionState>()(
                 // If we have both id and secret, save them securely
                 const { sessionSecret } = useSessionStore.getState();
                 if (id && sessionSecret) {
-                    await secureStorage.saveSessionCredentials(id.toString(), sessionSecret);
+                    await secureStorage.saveSessionCredentials(id, sessionSecret);
                 }
             },
             setNowPlaying: (track) => set({ nowPlaying: track }),
@@ -121,7 +121,7 @@ export const useSessionStore = create<SessionState>()(
                 set({ sessionSecret: secret });
                 const { sessionId } = useSessionStore.getState();
                 if (sessionId && secret) {
-                    await secureStorage.saveSessionCredentials(sessionId.toString(), secret);
+                    await secureStorage.saveSessionCredentials(sessionId, secret);
                 }
             },
             hydrateCredentials: async () => {

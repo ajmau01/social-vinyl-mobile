@@ -14,6 +14,7 @@ import { logger } from '@/utils/logger';
 import { ActionAckSchema, AuthResponseSchema, ProtocolAckSchema, WebSocketMessageSchema } from '@/types/schemas';
 import { generateUUID } from '@/utils/uuid';
 import { networkSecurity } from '@/utils/network';
+import { useSessionStore } from '@/store/useSessionStore';
 
 // Issue #125: Protocol Versioning
 const PROTOCOL_VERSION = '1.0';
@@ -282,7 +283,7 @@ class WebSocketService implements IWebSocketService {
     public async joinSession(joinCode: string, username: string, authToken?: string): AsyncResult<any> {
         try {
             // BLOCK-1 FIX: If already connected with matching credentials, skip reconnect
-            const isAlreadyConnected = this.socket?.readyState === WebSocket.OPEN && 
+            const isAlreadyConnected = this.socket?.readyState === WebSocket.OPEN &&
                                      this.currentConfig?.username === username &&
                                      this.currentConfig?.authToken === authToken;
 
@@ -294,32 +295,8 @@ class WebSocketService implements IWebSocketService {
                 if (CONFIG.DEBUG_WS) logger.log('[WS] joinSession: Already connected with matching credentials, skipping reconnect');
             }
 
-            await new Promise<void>((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    clearInterval(interval);
-                    reject(new Error('Connection timed out'));
-                }, 10000);
-
-                const interval = setInterval(() => {
-                    // Check actual socket state AND protocol handshake readiness
-                    if (this.socket?.readyState === WebSocket.OPEN) {
-                        const { useSessionStore } = require('@/store/useSessionStore');
-                        const state = useSessionStore.getState().connectionState;
-                        
-                        // We are 'connected' only after successful protocol handshake or auth
-                        if (state === 'connected') {
-                            clearInterval(interval);
-                            clearTimeout(timeout);
-                            resolve();
-                        }
-                    } else if (this.socket?.readyState === WebSocket.CLOSED && !isAlreadyConnected) {
-                        // Only fail if we were actually trying to connect
-                        clearInterval(interval);
-                        clearTimeout(timeout);
-                        reject(new Error('WebSocket closed during connection'));
-                    }
-                }, 100);
-            });
+            // Issues #136 + #138: event-driven wait replaces 100ms polling loop
+            await this.waitForConnection(10000);
 
             // Connection successful, now send join action
             const response = await this.sendAction('join-session', { joinCode, username });
@@ -329,6 +306,34 @@ class WebSocketService implements IWebSocketService {
             this.disconnect();
             return { success: false, error: err };
         }
+    }
+
+    /**
+     * Issues #136 + #138: Event-driven connection wait.
+     * Subscribes to the store and resolves as soon as connectionState
+     * transitions to 'connected', or rejects after timeoutMs.
+     * Replaces the previous 100ms polling loop.
+     */
+    private waitForConnection(timeoutMs: number): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (useSessionStore.getState().connectionState === 'connected') {
+                resolve();
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                unsubscribe();
+                reject(new Error('Connection timed out'));
+            }, timeoutMs);
+
+            const unsubscribe = useSessionStore.subscribe((state) => {
+                if (state.connectionState === 'connected') {
+                    clearTimeout(timeout);
+                    unsubscribe();
+                    resolve();
+                }
+            });
+        });
     }
 
     private handleOpen = () => {
@@ -407,7 +412,7 @@ class WebSocketService implements IWebSocketService {
                     if (CONFIG.DEBUG_WS) logger.log('[WS] Protocol Handshake ACK:', ackValidation.data.enabledFeatures);
                     // Store enabledFeatures in SessionStore
                     // Implements feature negotiation from Issue #125
-                    const { setEnabledFeatures } = require('@/store/useSessionStore').useSessionStore.getState();
+                    const { setEnabledFeatures } = useSessionStore.getState();
                     setEnabledFeatures(ackValidation.data.enabledFeatures);
 
                     // FIX: Ensure we transition to connected state
