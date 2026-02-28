@@ -53,7 +53,7 @@ export default function AccountLoginScreen() {
                 useSessionStore.getState().setSyncStatus('syncing');
                 useListeningBinStore.getState().clearBin();
 
-                router.replace('/(tabs)/collection');
+                router.replace('/');
 
                 syncService.syncCollection(loggedInId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
