@@ -252,7 +252,7 @@ export interface WebSocketMessage {
     type?: WebSocketMessageType;
     messageType?: WebSocketMessageType;
     payload?: LoginResult | SyncResult | NowPlaying | { message: string } | Record<string, unknown>;
-    sessionId?: string | number;
+    sessionId?: string;
     authToken?: string;
     sessionSecret?: string;
     joinCode?: string;
