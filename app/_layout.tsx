@@ -137,6 +137,7 @@ function RootLayout() {
             <Stack.Screen name="join-session" />
             <Stack.Screen name="account-create" />
             <Stack.Screen name="account-login" />
+            <Stack.Screen name="link-discogs" />
             <Stack.Screen name="want-list" />
           </Stack>
         </GestureHandlerRootView>

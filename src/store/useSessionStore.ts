@@ -62,6 +62,12 @@ interface SessionState {
     sessionMode: 'party' | 'live' | 'solo' | null;
     sessionStartTime: number | null;
 
+    // Milestone 17: Discogs linking
+    discogsLinked: boolean;
+    discogsUsername: string | null;
+    setDiscogsLinked: (linked: boolean) => void;
+    setDiscogsUsername: (username: string | null) => void;
+
     setSessionName: (name: string | null) => void;
     setHostUsername: (username: string | null) => void;
     setJoinCode: (code: string | null) => void;
@@ -96,6 +102,8 @@ export const useSessionStore = create<SessionState>()(
             familyPassCode: null,
             sessionMode: null,
             sessionStartTime: null,
+            discogsLinked: false,
+            discogsUsername: null,
 
             setConnectionState: (state) => set({ connectionState: state }),
             setSessionId: async (id) => {
@@ -192,6 +200,8 @@ export const useSessionStore = create<SessionState>()(
             setFamilyPassCode: (code) => set({ familyPassCode: code }),
             setSessionMode: (mode) => set({ sessionMode: mode }),
             setSessionStartTime: (time) => set({ sessionStartTime: time }),
+            setDiscogsLinked: (linked) => set({ discogsLinked: linked }),
+            setDiscogsUsername: (username) => set({ discogsUsername: username }),
             resetSession: () => set({
                 sessionId: null,
                 sessionSecret: null,
@@ -224,7 +234,9 @@ export const useSessionStore = create<SessionState>()(
                 displayName: state.displayName,
                 familyPassCode: state.familyPassCode,
                 sessionMode: state.sessionMode,
-                sessionStartTime: state.sessionStartTime
+                sessionStartTime: state.sessionStartTime,
+                discogsLinked: state.discogsLinked,
+                discogsUsername: state.discogsUsername
             }),
         }
     )
