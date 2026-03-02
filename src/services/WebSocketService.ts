@@ -257,6 +257,107 @@ class WebSocketService implements IWebSocketService {
         });
     }
     /**
+     * Registers a new host account using an isolated temporary WebSocket connection.
+     * Mirrors the login() pattern exactly — separate socket, same LoginResult shape.
+     */
+    public async register(username: string, password: string): AsyncResult<LoginResult> {
+        return new Promise((resolve) => {
+            const tempSocket = new WebSocket(CONFIG.WS_URL + `?username=${username}&admin=true`);
+            const timeout = setTimeout(() => {
+                tempSocket.close();
+                resolve({ success: false, error: new Error('Registration timed out') });
+            }, 10000);
+
+            tempSocket.onopen = () => {
+                tempSocket.send(JSON.stringify({
+                    action: 'register-host',
+                    username,
+                    password
+                }));
+            };
+
+            tempSocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    const isSuccess =
+                        (data.type === 'session-joined' && data.authToken) ||
+                        (data.type === 'access-level' && data.level === 'ADMIN' && data.authToken);
+                    if (isSuccess) {
+                        clearTimeout(timeout);
+                        tempSocket.close();
+                        resolve({
+                            success: true,
+                            data: {
+                                sessionId: String(data.sessionId),
+                                token: data.authToken,
+                                userId: data.username,
+                                sessionSecret: data.sessionSecret,
+                                sessionName: data.name,
+                                joinCode: data.joinCode,
+                                hostUsername: data.hostUsername,
+                                isPermanent: data.isPermanent
+                            }
+                        });
+                    } else if (data.type === 'error') {
+                        clearTimeout(timeout);
+                        tempSocket.close();
+                        resolve({ success: false, error: new Error(data.message || 'Registration failed') });
+                    }
+                } catch (e) {
+                    clearTimeout(timeout);
+                    tempSocket.close();
+                    resolve({ success: false, error: e as Error });
+                }
+            };
+
+            tempSocket.onerror = () => {
+                clearTimeout(timeout);
+                tempSocket.close();
+                resolve({ success: false, error: new Error('Network error during registration') });
+            };
+        });
+    }
+
+    /**
+     * Links a Discogs account to the authenticated host user.
+     * Sends link-discogs action on the persistent connection and resolves
+     * when the backend emits a discogs-linked confirmation message.
+     */
+    public async linkDiscogs(discogsUsername: string, discogsToken: string): AsyncResult<{ discogsUsername: string; avatarUrl?: string }> {
+        return new Promise((resolve) => {
+            if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+                resolve({ success: false, error: new Error('Not connected to server') });
+                return;
+            }
+
+            const onLinked = (data: any) => {
+                clearTimeout(timeout);
+                this.removeListener('discogs-linked', onLinked);
+                resolve({
+                    success: true,
+                    data: {
+                        discogsUsername: data.discogsUsername,
+                        avatarUrl: data.avatarUrl
+                    }
+                });
+            };
+
+            const timeout = setTimeout(() => {
+                this.removeListener('discogs-linked', onLinked);
+                resolve({ success: false, error: new Error('Link Discogs timed out') });
+            }, 10000);
+
+            this.addListener('discogs-linked', onLinked);
+
+            this.socket.send(JSON.stringify({
+                action: 'link-discogs',
+                discogsUsername,
+                discogsToken
+            }));
+        });
+    }
+
+    /**
      * Listen for a specific message type
      */
     public addListener(type: string, callback: (data: any) => void) {

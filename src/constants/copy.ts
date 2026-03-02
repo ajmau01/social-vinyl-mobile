@@ -40,6 +40,14 @@ export const COPY = {
     DISPLAY_NAME: 'Display Name',
     WELCOME_BACK: 'Welcome Back',
 
+    // Issues #170/#171: Host Registration
+    CREATE_HOST_ACCOUNT: 'Create Host Account',
+    USERNAME_PLACEHOLDER: 'Choose a username',
+    USERNAME_HINT: '3–20 characters, letters, numbers, _ and - only',
+    PASSWORD_HINT: 'At least 8 characters',
+    CONFIRM_PASSWORD_LABEL: 'Confirm Password',
+    ALREADY_HAVE_ACCOUNT: 'Already have an account?',
+
     // Issue #147: Guest Onboarding
     GUEST_JOIN_TITLE: 'Welcome to the Party!',
     GUEST_JOIN_SUBTITLE: 'Join the party to start picking records.',

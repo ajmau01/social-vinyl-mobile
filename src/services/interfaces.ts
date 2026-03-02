@@ -36,6 +36,8 @@ export interface IWebSocketService {
     connect(username: string, authToken?: string, sessionId?: string, sessionSecret?: string): void;
     disconnect(): void;
     login(username: string, password: string): AsyncResult<LoginResult>;
+    register(username: string, password: string): AsyncResult<LoginResult>;
+    linkDiscogs(discogsUsername: string, discogsToken: string): AsyncResult<{ discogsUsername: string; avatarUrl?: string }>;
     sendAction<T = any>(action: string, payload?: any): Promise<T>;
 }
 
