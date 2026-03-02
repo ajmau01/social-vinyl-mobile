@@ -71,7 +71,7 @@ export default function CreateSessionScreen() {
                 if (mode === 'live') {
                     await sessionService.setBroadcast(Number(result.data.sessionId));
                 }
-                router.replace('/');
+                router.replace('/(tabs)/bin');
             } else {
                 setError('Failed to create session');
             }

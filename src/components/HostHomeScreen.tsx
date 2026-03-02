@@ -67,7 +67,7 @@ export function HostHomeScreen() {
             );
             if (result.success) {
                 await sessionService.setBroadcast(Number(result.data.sessionId));
-                // isSessionActive gate in index.tsx handles navigation to ActiveSessionView
+                router.replace('/(tabs)/bin');
             }
         } finally {
             setActionLoading(null);
@@ -82,8 +82,10 @@ export function HostHomeScreen() {
                 month: 'short',
                 day: 'numeric',
             });
-            await sessionService.createSession(`Solo \u2014 ${dateStr}`, false, 'solo');
-            // isSessionActive gate handles navigation
+            const soloResult = await sessionService.createSession(`Solo \u2014 ${dateStr}`, false, 'solo');
+            if (soloResult.success) {
+                router.replace('/(tabs)/bin');
+            }
         } finally {
             setActionLoading(null);
         }
