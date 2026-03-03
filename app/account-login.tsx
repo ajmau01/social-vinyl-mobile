@@ -145,7 +145,7 @@ export default function AccountLoginScreen() {
 
                         <TouchableOpacity
                             style={styles.createAccountLink}
-                            onPress={() => router.replace('/account-create')}
+                            onPress={() => router.push('/account-create')}
                             disabled={loading}
                         >
                             <Text style={styles.createAccountText}>

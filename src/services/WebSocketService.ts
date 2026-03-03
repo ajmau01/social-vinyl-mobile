@@ -227,7 +227,7 @@ class WebSocketService implements IWebSocketService {
                         resolve({
                             success: true,
                             data: {
-                                sessionId: String(data.sessionId),
+                                sessionId: data.sessionId ? String(data.sessionId) : undefined,
                                 token: data.authToken,
                                 userId: data.username,
                                 sessionSecret: data.sessionSecret,
@@ -305,6 +305,12 @@ class WebSocketService implements IWebSocketService {
                                     isPermanent: data.isPermanent
                                 }
                             });
+                        } else {
+                            // session-joined arrived but no auth token was collected — fail fast
+                            // rather than silently hanging until the timeout fires.
+                            clearTimeout(timeout);
+                            tempSocket.close();
+                            resolve({ success: false, error: new Error('Registration succeeded but no auth token was received') });
                         }
                     } else if (data.type === 'error') {
                         clearTimeout(timeout);
@@ -318,7 +324,7 @@ class WebSocketService implements IWebSocketService {
                 }
             };
 
-            tempSocket.onerror = () => {
+            tempSocket.onerror = (err) => {
                 clearTimeout(timeout);
                 tempSocket.close();
                 resolve({ success: false, error: new Error('Network error during registration') });

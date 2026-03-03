@@ -177,3 +177,158 @@ describe('WebSocketService Authentication', () => {
         expect(mockSocket.url).toContain('username=test-user');
     });
 });
+
+describe('WebSocketService register() two-phase flow', () => {
+    let wsService: any;
+
+    beforeEach(() => {
+        jest.resetModules();
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        MockWebSocket.instances = [];
+
+        jest.doMock('@/config', () => ({
+            CONFIG: { WS_URL: 'ws://test-url', DEBUG_WS: false, USE_MESSAGE_AUTH: true }
+        }));
+        jest.doMock('@/utils/logger', () => ({
+            logger: { log: jest.fn(), error: jest.fn(), warn: jest.fn() }
+        }));
+
+        wsService = require('../WebSocketService').wsService;
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('resolves with full payload after access-level then session-joined', async () => {
+        const registerPromise = wsService.register('newuser', 'password123');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        // Step 1: access-level arrives with token
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'access-level', level: 'ADMIN', authToken: 'tok-abc'
+        })});
+
+        // Step 2: session-joined arrives with full payload
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'session-joined',
+            sessionId: 42,
+            sessionSecret: 'sec-xyz',
+            name: 'My Session',
+            joinCode: 'JOIN1',
+            hostUsername: 'newuser',
+            isPermanent: false
+        })});
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(true);
+        expect(result.data?.token).toBe('tok-abc');
+        expect(result.data?.sessionId).toBe('42');
+        expect(result.data?.joinCode).toBe('JOIN1');
+        expect(result.data?.hostUsername).toBe('newuser');
+        expect(tempSocket.close).toHaveBeenCalled();
+    });
+
+    it('resolves correctly when session-joined carries its own authToken', async () => {
+        const registerPromise = wsService.register('newuser', 'password123');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        // session-joined arrives first with its own token (no prior access-level)
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'session-joined',
+            authToken: 'direct-token',
+            sessionId: 99,
+            sessionSecret: 'sec-direct',
+            name: 'Direct Session',
+            joinCode: 'DIRCT',
+            hostUsername: 'newuser',
+            isPermanent: true
+        })});
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(true);
+        expect(result.data?.token).toBe('direct-token');
+        expect(result.data?.sessionId).toBe('99');
+    });
+
+    it('fails fast when session-joined arrives with no token at all', async () => {
+        const registerPromise = wsService.register('newuser', 'password123');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        // No access-level sent first; session-joined has no token either
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'session-joined',
+            sessionId: 1,
+            joinCode: 'NOTOK'
+            // authToken intentionally absent
+        })});
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toContain('no auth token');
+        expect(tempSocket.close).toHaveBeenCalled();
+    });
+
+    it('resolves with error on server error message', async () => {
+        const registerPromise = wsService.register('takenuser', 'pass');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'error', message: 'Username already taken'
+        })});
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toBe('Username already taken');
+        expect(tempSocket.close).toHaveBeenCalled();
+    });
+
+    it('times out after 10 seconds if no response', async () => {
+        const registerPromise = wsService.register('newuser', 'pass');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        jest.advanceTimersByTime(10001);
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toContain('timed out');
+        expect(tempSocket.close).toHaveBeenCalled();
+    });
+
+    it('resolves with error on WebSocket network error', async () => {
+        const registerPromise = wsService.register('newuser', 'pass');
+        const tempSocket = MockWebSocket.instances[0];
+
+        tempSocket.readyState = MockWebSocket.OPEN;
+        tempSocket.onopen?.();
+
+        tempSocket.onerror?.({ type: 'error' });
+
+        const result = await registerPromise;
+
+        expect(result.success).toBe(false);
+        expect(result.error?.message).toContain('Network error');
+        expect(tempSocket.close).toHaveBeenCalled();
+    });
+});
