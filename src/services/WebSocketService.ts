@@ -276,28 +276,36 @@ class WebSocketService implements IWebSocketService {
                 }));
             };
 
+            // Collect authToken from access-level, then wait for session-joined
+            // which carries the full session payload (sessionId, joinCode, etc.).
+            let collectedAuthToken: string | undefined;
+
             tempSocket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    const isSuccess =
-                        (data.type === 'session-joined' && data.authToken) ||
-                        (data.type === 'access-level' && data.level === 'ADMIN' && data.authToken);
-                    if (isSuccess) {
-                        clearTimeout(timeout);
-                        tempSocket.close();
-                        resolve({
-                            success: true,
-                            data: {
-                                sessionId: String(data.sessionId),
-                                token: data.authToken,
-                                userId: data.username,
-                                sessionSecret: data.sessionSecret,
-                                sessionName: data.name,
-                                joinCode: data.joinCode,
-                                hostUsername: data.hostUsername,
-                                isPermanent: data.isPermanent
-                            }
-                        });
+
+                    if (data.type === 'access-level' && data.level === 'ADMIN' && data.authToken) {
+                        // Store the token — session data arrives in the subsequent session-joined.
+                        collectedAuthToken = data.authToken;
+                    } else if (data.type === 'session-joined') {
+                        const token = data.authToken || collectedAuthToken;
+                        if (token) {
+                            clearTimeout(timeout);
+                            tempSocket.close();
+                            resolve({
+                                success: true,
+                                data: {
+                                    sessionId: data.sessionId ? String(data.sessionId) : undefined,
+                                    token,
+                                    userId: data.username,
+                                    sessionSecret: data.sessionSecret,
+                                    sessionName: data.name,
+                                    joinCode: data.joinCode,
+                                    hostUsername: data.hostUsername,
+                                    isPermanent: data.isPermanent
+                                }
+                            });
+                        }
                     } else if (data.type === 'error') {
                         clearTimeout(timeout);
                         tempSocket.close();

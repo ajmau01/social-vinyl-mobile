@@ -142,6 +142,16 @@ export default function AccountLoginScreen() {
                                 )}
                             </TouchableOpacity>
                         </View>
+
+                        <TouchableOpacity
+                            style={styles.createAccountLink}
+                            onPress={() => router.replace('/account-create')}
+                            disabled={loading}
+                        >
+                            <Text style={styles.createAccountText}>
+                                No account? <Text style={styles.createAccountAccent}>Sign up</Text>
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -232,5 +242,17 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
-    }
+    },
+    createAccountLink: {
+        marginTop: 24,
+        alignItems: 'center',
+    },
+    createAccountText: {
+        color: THEME.colors.textDim,
+        fontSize: 14,
+    },
+    createAccountAccent: {
+        color: THEME.colors.primary,
+        fontWeight: '600',
+    },
 });
