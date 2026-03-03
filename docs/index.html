@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Vinyl — Where Record Collections Come Alive</title>
+  <meta name="description" content="Host a listening session with your Discogs collection. Let your guests browse the crate, vote on what spins next, and experience music together." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f1016;
+      --surface:      #12121e;
+      --surface-2:    #1e1e2d;
+      --primary:      #7c3aed;
+      --primary-glow: rgba(124, 58, 237, 0.35);
+      --secondary:    #db2777;
+      --secondary-glow: rgba(219, 39, 119, 0.3);
+      --text:         #ffffff;
+      --text-dim:     #9ca3af;
+      --text-muted:   #6b7280;
+      --gold:         #ffd700;
+      --glass:        rgba(255, 255, 255, 0.04);
+      --glass-border: rgba(255, 255, 255, 0.09);
+      --radius-sm:    8px;
+      --radius-md:    16px;
+      --radius-lg:    24px;
+      --radius-full:  9999px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Ambient gradient orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-purple { width: 600px; height: 600px; background: var(--primary); top: -200px; left: -150px; }
+    .orb-pink   { width: 500px; height: 500px; background: var(--secondary); bottom: -100px; right: -150px; }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Nav ── */
+    nav {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 16, 22, 0.8);
+    }
+    nav .inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .logo-disc {
+      width: 32px;
+      height: 32px;
+      position: relative;
+    }
+    .logo-disc svg { width: 100%; height: 100%; }
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .logo-text span { color: var(--primary); }
+    .nav-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-full);
+      padding: 4px 12px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: rgba(124, 58, 237, 0.12);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      border-radius: var(--radius-full);
+      padding: 6px 16px;
+      margin-bottom: 28px;
+    }
+    .hero-eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.85); }
+    }
+    .hero h1 {
+      font-size: clamp(42px, 7vw, 80px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--text-dim);
+      max-width: 560px;
+      margin: 0 auto 48px;
+      line-height: 1.65;
+    }
+    .hero-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      padding: 14px 28px;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      box-shadow: 0 0 40px var(--primary-glow);
+    }
+    .btn-ghost {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      color: var(--text-dim);
+    }
+
+    /* ── Record visual ── */
+    .record-wrap {
+      margin: 72px auto 0;
+      width: min(380px, 90vw);
+      position: relative;
+    }
+    .record {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: conic-gradient(
+        #111 0deg 3deg,
+        #1a1a1a 3deg 6deg,
+        #111 6deg 9deg,
+        #1a1a1a 9deg 12deg,
+        #111 12deg 15deg,
+        #1a1a1a 15deg 360deg
+      );
+      box-shadow:
+        0 0 0 2px #222,
+        0 0 80px rgba(124, 58, 237, 0.2),
+        0 30px 80px rgba(0,0,0,0.7);
+      animation: spin 18s linear infinite;
+      position: relative;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .record::after {
+      content: '';
+      position: absolute;
+      inset: 36%;
+      border-radius: 50%;
+      background: radial-gradient(circle, #1e1e2d 60%, #2a1a4e 100%);
+      border: 2px solid rgba(124, 58, 237, 0.3);
+    }
+    .record-label {
+      position: absolute;
+      inset: 38%;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .record-label-text {
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--primary);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .record-shine {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 220deg,
+        transparent 0deg,
+        rgba(255,255,255,0.04) 30deg,
+        transparent 60deg
+      );
+      animation: spin 18s linear infinite;
+    }
+
+    /* ── Features ── */
+    .section { padding: 80px 0; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 17px;
+      color: var(--text-dim);
+      max-width: 500px;
+      line-height: 1.65;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 52px;
+    }
+    .feature-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(124, 58, 237, 0.3);
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.08);
+    }
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ── How it works ── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0;
+      margin-top: 52px;
+      position: relative;
+    }
+    .how-grid::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--glass-border), var(--primary-glow), var(--glass-border), transparent);
+    }
+    .how-step {
+      text-align: center;
+      padding: 0 20px;
+      position: relative;
+    }
+    .step-num {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin: 0 auto 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .how-step h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .how-step p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── Discogs callout ── */
+    .discogs-banner {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 48px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      margin: 0 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .discogs-banner::before {
+      content: '';
+      position: absolute;
+      top: -80px;
+      right: -80px;
+      width: 300px;
+      height: 300px;
+      background: var(--primary-glow);
+      border-radius: 50%;
+      filter: blur(80px);
+    }
+    .discogs-icon {
+      font-size: 56px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .discogs-content { position: relative; z-index: 1; }
+    .discogs-content h3 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+    }
+    .discogs-content p {
+      font-size: 15px;
+      color: var(--text-dim);
+      line-height: 1.65;
+      max-width: 480px;
+    }
+
+    /* ── Beta callout ── */
+    .beta-section {
+      text-align: center;
+      padding: 80px 0;
+      border-top: 1px solid var(--glass-border);
+    }
+    .beta-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: var(--radius-full);
+      padding: 6px 16px;
+      margin-bottom: 24px;
+    }
+    .beta-section h2 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .beta-section p {
+      font-size: 17px;
+      color: var(--text-dim);
+      max-width: 480px;
+      margin: 0 auto 36px;
+      line-height: 1.65;
+    }
+    .email-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-radius: var(--radius-full);
+      padding: 12px 24px;
+      background: rgba(124, 58, 237, 0.08);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .email-link:hover {
+      background: rgba(124, 58, 237, 0.16);
+      border-color: rgba(124, 58, 237, 0.5);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--glass-border);
+      padding: 28px 0;
+      text-align: center;
+    }
+    footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    footer a { color: var(--text-dim); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .discogs-banner { flex-direction: column; text-align: center; padding: 32px 24px; }
+      .discogs-banner::before { display: none; }
+      .how-grid::before { display: none; }
+      .hero { padding: 72px 0 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-purple"></div>
+<div class="orb orb-pink"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <a class="logo" href="#">
+      <div class="logo-disc">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="15" fill="#1a1a2e" stroke="#7c3aed" stroke-width="1.5"/>
+          <circle cx="16" cy="16" r="10" fill="none" stroke="#2a2a3e" stroke-width="1"/>
+          <circle cx="16" cy="16" r="6"  fill="none" stroke="#2a2a3e" stroke-width="1"/>
+          <circle cx="16" cy="16" r="2.5" fill="#7c3aed"/>
+          <path d="M16 4 A12 12 0 0 1 28 16" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">Social<span>Vinyl</span></span>
+    </a>
+    <span class="nav-badge">Private Beta</span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">Now in Private Beta</div>
+    <h1>
+      Where record collections<br/>
+      <span class="gradient">come alive.</span>
+    </h1>
+    <p class="hero-sub">
+      Connect your Discogs collection, host a listening session, and let your guests browse the crate — together in the same room.
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="mailto:ajmauer@gmail.com">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+        Request Early Access
+      </a>
+      <a class="btn btn-ghost" href="https://www.discogs.com" target="_blank" rel="noopener">
+        Powered by Discogs
+      </a>
+    </div>
+
+    <!-- Record -->
+    <div class="record-wrap">
+      <div class="record">
+        <div class="record-shine"></div>
+        <div class="record-label">
+          <span class="record-label-text">Social<br/>Vinyl</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything the listening room needs.</h2>
+    <p class="section-sub">Built for collectors who actually spin records — not just catalog them.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🎛️</div>
+        <h3>Host a Session</h3>
+        <p>Generate a room code, share it with guests. They join instantly — no account required. Your collection, their discovery.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💿</div>
+        <h3>Live Discogs Collection</h3>
+        <p>Your full collection syncs directly from Discogs. Browse by release, artist, label, or year — right from the phone in anyone's hand.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📥</div>
+        <h3>The Bin</h3>
+        <p>Guests add records to the bin. The host sees what the room wants to hear. A collaborative queue built for vinyl's natural rhythm.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <h3>Real-Time, No Refresh</h3>
+        <p>Everything updates live over WebSocket. Bin changes, now playing, session state — all in sync across every device in the room.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Secure Discogs Auth</h3>
+        <p>Connects via Discogs OAuth — no passwords shared with Social Vinyl. You authorize once and your guests never touch your credentials.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Mobile-First</h3>
+        <p>Designed for the couch, the listening chair, the record fair. Native Android app. iOS coming soon.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="section" style="padding-top: 0;">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">From crate to room in seconds.</h2>
+
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="step-num">🔗</div>
+        <h3>Link Discogs</h3>
+        <p>Authorize Social Vinyl with your Discogs account via OAuth.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">🚀</div>
+        <h3>Start a Session</h3>
+        <p>Tap "Start Party" — get a room code instantly.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">👥</div>
+        <h3>Guests Join</h3>
+        <p>Share the code. Guests join with just a display name, no sign-up.</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">🎶</div>
+        <h3>Browse &amp; Spin</h3>
+        <p>Everyone browses the crate. Guests build the bin. You control the needle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Discogs callout -->
+<div class="container">
+  <div class="discogs-banner">
+    <div class="discogs-icon">🏷️</div>
+    <div class="discogs-content">
+      <h3>Built on the Discogs database.</h3>
+      <p>
+        Social Vinyl connects directly to your existing Discogs collection — no manual imports, no re-cataloguing. If your records are on Discogs, they're in Social Vinyl. Artwork, pressing details, and all.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Beta -->
+<section class="beta-section">
+  <div class="container">
+    <div class="beta-badge">✦ Private Beta</div>
+    <h2>Want early access?</h2>
+    <p>
+      We're looking for Discogs collectors to host sessions and help shape the app. Reach out — Android APK provided directly.
+    </p>
+    <a class="email-link" href="mailto:ajmauer@gmail.com">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+      ajmauer@gmail.com
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <p>
+      &copy; 2026 Social Vinyl &nbsp;·&nbsp;
+      <a href="https://www.discogs.com" target="_blank" rel="noopener">Powered by Discogs</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
