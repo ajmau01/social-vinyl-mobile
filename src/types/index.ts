@@ -193,7 +193,7 @@ export interface SessionListMessage {
 }
 
 export interface LoginResult {
-    sessionId: string;
+    sessionId?: string;
     token: string;
     userId?: string;
     sessionSecret?: string;
