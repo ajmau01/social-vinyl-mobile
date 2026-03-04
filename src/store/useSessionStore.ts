@@ -68,6 +68,10 @@ interface SessionState {
     setDiscogsLinked: (linked: boolean) => void;
     setDiscogsUsername: (username: string | null) => void;
 
+    // M18: Discogs OAuth
+    pendingOAuthToken: string | null;
+    setPendingOAuthToken: (token: string | null) => void;
+
     setSessionName: (name: string | null) => void;
     setHostUsername: (username: string | null) => void;
     setJoinCode: (code: string | null) => void;
@@ -104,6 +108,7 @@ export const useSessionStore = create<SessionState>()(
             sessionStartTime: null,
             discogsLinked: false,
             discogsUsername: null,
+            pendingOAuthToken: null,
 
             setConnectionState: (state) => set({ connectionState: state }),
             setSessionId: async (id) => {
@@ -202,6 +207,7 @@ export const useSessionStore = create<SessionState>()(
             setSessionStartTime: (time) => set({ sessionStartTime: time }),
             setDiscogsLinked: (linked) => set({ discogsLinked: linked }),
             setDiscogsUsername: (username) => set({ discogsUsername: username }),
+            setPendingOAuthToken: (token) => set({ pendingOAuthToken: token }),
             resetSession: () => set({
                 sessionId: null,
                 sessionSecret: null,

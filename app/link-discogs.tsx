@@ -2,57 +2,40 @@
 // Proprietary and confidential. Unauthorized use prohibited.
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+    KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { THEME } from '@/constants/theme';
 import { useSessionStore } from '@/store/useSessionStore';
-import { useServices } from '@/contexts/ServiceContext';
 
-const DISCOGS_DEVELOPERS_URL = 'https://www.discogs.com/settings/developers';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 export default function LinkDiscogsScreen() {
     const router = useRouter();
-    const { webSocketService, syncService } = useServices();
+    const { error: callbackError } = useLocalSearchParams<{ error?: string }>();
 
-    const [discogsUsername, setDiscogsUsername] = useState('');
-    const [discogsToken, setDiscogsToken] = useState('');
-    const [showToken, setShowToken] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const isSubmitDisabled = loading || !discogsUsername.trim() || !discogsToken.trim();
+    const displayError = callbackError === 'callback_failed'
+        ? 'Discogs authorization failed. Please try again.'
+        : error;
 
-    const handleLink = async () => {
+    const handleLinkDiscogs = async () => {
         setLoading(true);
         setError(null);
         try {
-            const result = await webSocketService.linkDiscogs(discogsUsername.trim(), discogsToken.trim());
-            if (result.success) {
-                const store = useSessionStore.getState();
-                store.setDiscogsLinked(true);
-                store.setDiscogsUsername(result.data.discogsUsername);
-                if (result.data.avatarUrl) store.setAvatarUrl(result.data.avatarUrl);
-
-                const username = store.username;
-                if (username) {
-                    syncService.syncCollection(username, {
-                        onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
-                        onStatusChange: (s) => useSessionStore.getState().setSyncStatus(s)
-                    }).then(syncResult => {
-                        if (syncResult.success && syncResult.data.avatarUrl) {
-                            useSessionStore.getState().setAvatarUrl(syncResult.data.avatarUrl);
-                        }
-                    });
-                }
-
-                router.replace('/(tabs)/collection');
-            } else {
-                setError(result.error.message || 'Failed to link Discogs account');
-            }
-        } catch (e: any) {
-            setError(e.message || 'Failed to link Discogs account');
+            const res = await fetch(`${API_URL}/api/discogs-auth/init`);
+            if (!res.ok) throw new Error('Server error starting Discogs authorization');
+            const { authorizeUrl, oauthToken } = await res.json();
+            useSessionStore.getState().setPendingOAuthToken(oauthToken);
+            await Linking.openURL(authorizeUrl);
+        } catch (e) {
+            setError('Could not start Discogs authorization. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -75,57 +58,19 @@ export default function LinkDiscogsScreen() {
                             Connect your Discogs collection to start hosting listening parties.
                         </Text>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Discogs Username</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={discogsUsername}
-                                onChangeText={setDiscogsUsername}
-                                placeholder="Your Discogs username"
-                                placeholderTextColor={THEME.colors.textMuted}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                maxLength={50}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Personal Access Token</Text>
-                            <View style={styles.tokenInputRow}>
-                                <TextInput
-                                    style={[styles.input, styles.tokenInput]}
-                                    value={discogsToken}
-                                    onChangeText={setDiscogsToken}
-                                    placeholder="Paste your token here"
-                                    placeholderTextColor={THEME.colors.textMuted}
-                                    secureTextEntry={!showToken}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                />
-                                <TouchableOpacity
-                                    style={styles.showToggle}
-                                    onPress={() => setShowToken(v => !v)}
-                                >
-                                    <Text style={styles.showToggleText}>{showToken ? 'Hide' : 'Show'}</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <TouchableOpacity onPress={() => Linking.openURL(DISCOGS_DEVELOPERS_URL)}>
-                                <Text style={styles.helpLink}>How to get your token →</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {error && <Text style={styles.errorMsg}>{error}</Text>}
+                        {displayError && (
+                            <Text style={styles.errorMsg}>{displayError}</Text>
+                        )}
 
                         <TouchableOpacity
-                            style={[styles.primaryButton, isSubmitDisabled && styles.primaryButtonDisabled]}
-                            onPress={handleLink}
-                            disabled={isSubmitDisabled}
+                            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                            onPress={handleLinkDiscogs}
+                            disabled={loading}
                         >
-                            {loading ? (
-                                <ActivityIndicator color="white" />
-                            ) : (
-                                <Text style={styles.primaryButtonText}>Link Discogs</Text>
-                            )}
+                            {loading
+                                ? <ActivityIndicator color="white" />
+                                : <Text style={styles.primaryButtonText}>Link Discogs Account</Text>
+                            }
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -169,45 +114,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: THEME.colors.textDim,
         marginBottom: 32,
-    },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        color: THEME.colors.textDim,
-        fontSize: 14,
-        marginBottom: 8,
-    },
-    input: {
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: 12,
-        padding: 16,
-        color: '#fff',
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    tokenInputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    tokenInput: {
-        flex: 1,
-    },
-    showToggle: {
-        paddingHorizontal: 12,
-        paddingVertical: 16,
-    },
-    showToggleText: {
-        color: THEME.colors.primary,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    helpLink: {
-        color: THEME.colors.primary,
-        fontSize: 13,
-        marginTop: 8,
     },
     errorMsg: {
         color: THEME.colors.status.error,

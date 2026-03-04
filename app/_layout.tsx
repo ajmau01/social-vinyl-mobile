@@ -20,6 +20,8 @@ import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { LogBox } from 'react-native';
 import { validatePartyCode } from '@/utils/validation';
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+
 if (CONFIG.IS_E2E) {
   LogBox.ignoreAllLogs();
   console.log('[BOOT] E2E Mode detected. IS_E2E:', CONFIG.IS_E2E);
@@ -105,11 +107,38 @@ function RootLayout() {
 
           // If we have a username/token, WebSocketManager will handle connection.
           // If not, we just navigate and let GuestJoinModal handle it.
-          
+
           // Slight delay to ensure router navigation hierarchy is completely mounted
           setTimeout(() => {
             router.push(`/join-session?code=${joinCode}`);
           }, 300);
+        }
+      } else if (parsed.hostname === 'discogs-callback' || parsed.path === 'discogs-callback') {
+        const oauthToken    = parsed.queryParams?.oauth_token as string | undefined;
+        const oauthVerifier = parsed.queryParams?.oauth_verifier as string | undefined;
+        const store = useSessionStore.getState();
+        const appUsername = store.username;
+
+        if (oauthToken && oauthVerifier && appUsername) {
+          store.setPendingOAuthToken(null);
+
+          fetch(`${API_URL}/api/discogs-auth/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oauthToken, oauthVerifier, appUsername }),
+          })
+            .then(res => {
+              if (!res.ok) throw new Error('complete failed');
+              return res.json();
+            })
+            .then((data: { discogsUsername: string }) => {
+              store.setDiscogsLinked(true);
+              store.setDiscogsUsername(data.discogsUsername);
+              router.replace('/(tabs)/collection');
+            })
+            .catch(() => {
+              router.replace('/link-discogs?error=callback_failed');
+            });
         }
       }
     }
