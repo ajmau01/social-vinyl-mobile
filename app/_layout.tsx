@@ -20,7 +20,6 @@ import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { LogBox } from 'react-native';
 import { validatePartyCode } from '@/utils/validation';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 if (CONFIG.IS_E2E) {
   LogBox.ignoreAllLogs();
@@ -113,33 +112,6 @@ function RootLayout() {
             router.push(`/join-session?code=${joinCode}`);
           }, 300);
         }
-      } else if (parsed.hostname === 'discogs-callback' || parsed.path === 'discogs-callback') {
-        const oauthToken    = parsed.queryParams?.oauth_token as string | undefined;
-        const oauthVerifier = parsed.queryParams?.oauth_verifier as string | undefined;
-        const store = useSessionStore.getState();
-        const appUsername = store.username;
-
-        if (oauthToken && oauthVerifier && appUsername) {
-          store.setPendingOAuthToken(null);
-
-          fetch(`${API_URL}/api/discogs-auth/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ oauthToken, oauthVerifier, appUsername }),
-          })
-            .then(res => {
-              if (!res.ok) throw new Error('complete failed');
-              return res.json();
-            })
-            .then((data: { discogsUsername: string }) => {
-              store.setDiscogsLinked(true);
-              store.setDiscogsUsername(data.discogsUsername);
-              router.replace('/(tabs)/collection');
-            })
-            .catch(() => {
-              router.replace('/link-discogs?error=callback_failed');
-            });
-        }
       }
     }
   }, [url, router]);
@@ -167,6 +139,7 @@ function RootLayout() {
             <Stack.Screen name="account-create" />
             <Stack.Screen name="account-login" />
             <Stack.Screen name="link-discogs" />
+            <Stack.Screen name="discogs-callback" />
             <Stack.Screen name="want-list" />
           </Stack>
         </GestureHandlerRootView>
