@@ -305,13 +305,10 @@ class WebSocketService implements IWebSocketService {
                                     isPermanent: data.isPermanent
                                 }
                             });
-                        } else {
-                            // session-joined arrived but no auth token was collected — fail fast
-                            // rather than silently hanging until the timeout fires.
-                            clearTimeout(timeout);
-                            tempSocket.close();
-                            resolve({ success: false, error: new Error('Registration succeeded but no auth token was received') });
                         }
+                        // No token: this session-joined is from onOpen auto-join (LOCAL
+                        // connections); keep waiting for the one from RegisterHostHandler
+                        // which will include the authToken.
                     } else if (data.type === 'error') {
                         clearTimeout(timeout);
                         tempSocket.close();

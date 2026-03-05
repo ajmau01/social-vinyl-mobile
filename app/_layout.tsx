@@ -20,6 +20,7 @@ import { listeningBinSyncService } from '@/services/ListeningBinSyncService';
 import { LogBox } from 'react-native';
 import { validatePartyCode } from '@/utils/validation';
 
+
 if (CONFIG.IS_E2E) {
   LogBox.ignoreAllLogs();
   console.log('[BOOT] E2E Mode detected. IS_E2E:', CONFIG.IS_E2E);
@@ -105,7 +106,7 @@ function RootLayout() {
 
           // If we have a username/token, WebSocketManager will handle connection.
           // If not, we just navigate and let GuestJoinModal handle it.
-          
+
           // Slight delay to ensure router navigation hierarchy is completely mounted
           setTimeout(() => {
             router.push(`/join-session?code=${joinCode}`);
@@ -138,6 +139,7 @@ function RootLayout() {
             <Stack.Screen name="account-create" />
             <Stack.Screen name="account-login" />
             <Stack.Screen name="link-discogs" />
+            <Stack.Screen name="discogs-callback" />
             <Stack.Screen name="want-list" />
           </Stack>
         </GestureHandlerRootView>
