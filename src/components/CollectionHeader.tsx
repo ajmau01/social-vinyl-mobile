@@ -107,7 +107,7 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = React.memo(({
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <View>
-                        <Text testID="collection-header-title" style={styles.title}>{title}</Text>
+                        <Text testID="collection-header-title" style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
                         <Text
                             testID="collection-header-cache-status"
                             style={[styles.cacheText, stale && !isSyncing && styles.cacheTextStale]}
@@ -195,9 +195,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerLeft: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: THEME.spacing.sm,
+        marginRight: THEME.spacing.sm,
     },
     headerRight: {
         flexDirection: 'row',
