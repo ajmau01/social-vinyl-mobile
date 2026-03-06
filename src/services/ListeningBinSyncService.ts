@@ -68,7 +68,9 @@ class ListeningBinSyncService {
                 // Use instanceId as frontendId for stability
                 frontendId: item.instanceId
                     ? item.instanceId.toString()
-                    : `${item.releaseId}-${item.addedTimestamp}-${index}`
+                    : `${item.releaseId}-${item.addedTimestamp}-${index}`,
+                // Explicit mapping — backend broadcasts this for ownership verification on remove
+                clientUUID: item.clientUUID
             };
         });
 
@@ -196,7 +198,8 @@ class ListeningBinSyncService {
      * Clears all albums from the bin
      */
     public async clearBin(): Promise<Result<void>> {
-        const { username: userId } = useSessionStore.getState();
+        const { username, displayName } = useSessionStore.getState();
+        const userId = username || displayName;
 
         // No optimistic update for clear yet, relying on server state push
         // to avoid complex revert logic for many items. 
