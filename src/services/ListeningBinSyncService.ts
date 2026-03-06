@@ -159,7 +159,8 @@ class ListeningBinSyncService {
             // 2. Send Action
             await wsService.sendAction('remove', {
                 releaseId: itemToRemove.releaseId,
-                instanceId: itemToRemove.instanceId
+                instanceId: itemToRemove.instanceId,
+                clientUUID: itemToRemove.clientUUID  // required for guest ownership verification
             });
 
             // 3. Success (no specific confirm action needed as state is already gone)

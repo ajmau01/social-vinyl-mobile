@@ -83,6 +83,8 @@ export interface BinItem extends Release {
     frontendId?: string;
     // Backend sends 'requestedBy' instead of 'userId' for server-synced items
     requestedBy?: string;
+    // Backend-assigned UUID used for ownership verification on remove
+    clientUUID?: string;
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'complete' | 'error';
