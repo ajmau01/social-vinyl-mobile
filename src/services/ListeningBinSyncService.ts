@@ -154,8 +154,9 @@ class ListeningBinSyncService {
             : items.find(i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === callerUserId);
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
-        // Use the item's own userId for store scoping (host may be removing a guest's item)
-        const userId = itemToRemove.userId || callerUserId;
+        // Use the item's own userId for store scoping (host may be removing a guest's item).
+        // Use != null (not ||) to preserve empty string userId for items whose owner resolved to "".
+        const userId = itemToRemove.userId != null ? itemToRemove.userId : callerUserId;
 
         // 1. Optimistic Update
         removeAlbumOptimistic(releaseId, userId);
@@ -181,7 +182,9 @@ class ListeningBinSyncService {
             const isTimeout = (error as Error).message?.includes('timed out');
             if (isTimeout) {
                 const { items: currentItems } = useListeningBinStore.getState();
-                const stillInStore = currentItems.some(i => i.id === releaseId && i.userId === userId);
+                const stillInStore = currentItems.some(
+                    i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+                );
                 if (stillInStore) {
                     revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
                 }
@@ -214,9 +217,6 @@ class ListeningBinSyncService {
      * Clears all albums from the bin
      */
     public async clearBin(): Promise<Result<void>> {
-        const { username, displayName } = useSessionStore.getState();
-        const userId = username || displayName;
-
         // No optimistic update for clear yet, relying on server state push
         // to avoid complex revert logic for many items. 
         // Could implement optimistic clear if needed for responsiveness.

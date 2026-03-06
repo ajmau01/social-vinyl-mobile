@@ -82,6 +82,8 @@ export default function BinScreen() {
     };
 
     const onDragEnd = async (data: BinItemType[]) => {
+        // Guests and voyeurs cannot reorder — reorder is a host-only operation
+        if (sessionRole === 'guest' || sessionRole === 'voyeur') return;
         // data is the complete reordered list from DraggableFlatList — use it directly
         setBin(data);
 
@@ -124,7 +126,7 @@ export default function BinScreen() {
                                 <Ionicons name="information-circle-outline" size={24} color={THEME.colors.primary} />
                             </Pressable>
                         )}
-                        {sessionRole !== 'guest' && userItems.length > 0 && (
+                        {(sessionRole === 'host' || !sessionId) && userItems.length > 0 && (
                             <Pressable testID="bin-clear-button" onPress={handleClear} style={styles.headerButton}>
                                 <Text style={styles.clearButtonText}>Clear All</Text>
                             </Pressable>
