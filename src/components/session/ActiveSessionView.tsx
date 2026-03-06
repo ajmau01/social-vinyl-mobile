@@ -202,10 +202,10 @@ export const ActiveSessionView = () => {
                     <Text testID="up-next-title" style={styles.binTitle}>Up Next ({binItems.length})</Text>
                     <Pressable
                         onPress={() => router.push('/(tabs)/collection')}
-                        style={styles.browseLink}
+                        style={styles.browseButton}
                     >
-                        <Ionicons name="add-circle" size={16} color={THEME.colors.primary} />
-                        <Text style={styles.browseLinkText}>Browse</Text>
+                        <Ionicons name="albums-outline" size={16} color={THEME.colors.primary} />
+                        <Text style={styles.browseButtonText}>Browse Crate</Text>
                     </Pressable>
                 </View>
             </View>
@@ -383,15 +383,21 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
-    browseLink: {
+    browseButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: 6,
+        backgroundColor: 'rgba(124, 58, 237, 0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.4)',
+        borderRadius: 20,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
     },
-    browseLinkText: {
+    browseButtonText: {
         color: THEME.colors.primary,
-        fontSize: 12,
-        fontWeight: 'bold',
+        fontSize: 13,
+        fontWeight: '600',
     },
     binListContent: {
         paddingHorizontal: THEME.spacing.md,

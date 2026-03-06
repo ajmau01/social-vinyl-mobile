@@ -2,7 +2,8 @@
 // Proprietary and confidential. Unauthorized use prohibited.
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/shallow';
 import { THEME } from '@/constants/theme';
@@ -39,6 +40,7 @@ export default function BinScreen() {
         nowPlaying: state.nowPlaying
     })));
     const { items, setBin } = useListeningBinStore();
+    const router = useRouter();
     const [infoVisible, setInfoVisible] = React.useState(false);
 
     const userItems = items;
@@ -87,7 +89,14 @@ export default function BinScreen() {
         <View testID="bin-empty-state" style={styles.emptyContainer}>
             <Ionicons name="musical-notes-outline" size={64} color={THEME.colors.textDim} />
             <Text style={styles.emptyText}>Your bin is empty</Text>
-            <Text style={styles.emptySubtext}>Add albums from your collection to start listening.</Text>
+            <Text style={styles.emptySubtext}>Browse {hostUsername ? `${hostUsername}'s` : 'the'} crate and add albums to your bin.</Text>
+            <TouchableOpacity
+                style={styles.browseButton}
+                onPress={() => router.push('/(tabs)/collection')}
+            >
+                <Ionicons name="albums-outline" size={18} color={THEME.colors.primary} />
+                <Text style={styles.browseButtonText}>Browse {hostUsername ? `${hostUsername}'s` : 'the'} Crate</Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -209,5 +218,22 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginTop: THEME.spacing.xs,
+    },
+    browseButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: THEME.spacing.lg,
+        backgroundColor: 'rgba(124, 58, 237, 0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.4)',
+        borderRadius: 24,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+    },
+    browseButtonText: {
+        color: THEME.colors.primary,
+        fontSize: 15,
+        fontWeight: '600',
     },
 });
