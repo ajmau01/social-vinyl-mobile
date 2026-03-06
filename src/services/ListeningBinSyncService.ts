@@ -162,7 +162,9 @@ class ListeningBinSyncService {
             await wsService.sendAction('remove', {
                 releaseId: itemToRemove.releaseId,
                 instanceId: itemToRemove.instanceId,
-                clientUUID: itemToRemove.clientUUID  // required for guest ownership verification
+                // clientUUID is set from bin-state sync; fall back to tempId for items
+                // that are still optimistic (added but bin-state not yet received)
+                clientUUID: itemToRemove.clientUUID || itemToRemove.tempId
             });
 
             // 3. Success (no specific confirm action needed as state is already gone)
@@ -170,8 +172,19 @@ class ListeningBinSyncService {
 
         } catch (error) {
             logger.error('[BinSync] Remove album failed', error);
-            // 4. Revert on failure
-            revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+            // On timeout: the remove may have succeeded but the ACK was lost (e.g. tunnel
+            // dropped the session after broadcastBinState). Check if bin-state already
+            // reflects the removal — if item is gone, don't revert.
+            const isTimeout = (error as Error).message?.includes('timed out');
+            if (isTimeout) {
+                const { items: currentItems } = useListeningBinStore.getState();
+                const stillInStore = currentItems.some(i => i.id === releaseId && i.userId === userId);
+                if (stillInStore) {
+                    revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+                }
+            } else {
+                revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+            }
             return { success: false, error: error as Error };
         }
     }

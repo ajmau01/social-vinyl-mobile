@@ -107,6 +107,7 @@ export const useListeningBinStore = create<ListeningBinState>()(
                             releaseId: realId,
                             instanceId: instanceId,
                             addedTimestamp: timestamp,
+                            clientUUID: tempId, // tempId IS the clientUUID sent to backend
                             tempId: undefined
                         }
                         : item
