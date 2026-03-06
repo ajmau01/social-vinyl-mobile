@@ -222,7 +222,7 @@ class ListeningBinSyncService {
         // Could implement optimistic clear if needed for responsiveness.
 
         try {
-            await wsService.sendAction('clear-bin', {});
+            await wsService.sendAction('clear', {});
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Clear bin failed', error);
