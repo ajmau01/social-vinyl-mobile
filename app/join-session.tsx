@@ -128,8 +128,8 @@ export default function JoinSessionScreen() {
             if (result.success) {
                 // NB-2: Clear join code on success
                 setStoreJoinCode(null);
-                // Success - navigate to bin (Guests have no collection)
-                router.replace('/(tabs)/bin');
+                // Success - navigate to collection so guests start browsing
+                router.replace('/(tabs)/collection');
             } else {
                 setError(result.error?.message || 'Failed to join party. Please check the code and try again.');
                 setShowJoinModal(true);

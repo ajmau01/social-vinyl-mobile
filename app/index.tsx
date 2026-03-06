@@ -90,7 +90,7 @@ export default function WelcomeScreen() {
                     const result = await sessionService.joinSession(familyPassCode, displayName);
                     if (result.success) {
                         useListeningBinStore.getState().clearBin();
-                        router.replace('/(tabs)/bin');
+                        router.replace('/(tabs)/collection');
                     } else {
                         useSessionStore.getState().setFamilyPassCode(null);
                     }
@@ -241,7 +241,7 @@ export default function WelcomeScreen() {
                     }
 
                     useListeningBinStore.getState().clearBin(); // Issue #126: Clear old data
-                    router.replace('/(tabs)/bin');
+                    router.replace('/(tabs)/collection');
                 } else {
                     setError(result.error.message || 'Failed to join party');
                 }
