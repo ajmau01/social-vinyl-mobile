@@ -20,6 +20,7 @@ import { NowPlayingHero } from '@/components/NowPlayingHero';
 export default function BinScreen() {
     const {
         username,
+        displayName,
         hostUsername,
         sessionId,
         sessionName,
@@ -30,6 +31,7 @@ export default function BinScreen() {
         nowPlaying
     } = useSessionStore(useShallow(state => ({
         username: state.username,
+        displayName: state.displayName,
         hostUsername: state.hostUsername,
         sessionId: state.sessionId,
         sessionName: state.sessionName,
@@ -39,6 +41,8 @@ export default function BinScreen() {
         isPermanent: state.isPermanent,
         nowPlaying: state.nowPlaying
     })));
+    // Guests identify by displayName (e.g. "Guest-1234"); hosts by username
+    const effectiveUserId = username || displayName;
     const { items, setBin } = useListeningBinStore();
     const router = useRouter();
     const [infoVisible, setInfoVisible] = React.useState(false);
@@ -46,7 +50,7 @@ export default function BinScreen() {
     const userItems = items;
 
     const handleRemove = (item: BinItemType) => {
-        if (!username) return;
+        if (!effectiveUserId) return;
         Alert.alert(
             'Remove Album',
             `Are you sure you want to remove "${item.title}" from your Listening Bin?`,
@@ -62,7 +66,7 @@ export default function BinScreen() {
     };
 
     const handleClear = () => {
-        if (!username) return;
+        if (!effectiveUserId) return;
         Alert.alert(
             'Clear Bin',
             'Are you sure you want to clear all albums from your Listening Bin?',
@@ -78,8 +82,10 @@ export default function BinScreen() {
     };
 
     const onDragEnd = async (data: BinItemType[]) => {
-        const otherItems = items.filter(item => item.userId !== username);
-        setBin([...otherItems, ...data]);
+        // Guests and voyeurs cannot reorder — reorder is a host-only operation
+        if (sessionRole === 'guest' || sessionRole === 'voyeur') return;
+        // data is the complete reordered list from DraggableFlatList — use it directly
+        setBin(data);
 
         const ids = data.map(item => item.id);
         await listeningBinSyncService.reorderAlbums(ids);
@@ -120,7 +126,7 @@ export default function BinScreen() {
                                 <Ionicons name="information-circle-outline" size={24} color={THEME.colors.primary} />
                             </Pressable>
                         )}
-                        {userItems.length > 0 && (
+                        {(sessionRole === 'host' || !sessionId) && userItems.length > 0 && (
                             <Pressable testID="bin-clear-button" onPress={handleClear} style={styles.headerButton}>
                                 <Text style={styles.clearButtonText}>Clear All</Text>
                             </Pressable>
@@ -130,14 +136,14 @@ export default function BinScreen() {
 
                 <BinList
                     items={userItems}
-                    username={username}
+                    username={effectiveUserId}
                     hostUsername={hostUsername}
                     onRemove={handleRemove}
                     onDragEnd={onDragEnd}
                     contentContainerStyle={styles.listContent}
                     emptyComponent={emptyComponent}
                     ListHeaderComponent={
-                        sessionId ? (
+                        sessionId && nowPlaying ? (
                             <NowPlayingHero
                                 nowPlaying={nowPlaying}
                             />
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: THEME.spacing.md,
-        paddingBottom: THEME.layout.tabBarHeight + 40,
+        paddingBottom: THEME.layout.tabBarHeight + 140, // clears tab bar + NowPlayingBanner
     },
     emptyContainer: {
         flex: 1,

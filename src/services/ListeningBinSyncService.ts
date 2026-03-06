@@ -68,7 +68,9 @@ class ListeningBinSyncService {
                 // Use instanceId as frontendId for stability
                 frontendId: item.instanceId
                     ? item.instanceId.toString()
-                    : `${item.releaseId}-${item.addedTimestamp}-${index}`
+                    : `${item.releaseId}-${item.addedTimestamp}-${index}`,
+                // Explicit mapping — backend broadcasts this for ownership verification on remove
+                clientUUID: item.clientUUID
             };
         });
 
@@ -138,19 +140,23 @@ class ListeningBinSyncService {
      * Removes an album from the bin with optimistic update
      */
     public async removeAlbum(releaseId: number): Promise<Result<void>> {
-        const { username, displayName } = useSessionStore.getState();
-        const userId = username || displayName;
+        const { username, displayName, sessionRole } = useSessionStore.getState();
+        const callerUserId = username || displayName;
         const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
 
-        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (!callerUserId) return { success: false, error: new Error('User not logged in') };
 
-        // Find item by id (works for both Discogs releaseId and instanceId after confirmAdd).
+        // Find item by id. Hosts can remove any item; guests/others only their own.
         // Note: callers should pass item.id, not the Discogs release ID, since after
         // confirmAdd item.id is set to instanceId.
-        const itemToRemove = items.find(i =>
-            (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
-        );
+        const itemToRemove = sessionRole === 'host'
+            ? items.find(i => i.id === releaseId || i.releaseId === releaseId)
+            : items.find(i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === callerUserId);
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
+
+        // Use the item's own userId for store scoping (host may be removing a guest's item).
+        // Use != null (not ||) to preserve empty string userId for items whose owner resolved to "".
+        const userId = itemToRemove.userId != null ? itemToRemove.userId : callerUserId;
 
         // 1. Optimistic Update
         removeAlbumOptimistic(releaseId, userId);
@@ -159,7 +165,10 @@ class ListeningBinSyncService {
             // 2. Send Action
             await wsService.sendAction('remove', {
                 releaseId: itemToRemove.releaseId,
-                instanceId: itemToRemove.instanceId
+                instanceId: itemToRemove.instanceId,
+                // clientUUID is set from bin-state sync; fall back to tempId for items
+                // that are still optimistic (added but bin-state not yet received)
+                clientUUID: itemToRemove.clientUUID || itemToRemove.tempId
             });
 
             // 3. Success (no specific confirm action needed as state is already gone)
@@ -167,8 +176,21 @@ class ListeningBinSyncService {
 
         } catch (error) {
             logger.error('[BinSync] Remove album failed', error);
-            // 4. Revert on failure
-            revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+            // On timeout: the remove may have succeeded but the ACK was lost (e.g. tunnel
+            // dropped the session after broadcastBinState). Check if bin-state already
+            // reflects the removal — if item is gone, don't revert.
+            const isTimeout = (error as Error).message?.includes('timed out');
+            if (isTimeout) {
+                const { items: currentItems } = useListeningBinStore.getState();
+                const stillInStore = currentItems.some(
+                    i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+                );
+                if (stillInStore) {
+                    revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+                }
+            } else {
+                revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
+            }
             return { success: false, error: error as Error };
         }
     }
@@ -195,14 +217,12 @@ class ListeningBinSyncService {
      * Clears all albums from the bin
      */
     public async clearBin(): Promise<Result<void>> {
-        const { username: userId } = useSessionStore.getState();
-
         // No optimistic update for clear yet, relying on server state push
         // to avoid complex revert logic for many items. 
         // Could implement optimistic clear if needed for responsiveness.
 
         try {
-            await wsService.sendAction('clear-bin', {});
+            await wsService.sendAction('clear', {});
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Clear bin failed', error);
