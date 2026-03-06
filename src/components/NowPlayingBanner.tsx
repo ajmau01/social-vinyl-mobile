@@ -224,9 +224,9 @@ const styles = StyleSheet.create({
     },
     artworkWrapper: {
         position: 'absolute',
-        width: 32,
-        height: 32,
-        borderRadius: 4, // Square with rounded corners
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         overflow: 'hidden',
         backgroundColor: THEME.colors.surfaceLight,
     },
