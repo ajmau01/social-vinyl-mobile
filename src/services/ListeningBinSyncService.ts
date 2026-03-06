@@ -140,19 +140,22 @@ class ListeningBinSyncService {
      * Removes an album from the bin with optimistic update
      */
     public async removeAlbum(releaseId: number): Promise<Result<void>> {
-        const { username, displayName } = useSessionStore.getState();
-        const userId = username || displayName;
+        const { username, displayName, sessionRole } = useSessionStore.getState();
+        const callerUserId = username || displayName;
         const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
 
-        if (!userId) return { success: false, error: new Error('User not logged in') };
+        if (!callerUserId) return { success: false, error: new Error('User not logged in') };
 
-        // Find item by id (works for both Discogs releaseId and instanceId after confirmAdd).
+        // Find item by id. Hosts can remove any item; guests/others only their own.
         // Note: callers should pass item.id, not the Discogs release ID, since after
         // confirmAdd item.id is set to instanceId.
-        const itemToRemove = items.find(i =>
-            (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
-        );
+        const itemToRemove = sessionRole === 'host'
+            ? items.find(i => i.id === releaseId || i.releaseId === releaseId)
+            : items.find(i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === callerUserId);
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
+
+        // Use the item's own userId for store scoping (host may be removing a guest's item)
+        const userId = itemToRemove.userId || callerUserId;
 
         // 1. Optimistic Update
         removeAlbumOptimistic(releaseId, userId);

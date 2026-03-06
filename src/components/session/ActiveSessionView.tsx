@@ -99,6 +99,21 @@ export const ActiveSessionView = () => {
         await listeningBinSyncService.stopPlayback();
     };
 
+    const handleClearBin = () => {
+        Alert.alert(
+            'Clear Bin',
+            'Remove all albums from the listening queue?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: () => listeningBinSyncService.clearBin()
+                }
+            ]
+        );
+    };
+
     const isSpinning = useMemo(() => {
         if (!nowPlaying?.position || !nowPlaying?.duration) return false;
         return nowPlaying.position > 0 && nowPlaying.position < (nowPlaying.duration * 0.99);
@@ -114,6 +129,7 @@ export const ActiveSessionView = () => {
                 'Share Join Code',
                 'Share QR Code',
                 'Stop Current',
+                'Clear Bin',
                 'Leave Session',
             ];
             if (isPartyHost) options.push('End Session');
@@ -139,6 +155,8 @@ export const ActiveSessionView = () => {
                         handleShare();
                     } else if (label === 'Stop Current') {
                         handleStopPlayback();
+                    } else if (label === 'Clear Bin') {
+                        handleClearBin();
                     } else if (label === 'Leave Session') {
                         handleLeaveSession();
                     } else if (label === 'End Session') {
@@ -153,6 +171,7 @@ export const ActiveSessionView = () => {
             const buttons: any[] = [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Stop Current', onPress: handleStopPlayback },
+                { text: 'Clear Bin', style: 'destructive', onPress: handleClearBin },
                 { text: 'Leave Session', style: 'destructive', onPress: handleLeaveSession },
             ];
             if (isPartyHost) {
