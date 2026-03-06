@@ -5,8 +5,11 @@ import React, { useEffect } from 'react';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
     useAnimatedProps,
+    useAnimatedStyle,
     useSharedValue,
     withTiming,
+    withRepeat,
+    cancelAnimation,
     Easing,
 } from 'react-native-reanimated';
 import { COLORS } from '../constants/theme';
@@ -33,7 +36,10 @@ interface ProgressRingProps {
  * Fallback path: when playedAt is unavailable, advances to the server-reported
  * position on each prop update.
  *
- * Both paths use withTiming(1100ms) for a CSS-transition-like smooth advance,
+ * Indeterminate path: when duration is 0 (no Discogs tracklist data), spins
+ * continuously so the ring still provides visual feedback that playback is active.
+ *
+ * Both timed paths use withTiming(1100ms) for a CSS-transition-like smooth advance,
  * just as the webapp uses `transition: stroke-dashoffset 1s linear`.
  */
 export const ProgressRing: React.FC<ProgressRingProps> = ({
@@ -57,6 +63,22 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     };
 
     const animatedProgress = useSharedValue(getInitialProgress());
+    const spinDeg = useSharedValue(0);
+
+    // Indeterminate spinner: when duration is unknown, rotate continuously.
+    useEffect(() => {
+        if (duration) {
+            cancelAnimation(spinDeg);
+            spinDeg.value = 0;
+        } else {
+            spinDeg.value = 0;
+            spinDeg.value = withRepeat(
+                withTiming(360, { duration: 1500, easing: Easing.linear }),
+                -1,
+                false
+            );
+        }
+    }, [duration]);
 
     // Primary: clock-based setInterval — mirrors webapp's startProgressTimer.
     // Recalculates from playedAt every second so the ring advances continuously
@@ -88,35 +110,45 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
     }, [position, duration, playedAt]);
 
     const animatedProps = useAnimatedProps(() => {
+        if (!duration) {
+            // Indeterminate: fixed arc of ~1/3 circumference
+            return { strokeDashoffset: circumference * 0.67 };
+        }
         const clampedProgress = Math.min(Math.max(animatedProgress.value, 0), 1);
         const strokeDashoffset = circumference * (1 - clampedProgress);
         return { strokeDashoffset };
     });
 
+    const spinStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: `${spinDeg.value}deg` }],
+    }));
+
     return (
-        <Svg width={size} height={size}>
-            {/* Background Circle */}
-            <Circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke={backgroundColor}
-                strokeWidth={strokeWidth}
-                fill="none"
-            />
-            {/* Animated Progress Circle */}
-            <AnimatedCircle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke={color}
-                strokeWidth={strokeWidth}
-                strokeDasharray={`${circumference} ${circumference}`}
-                animatedProps={animatedProps}
-                strokeLinecap="round"
-                fill="none"
-                transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            />
-        </Svg>
+        <Animated.View style={[{ width: size, height: size }, !duration && spinStyle]}>
+            <Svg width={size} height={size}>
+                {/* Background Circle */}
+                <Circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke={backgroundColor}
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                />
+                {/* Animated Progress Circle */}
+                <AnimatedCircle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke={color}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={`${circumference} ${circumference}`}
+                    animatedProps={animatedProps}
+                    strokeLinecap="round"
+                    fill="none"
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+            </Svg>
+        </Animated.View>
     );
 };

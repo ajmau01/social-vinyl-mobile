@@ -83,8 +83,8 @@ export const NowPlayingBanner: React.FC = () => {
                     {/* Left: Progress + Artwork */}
                     <View style={styles.artworkContainer}>
                         <ProgressRing
-                            size={46}
-                            strokeWidth={3}
+                            size={62}
+                            strokeWidth={2}
                             position={nowPlaying?.position || 0}
                             duration={nowPlaying?.duration || 0}
                             playedAt={nowPlaying?.playedAt}
@@ -217,16 +217,16 @@ const styles = StyleSheet.create({
     },
     artworkContainer: {
         position: 'relative',
-        width: 46,
-        height: 46,
+        width: 62,
+        height: 62,
         alignItems: 'center',
         justifyContent: 'center',
     },
     artworkWrapper: {
         position: 'absolute',
-        width: 32,
-        height: 32,
-        borderRadius: 4, // Square with rounded corners
+        width: 58,
+        height: 58,
+        borderRadius: 29,
         overflow: 'hidden',
         backgroundColor: THEME.colors.surfaceLight,
     },
