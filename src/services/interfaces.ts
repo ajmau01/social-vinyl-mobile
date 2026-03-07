@@ -25,6 +25,8 @@ import {
     WantListItem
 } from '@/types';
 
+import { WsAction } from './wsActions';
+
 /**
  * WebSocket Service Interface
  * Manages WebSocket connections and authentication
@@ -38,7 +40,7 @@ export interface IWebSocketService {
     login(username: string, password: string): AsyncResult<LoginResult>;
     register(username: string, password: string): AsyncResult<LoginResult>;
     linkDiscogs(discogsUsername: string, discogsToken: string): AsyncResult<{ discogsUsername: string; avatarUrl?: string }>;
-    sendAction<T = any>(action: string, payload?: any): Promise<T>;
+    sendAction<T = any>(action: WsAction | string, payload?: any): Promise<T>;
 }
 
 /**
