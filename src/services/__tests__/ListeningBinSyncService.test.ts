@@ -7,7 +7,6 @@ import { WS_ACTIONS } from '../wsActions';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release, BinItem } from '@/types';
-import { WS_ACTIONS } from '../wsActions';
 
 // Mock Dependencies
 jest.mock('../WebSocketService', () => ({
