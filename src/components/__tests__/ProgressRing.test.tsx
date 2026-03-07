@@ -6,16 +6,36 @@ import { render } from '@testing-library/react-native';
 import { ProgressRing } from '../ProgressRing';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
-// Mock reanimated
+// Mock react-native-svg (native module unavailable in Jest environment)
+jest.mock('react-native-svg', () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    const Svg = ({ children }: any) => React.createElement(View, {}, children);
+    const Circle = (_props: any) => React.createElement(View, {});
+    return { __esModule: true, default: Svg, Circle };
+});
+
+// Mock reanimated — complete standalone mock (avoids jest.requireActual conflicts with
+// the global require('react-native-reanimated/mock') in jest.setup.js).
 jest.mock('react-native-reanimated', () => {
-    const ActualReanimated = jest.requireActual('react-native-reanimated');
+    const React = require('react');
+    const { View } = require('react-native');
     return {
-        ...ActualReanimated,
-        withTiming: jest.fn((val, _config) => val),
-        useSharedValue: jest.fn((val) => ({ value: val })),
-        useAnimatedProps: jest.fn((_cb) => ({})),
+        __esModule: true,
+        default: {
+            createAnimatedComponent: (comp: any) => comp,
+            View: ({ children, style }: any) => React.createElement(View, { style }, children),
+        },
+        withTiming: jest.fn((val: any, _config?: any) => val),
+        withRepeat: jest.fn((val: any) => val),
+        cancelAnimation: jest.fn(),
+        useSharedValue: jest.fn((val: any) => ({ value: val })),
+        useAnimatedProps: jest.fn((_cb: any) => ({})),
+        useAnimatedStyle: jest.fn((_cb: any) => ({})),
         Easing: {
-            linear: jest.fn(),
+            linear: jest.fn((x: any) => x),
+            bezier: jest.fn(),
+            inOut: jest.fn((fn: any) => fn),
         },
     };
 });
