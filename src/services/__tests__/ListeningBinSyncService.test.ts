@@ -6,6 +6,7 @@ import { wsService } from '../WebSocketService';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release, BinItem } from '@/types';
+import { WS_ACTIONS } from '../wsActions';
 
 // Mock Dependencies
 jest.mock('../WebSocketService', () => ({
@@ -78,13 +79,12 @@ describe('ListeningBinSyncService', () => {
     // Test 1: clearBin sends the correct WS action name
     // Regression: 'clear-bin' was shipped; backend expects 'clear'
     // ────────────────────────────────────────────────────────────
-    it('clearBin sends action "clear" (not "clear-bin")', async () => {
+    it('clearBin sends action WS_ACTIONS.CLEAR', async () => {
         (wsService.sendAction as jest.Mock).mockResolvedValue(undefined);
 
         await listeningBinSyncService.clearBin();
 
-        expect(wsService.sendAction).toHaveBeenCalledWith('clear', expect.anything());
-        expect(wsService.sendAction).not.toHaveBeenCalledWith('clear-bin', expect.anything());
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.CLEAR, expect.anything());
     });
 
     // ────────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ describe('ListeningBinSyncService', () => {
         expect(result.success).toBe(true);
         // Optimistic remove scoped to guest's userId (not host's)
         expect(removeAlbumOptimistic).toHaveBeenCalledWith(1601, 'Guest-1234');
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REMOVE, expect.objectContaining({
             releaseId: 9999,
         }));
     });
@@ -142,7 +142,7 @@ describe('ListeningBinSyncService', () => {
 
         await listeningBinSyncService.removeAlbum(1601);
 
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REMOVE, expect.objectContaining({
             clientUUID: 'test-client-uuid',
         }));
     });
@@ -196,7 +196,7 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(mockActions.addAlbumOptimistic).toHaveBeenCalledWith(mockRelease, 'testuser', expect.any(String));
-        expect(wsService.sendAction).toHaveBeenCalledWith('add', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.ADD, expect.objectContaining({
             album: expect.objectContaining({
                 releaseId: 1,
                 title: 'Test Album',
@@ -235,7 +235,7 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(mockActions.removeAlbumOptimistic).toHaveBeenCalledWith(1, 'testuser');
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REMOVE, expect.objectContaining({
             instanceId: 101,
         }));
     });
@@ -267,7 +267,7 @@ describe('ListeningBinSyncService', () => {
         const result = await listeningBinSyncService.reorderAlbums([1, 2, 3]);
 
         expect(result.success).toBe(true);
-        expect(wsService.sendAction).toHaveBeenCalledWith('reorder', {
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REORDER, {
             instanceIds: [1, 2, 3]
         });
     });
