@@ -98,7 +98,7 @@ export default function AccountLoginScreen() {
                         <Text style={styles.subtitle}>{COPY.HUB_HOST_TITLE}</Text>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Discogs Username</Text>
+                            <Text style={styles.label}>Username</Text>
                             <TextInput
                                 testID="login-input"
                                 style={styles.input}

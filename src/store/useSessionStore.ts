@@ -253,6 +253,8 @@ export const useSessionStore = create<SessionState>()(
                 sessionStartTime: state.sessionStartTime,
                 discogsLinked: state.discogsLinked,
                 discogsUsername: state.discogsUsername,
+                // email persisted so verify-email screen survives app restart before verification.
+                // AsyncStorage is unencrypted; email is treated as low-sensitivity PII here.
                 email: state.email,
                 emailVerified: state.emailVerified
             }),

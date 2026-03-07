@@ -37,7 +37,7 @@ export default function VerifyEmailScreen() {
         const numeric = value.replace(/[^0-9]/g, '').slice(0, 6);
         setCode(numeric);
         setError(null);
-        if (numeric.length === 6) {
+        if (numeric.length === 6 && !loading) {
             submitCode(numeric);
         }
     };
@@ -50,6 +50,7 @@ export default function VerifyEmailScreen() {
         setLoading(true);
         setError(null);
         try {
+            // /api/auth/verify-email is intentionally unauthenticated — the OTP itself is the secret.
             const res = await fetch(`${CONFIG.API_URL}/api/auth/verify-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -83,7 +84,7 @@ export default function VerifyEmailScreen() {
                 body: JSON.stringify({ email }),
             });
         } catch {
-            // Ignore fetch errors — always start cooldown
+            setError('Could not send code. Try again shortly.');
         }
         setResendCooldown(30);
         setError(null);

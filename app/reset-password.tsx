@@ -7,13 +7,14 @@ import {
     ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { THEME } from '@/constants/theme';
 import { CONFIG } from '@/config';
 
 export default function ResetPasswordScreen() {
     const router = useRouter();
-    const [email, setEmail] = useState('');
+    const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+    const [email, setEmail] = useState(emailParam ?? '');
     const [code, setCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -91,7 +92,7 @@ export default function ResetPasswordScreen() {
                             <TextInput
                                 style={styles.input}
                                 value={code}
-                                onChangeText={setCode}
+                                onChangeText={(v) => setCode(v.replace(/[^0-9]/g, '').slice(0, 6))}
                                 placeholder="6-digit code"
                                 placeholderTextColor={THEME.colors.textMuted}
                                 keyboardType="number-pad"

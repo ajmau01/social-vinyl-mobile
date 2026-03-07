@@ -9,9 +9,8 @@ import { THEME } from '@/constants/theme';
 import { COPY } from '@/constants/copy';
 import { useSessionStore } from '@/store/useSessionStore';
 import { useServices } from '@/contexts/ServiceContext';
+import { validateUsername } from '@/utils/validation';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
-
-const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 export default function AccountCreateScreen() {
     const router = useRouter();
@@ -29,9 +28,9 @@ export default function AccountCreateScreen() {
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
-    const validateUsername = (value: string) => {
+    const validateUsernameInput = (value: string) => {
         if (!value.trim()) return 'Username is required';
-        if (!USERNAME_PATTERN.test(value)) return COPY.USERNAME_HINT;
+        if (!validateUsername(value)) return COPY.USERNAME_HINT;
         return null;
     };
 
@@ -55,7 +54,7 @@ export default function AccountCreateScreen() {
 
     const handleRegister = async () => {
         // Final validation pass
-        const uErr = validateUsername(username.trim());
+        const uErr = validateUsernameInput(username.trim());
         const eErr = validateEmail(email.trim());
         const pErr = password.length < 8 ? COPY.PASSWORD_HINT : null;
         const cErr = password !== confirmPassword ? 'Passwords do not match' : null;
@@ -131,13 +130,13 @@ export default function AccountCreateScreen() {
                                 value={username}
                                 onChangeText={(v) => {
                                     setUsername(v);
-                                    setUsernameError(validateUsername(v));
+                                    setUsernameError(validateUsernameInput(v));
                                 }}
                                 placeholder={COPY.USERNAME_PLACEHOLDER}
                                 placeholderTextColor={THEME.colors.textMuted}
                                 autoCapitalize="none"
                                 autoCorrect={false}
-                                maxLength={20}
+                                maxLength={30}
                             />
                             {usernameError
                                 ? <Text style={styles.fieldError}>{usernameError}</Text>
@@ -206,14 +205,15 @@ export default function AccountCreateScreen() {
                             {confirmPasswordError && <Text style={styles.fieldError}>{confirmPasswordError}</Text>}
                         </View>
 
-                        <TouchableOpacity
-                            style={styles.tosRow}
-                            onPress={() => setTosAccepted(!tosAccepted)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.checkbox, tosAccepted && styles.checkboxChecked]}>
-                                {tosAccepted && <Text style={styles.checkmark}>✓</Text>}
-                            </View>
+                        <View style={styles.tosRow}>
+                            <TouchableOpacity
+                                onPress={() => setTosAccepted(!tosAccepted)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.checkbox, tosAccepted && styles.checkboxChecked]}>
+                                    {tosAccepted && <Text style={styles.checkmark}>✓</Text>}
+                                </View>
+                            </TouchableOpacity>
                             <Text style={styles.tosText}>
                                 I agree to the{' '}
                                 <Text
@@ -223,7 +223,7 @@ export default function AccountCreateScreen() {
                                     Terms of Service
                                 </Text>
                             </Text>
-                        </TouchableOpacity>
+                        </View>
 
                         {error && <Text style={styles.errorMsg}>{error}</Text>}
 

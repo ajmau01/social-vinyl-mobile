@@ -50,7 +50,7 @@ export default function ForgotPasswordScreen() {
                     </Text>
                     <TouchableOpacity
                         style={styles.primaryButton}
-                        onPress={() => router.replace('/reset-password')}
+                        onPress={() => router.replace(`/reset-password?email=${encodeURIComponent(email.trim())}`)}
                     >
                         <Text style={styles.primaryButtonText}>Enter reset code</Text>
                     </TouchableOpacity>
