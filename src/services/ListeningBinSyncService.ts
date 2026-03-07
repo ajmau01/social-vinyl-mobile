@@ -135,9 +135,14 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Removes an album from the bin with optimistic update
+     * Removes an album from the bin with optimistic update.
+     * 
+     * @param itemId Pass `item.id` (NOT the Discogs release ID). After `confirmAdd`,
+     *   `item.id` is set to `instanceId` (a DB row ID like 1601). Passing the raw
+     *   Discogs releaseId for a confirmed item will fail to find it in the store.
+     *   See: BinItem identity note in types/index.ts.
      */
-    public async removeAlbum(releaseId: number): Promise<Result<void>> {
+    public async removeAlbum(itemId: number): Promise<Result<void>> {
         const { username, displayName } = useSessionStore.getState();
         const userId = username || displayName;
         const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
@@ -148,12 +153,12 @@ class ListeningBinSyncService {
         // Note: callers should pass item.id, not the Discogs release ID, since after
         // confirmAdd item.id is set to instanceId.
         const itemToRemove = items.find(i =>
-            (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+            (i.id === itemId || i.releaseId === itemId) && i.userId === userId
         );
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
         // 1. Optimistic Update
-        removeAlbumOptimistic(releaseId, userId);
+        removeAlbumOptimistic(itemId, userId);
 
         try {
             // 2. Send Action

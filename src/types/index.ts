@@ -74,6 +74,12 @@ export interface NowPlaying {
 }
 
 export interface BinItem extends Release {
+    /**
+     * Identity lifecycle: `item.id` is the Discogs releaseId BEFORE `confirmAdd`,
+     * and becomes `instanceId` (backend DB row PK) AFTER `confirmAdd` or `bin-state` sync.
+     * Always use `item.id` as the store lookup key. Use `item.releaseId` for Discogs API calls.
+     * See: ListeningBinSyncService.removeAlbum JSDoc.
+     */
     addedTimestamp: number;
     // Issue #126: Sync status for optimistic updates
     status?: 'synced' | 'pending' | 'error';
