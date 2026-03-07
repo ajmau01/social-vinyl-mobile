@@ -18,11 +18,14 @@ export default function AccountCreateScreen() {
     const { webSocketService, syncService } = useServices();
 
     const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [tosAccepted, setTosAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [usernameError, setUsernameError] = useState<string | null>(null);
+    const [emailError, setEmailError] = useState<string | null>(null);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
@@ -32,31 +35,42 @@ export default function AccountCreateScreen() {
         return null;
     };
 
+    const validateEmail = (value: string) => {
+        if (!value.trim()) return 'Email is required';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Please enter a valid email address';
+        return null;
+    };
+
     const isSubmitDisabled =
         loading ||
         !!usernameError ||
+        !!emailError ||
         !!passwordError ||
         !!confirmPasswordError ||
         !username.trim() ||
+        !email.trim() ||
         !password ||
-        !confirmPassword;
+        !confirmPassword ||
+        !tosAccepted;
 
     const handleRegister = async () => {
         // Final validation pass
         const uErr = validateUsername(username.trim());
+        const eErr = validateEmail(email.trim());
         const pErr = password.length < 8 ? COPY.PASSWORD_HINT : null;
         const cErr = password !== confirmPassword ? 'Passwords do not match' : null;
 
         setUsernameError(uErr);
+        setEmailError(eErr);
         setPasswordError(pErr);
         setConfirmPasswordError(cErr);
 
-        if (uErr || pErr || cErr) return;
+        if (uErr || eErr || pErr || cErr) return;
 
         setLoading(true);
         setError(null);
         try {
-            const result = await webSocketService.register(username.trim().toLowerCase(), password);
+            const result = await webSocketService.register(username.trim().toLowerCase(), password, email.trim());
             if (result.success) {
                 const { data } = result;
                 const loggedInId = data.userId || username.trim().toLowerCase();
@@ -64,6 +78,7 @@ export default function AccountCreateScreen() {
 
                 store.setAuthToken(data.token);
                 store.setUsername(loggedInId);
+                store.setEmail(email.trim());
 
                 if (data.sessionId) await store.setSessionId(String(data.sessionId));
                 if (data.sessionSecret) await store.setSessionSecret(data.sessionSecret);
@@ -78,7 +93,7 @@ export default function AccountCreateScreen() {
                 useSessionStore.getState().setSyncStatus('syncing');
                 useListeningBinStore.getState().clearBin();
 
-                router.replace('/link-discogs');
+                router.replace('/verify-email');
 
                 syncService.syncCollection(loggedInId, {
                     onProgress: (p) => useSessionStore.getState().setSyncProgress(p),
@@ -131,6 +146,28 @@ export default function AccountCreateScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Email</Text>
+                            <TextInput
+                                style={[styles.input, emailError ? styles.inputError : null]}
+                                value={email}
+                                onChangeText={(v) => {
+                                    setEmail(v);
+                                    setEmailError(validateEmail(v));
+                                }}
+                                onBlur={() => setEmailError(validateEmail(email))}
+                                placeholder="your@email.com"
+                                placeholderTextColor={THEME.colors.textMuted}
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                autoCorrect={false}
+                            />
+                            {emailError
+                                ? <Text style={styles.fieldError}>{emailError}</Text>
+                                : <Text style={styles.hint}>Used for account verification</Text>
+                            }
+                        </View>
+
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Password</Text>
                             <TextInput
                                 style={[styles.input, passwordError ? styles.inputError : null]}
@@ -168,6 +205,25 @@ export default function AccountCreateScreen() {
                             />
                             {confirmPasswordError && <Text style={styles.fieldError}>{confirmPasswordError}</Text>}
                         </View>
+
+                        <TouchableOpacity
+                            style={styles.tosRow}
+                            onPress={() => setTosAccepted(!tosAccepted)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.checkbox, tosAccepted && styles.checkboxChecked]}>
+                                {tosAccepted && <Text style={styles.checkmark}>✓</Text>}
+                            </View>
+                            <Text style={styles.tosText}>
+                                I agree to the{' '}
+                                <Text
+                                    style={styles.tosLink}
+                                    onPress={() => router.push('/tos')}
+                                >
+                                    Terms of Service
+                                </Text>
+                            </Text>
+                        </TouchableOpacity>
 
                         {error && <Text style={styles.errorMsg}>{error}</Text>}
 
@@ -256,6 +312,39 @@ const styles = StyleSheet.create({
         color: THEME.colors.status.error,
         fontSize: 12,
         marginTop: 6,
+    },
+    tosRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        gap: 12,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxChecked: {
+        backgroundColor: THEME.colors.primary,
+        borderColor: THEME.colors.primary,
+    },
+    checkmark: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    tosText: {
+        color: THEME.colors.textDim,
+        fontSize: 14,
+        flex: 1,
+    },
+    tosLink: {
+        color: THEME.colors.primary,
+        fontWeight: '600',
     },
     errorMsg: {
         color: THEME.colors.status.error,

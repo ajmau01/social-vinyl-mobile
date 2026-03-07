@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { THEME } from '@/constants/theme';
 import { COPY } from '@/constants/copy';
@@ -14,6 +14,7 @@ import { useListeningBinStore } from '@/store/useListeningBinStore';
 
 export default function AccountLoginScreen() {
     const router = useRouter();
+    const { reset } = useLocalSearchParams<{ reset?: string }>();
     const { webSocketService, syncService } = useServices();
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
@@ -86,6 +87,13 @@ export default function AccountLoginScreen() {
             >
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.formContainer}>
+                        {reset === 'success' && (
+                            <View style={styles.successBanner}>
+                                <Text style={styles.successBannerText}>
+                                    Password reset successfully. Please sign in.
+                                </Text>
+                            </View>
+                        )}
                         <Text style={styles.title}>{COPY.SIGN_IN}</Text>
                         <Text style={styles.subtitle}>{COPY.HUB_HOST_TITLE}</Text>
 
@@ -142,6 +150,14 @@ export default function AccountLoginScreen() {
                                 )}
                             </TouchableOpacity>
                         </View>
+
+                        <TouchableOpacity
+                            style={styles.forgotPasswordLink}
+                            onPress={() => router.push('/forgot-password')}
+                            disabled={loading}
+                        >
+                            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+                        </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.createAccountLink}
@@ -242,6 +258,27 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    successBanner: {
+        backgroundColor: 'rgba(34, 197, 94, 0.15)',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(34, 197, 94, 0.3)',
+    },
+    successBannerText: {
+        color: '#22c55e',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    forgotPasswordLink: {
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    forgotPasswordText: {
+        color: THEME.colors.textDim,
+        fontSize: 14,
     },
     createAccountLink: {
         marginTop: 24,

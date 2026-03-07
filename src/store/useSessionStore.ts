@@ -68,6 +68,12 @@ interface SessionState {
     setDiscogsLinked: (linked: boolean) => void;
     setDiscogsUsername: (username: string | null) => void;
 
+    // M19: Email verification
+    email: string | null;
+    emailVerified: boolean;
+    setEmail: (email: string | null) => void;
+    setEmailVerified: (verified: boolean) => void;
+
     // M18: Discogs OAuth
     pendingOAuthToken: string | null;
     setPendingOAuthToken: (token: string | null) => void;
@@ -108,6 +114,8 @@ export const useSessionStore = create<SessionState>()(
             sessionStartTime: null,
             discogsLinked: false,
             discogsUsername: null,
+            email: null,
+            emailVerified: false,
             pendingOAuthToken: null,
 
             setConnectionState: (state) => set({ connectionState: state }),
@@ -207,6 +215,8 @@ export const useSessionStore = create<SessionState>()(
             setSessionStartTime: (time) => set({ sessionStartTime: time }),
             setDiscogsLinked: (linked) => set({ discogsLinked: linked }),
             setDiscogsUsername: (username) => set({ discogsUsername: username }),
+            setEmail: (email) => set({ email }),
+            setEmailVerified: (verified) => set({ emailVerified: verified }),
             setPendingOAuthToken: (token) => set({ pendingOAuthToken: token }),
             resetSession: () => set({
                 sessionId: null,
@@ -242,7 +252,9 @@ export const useSessionStore = create<SessionState>()(
                 sessionMode: state.sessionMode,
                 sessionStartTime: state.sessionStartTime,
                 discogsLinked: state.discogsLinked,
-                discogsUsername: state.discogsUsername
+                discogsUsername: state.discogsUsername,
+                email: state.email,
+                emailVerified: state.emailVerified
             }),
         }
     )
