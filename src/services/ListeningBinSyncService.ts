@@ -2,6 +2,7 @@
 // Proprietary and confidential. Unauthorized use prohibited.
 
 import { wsService } from './WebSocketService';
+import { WS_ACTIONS } from './wsActions';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release, Result, BinItem } from '@/types';
@@ -101,7 +102,7 @@ class ListeningBinSyncService {
                 releaseId: number,
                 addedTimestamp: number,
                 instanceId?: number
-            }>('add', {
+            }>(WS_ACTIONS.ADD, {
                 album: {
                     releaseId: release.id,
                     masterId: 0, // Not currently available on mobile Release type
@@ -168,7 +169,7 @@ class ListeningBinSyncService {
 
         try {
             // 2. Send Action
-            await wsService.sendAction('remove', {
+            await wsService.sendAction(WS_ACTIONS.REMOVE, {
                 releaseId: itemToRemove.releaseId,
                 instanceId: itemToRemove.instanceId,
                 // clientUUID is set from bin-state sync; fall back to tempId for items
@@ -208,7 +209,7 @@ class ListeningBinSyncService {
         // So we just send the new order
 
         try {
-            await wsService.sendAction('reorder', {
+            await wsService.sendAction(WS_ACTIONS.REORDER, {
                 instanceIds: ids
             });
             return { success: true, data: undefined };
@@ -227,7 +228,7 @@ class ListeningBinSyncService {
         // Could implement optimistic clear if needed for responsiveness.
 
         try {
-            await wsService.sendAction('clear', {});
+            await wsService.sendAction(WS_ACTIONS.CLEAR, {});
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Clear bin failed', error);
@@ -246,7 +247,7 @@ class ListeningBinSyncService {
 
         const currentlyLiked = !!nowPlaying.userHasLiked;
         const newLikeState = !currentlyLiked;
-        const action = newLikeState ? 'like-album' : 'unlike-album';
+        const action = newLikeState ? WS_ACTIONS.LIKE : WS_ACTIONS.UNLIKE;
 
         // 1. Optimistic Update
         const originalNP = { ...nowPlaying };
@@ -289,7 +290,7 @@ class ListeningBinSyncService {
         if (!releaseId) return { success: false, error: new Error('Invalid album ID') };
 
         try {
-            await wsService.sendAction('play-album', {
+            await wsService.sendAction(WS_ACTIONS.PLAY_ALBUM, {
                 album: {
                     releaseId: Number(releaseId),
                     instanceId: album.instanceId || undefined,
@@ -317,7 +318,7 @@ class ListeningBinSyncService {
         if (userId !== hostUsername) return { success: false, error: new Error('Only the host can stop playback') };
 
         try {
-            await wsService.sendAction('stop-playback', {});
+            await wsService.sendAction(WS_ACTIONS.STOP_PLAYBACK, {});
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] Stop playback failed', error);
@@ -335,7 +336,7 @@ class ListeningBinSyncService {
         if (userId !== hostUsername) return { success: false, error: new Error('Only the host can end sessions') };
 
         try {
-            await wsService.sendAction('archive-session', {});
+            await wsService.sendAction(WS_ACTIONS.ARCHIVE, {});
             return { success: true, data: undefined };
         } catch (error) {
             logger.error('[BinSync] End session failed', error);
