@@ -260,26 +260,39 @@ describe('WebSocketService register() two-phase flow', () => {
         expect(result.data?.sessionId).toBe('99');
     });
 
-    it('fails fast when session-joined arrives with no token at all', async () => {
+    it('continues waiting when session-joined arrives with no token (local Liberty auto-join)', async () => {
+        // Open Liberty sends a tokenless session-joined on connection open before
+        // RegisterHostHandler runs. The register() promise must NOT resolve on this message —
+        // it keeps waiting for the subsequent session-joined that carries the authToken.
         const registerPromise = wsService.register('newuser', 'password123');
         const tempSocket = MockWebSocket.instances[0];
 
         tempSocket.readyState = MockWebSocket.OPEN;
         tempSocket.onopen?.();
 
-        // No access-level sent first; session-joined has no token either
         tempSocket.onmessage?.({ data: JSON.stringify({
             type: 'session-joined',
             sessionId: 1,
             joinCode: 'NOTOK'
-            // authToken intentionally absent
+            // authToken intentionally absent — simulates Liberty auto-join
         })});
 
-        const result = await registerPromise;
+        // Promise must still be pending after the tokenless message
+        let resolved = false;
+        registerPromise.then(() => { resolved = true; });
+        await Promise.resolve(); // flush microtasks
+        expect(resolved).toBe(false);
 
-        expect(result.success).toBe(false);
-        expect(result.error?.message).toContain('no auth token');
-        expect(tempSocket.close).toHaveBeenCalled();
+        // Simulate the real auth arriving — promise should now resolve
+        tempSocket.onmessage?.({ data: JSON.stringify({
+            type: 'session-joined',
+            sessionId: 1,
+            authToken: 'real-token',
+            joinCode: 'OK'
+        })});
+        const result = await registerPromise;
+        expect(result.success).toBe(true);
+        expect(result.data?.token).toBe('real-token');
     });
 
     it('resolves with error on server error message', async () => {

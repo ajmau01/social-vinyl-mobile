@@ -55,7 +55,7 @@ describe('JoinSessionScreen', () => {
 
         await waitFor(() => {
             expect(mockSessionService.joinSession).toHaveBeenCalledWith('ABCDE', 'returning_user');
-            expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/bin');
+            expect(mockRouter.replace).toHaveBeenCalledWith('/(tabs)/collection');
         });
     });
 
