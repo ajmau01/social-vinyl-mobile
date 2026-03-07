@@ -3,6 +3,7 @@
 
 import { listeningBinSyncService } from '../ListeningBinSyncService';
 import { wsService } from '../WebSocketService';
+import { WS_ACTIONS } from '../wsActions';
 import { useListeningBinStore } from '@/store/useListeningBinStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { Release, BinItem } from '@/types';
@@ -74,7 +75,7 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(mockActions.addAlbumOptimistic).toHaveBeenCalledWith(mockRelease, 'testuser', expect.any(String));
-        expect(wsService.sendAction).toHaveBeenCalledWith('add', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.ADD, expect.objectContaining({
             album: expect.objectContaining({
                 releaseId: 1,
                 title: 'Test Album',
@@ -113,7 +114,7 @@ describe('ListeningBinSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(mockActions.removeAlbumOptimistic).toHaveBeenCalledWith(1, 'testuser');
-        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REMOVE, expect.objectContaining({
             instanceId: 101,
         }));
     });
@@ -145,7 +146,7 @@ describe('ListeningBinSyncService', () => {
         const result = await listeningBinSyncService.reorderAlbums([1, 2, 3]);
 
         expect(result.success).toBe(true);
-        expect(wsService.sendAction).toHaveBeenCalledWith('reorder', {
+        expect(wsService.sendAction).toHaveBeenCalledWith(WS_ACTIONS.REORDER, {
             instanceIds: [1, 2, 3]
         });
     });
