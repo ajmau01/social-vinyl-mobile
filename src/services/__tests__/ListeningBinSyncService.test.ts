@@ -57,10 +57,132 @@ describe('ListeningBinSyncService', () => {
         items: [] as BinItem[]
     };
 
+    const mockBinItem: BinItem = {
+        ...mockRelease,
+        id: 1601,          // instanceId after confirmAdd
+        releaseId: 9999,   // Discogs release ID
+        userId: 'user1',
+        addedTimestamp: 0,
+        status: 'synced',
+        instanceId: 1601,
+        clientUUID: 'test-client-uuid',
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
         (useListeningBinStore.getState as jest.Mock).mockReturnValue(mockActions);
         (useSessionStore.getState as jest.Mock).mockReturnValue({ username: 'testuser' });
+    });
+
+    // ────────────────────────────────────────────────────────────
+    // Test 1: clearBin sends the correct WS action name
+    // Regression: 'clear-bin' was shipped; backend expects 'clear'
+    // ────────────────────────────────────────────────────────────
+    it('clearBin sends action "clear" (not "clear-bin")', async () => {
+        (wsService.sendAction as jest.Mock).mockResolvedValue(undefined);
+
+        await listeningBinSyncService.clearBin();
+
+        expect(wsService.sendAction).toHaveBeenCalledWith('clear', expect.anything());
+        expect(wsService.sendAction).not.toHaveBeenCalledWith('clear-bin', expect.anything());
+    });
+
+    // ────────────────────────────────────────────────────────────
+    // Test 3: Host can remove a guest's item by item.id
+    // Regression: host lookup was userId-gated, blocking host removes
+    // ────────────────────────────────────────────────────────────
+    it('host removeAlbum removes a guest item regardless of userId', async () => {
+        const removeAlbumOptimistic = jest.fn();
+        const revertRemove = jest.fn();
+        const guestItem: BinItem = {
+            ...mockBinItem,
+            userId: 'Guest-1234',
+        };
+
+        (useListeningBinStore.getState as jest.Mock).mockReturnValue({
+            ...mockActions,
+            items: [guestItem],
+            removeAlbumOptimistic,
+            revertRemove,
+        });
+        (useSessionStore.getState as jest.Mock).mockReturnValue({
+            username: 'hostUser',
+            displayName: null,
+            sessionRole: 'host',
+        });
+        (wsService.sendAction as jest.Mock).mockResolvedValue({});
+
+        const result = await listeningBinSyncService.removeAlbum(1601);
+
+        expect(result.success).toBe(true);
+        // Optimistic remove scoped to guest's userId (not host's)
+        expect(removeAlbumOptimistic).toHaveBeenCalledWith(1601, 'Guest-1234');
+        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+            releaseId: 9999,
+        }));
+    });
+
+    // ────────────────────────────────────────────────────────────
+    // Test 4: removeAlbum includes clientUUID in the WS payload
+    // Regression: backend uses clientUUID for ownership verification
+    // ────────────────────────────────────────────────────────────
+    it('removeAlbum sends clientUUID in the remove payload', async () => {
+        (useListeningBinStore.getState as jest.Mock).mockReturnValue({
+            ...mockActions,
+            items: [mockBinItem],
+            removeAlbumOptimistic: jest.fn(),
+            revertRemove: jest.fn(),
+        });
+        (useSessionStore.getState as jest.Mock).mockReturnValue({
+            username: 'user1',
+            displayName: null,
+            sessionRole: 'guest',
+        });
+        (wsService.sendAction as jest.Mock).mockResolvedValue({});
+
+        await listeningBinSyncService.removeAlbum(1601);
+
+        expect(wsService.sendAction).toHaveBeenCalledWith('remove', expect.objectContaining({
+            clientUUID: 'test-client-uuid',
+        }));
+    });
+
+    // ────────────────────────────────────────────────────────────
+    // Test 5: Timeout recovery — do NOT revert if item already gone
+    // Regression: single-branch stillInStore check missed items by Discogs ID
+    // Scenario: optimistic remove cleared it; bin-state confirmed it; ACK timed out
+    // ────────────────────────────────────────────────────────────
+    it('does not revert on timeout if bin-state already removed the item', async () => {
+        const revertRemove = jest.fn();
+        const removeAlbumOptimistic = jest.fn();
+
+        // First getState(): item is in store (for initial lookup + optimistic remove)
+        // Second getState(): item is gone (bin-state sync arrived and cleared it)
+        (useListeningBinStore.getState as jest.Mock)
+            .mockReturnValueOnce({
+                ...mockActions,
+                items: [mockBinItem],
+                removeAlbumOptimistic,
+                revertRemove,
+            })
+            .mockReturnValue({
+                ...mockActions,
+                items: [],   // bin-state has already cleared the item
+                removeAlbumOptimistic,
+                revertRemove,
+            });
+
+        (useSessionStore.getState as jest.Mock).mockReturnValue({
+            username: 'user1',
+            displayName: null,
+            sessionRole: 'guest',
+        });
+        (wsService.sendAction as jest.Mock).mockRejectedValue(new Error('Action remove timed out'));
+
+        await listeningBinSyncService.removeAlbum(1601);
+
+        // Item is already gone — should NOT revert
+        expect(revertRemove).not.toHaveBeenCalled();
     });
 
     it('should add album successfully', async () => {

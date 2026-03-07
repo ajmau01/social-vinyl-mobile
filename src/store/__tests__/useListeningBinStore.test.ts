@@ -68,6 +68,27 @@ describe('useListeningBinStore', () => {
         }));
     });
 
+    // ────────────────────────────────────────────────────────────
+    // Test 2: confirmAdd preserves clientUUID (= tempId sent to backend)
+    // Regression: clientUUID was cleared during confirmAdd, breaking remove ownership
+    // ────────────────────────────────────────────────────────────
+    it('confirmAdd sets clientUUID equal to tempId and clears tempId', () => {
+        const { result } = renderHook(() => useListeningBinStore());
+
+        act(() => {
+            result.current.addAlbumOptimistic(mockRelease, 'user1', 'test-uuid-123');
+        });
+
+        act(() => {
+            result.current.confirmAdd('test-uuid-123', 9999, Date.now(), 1601);
+        });
+
+        const item = result.current.items[0];
+        expect(item.clientUUID).toBe('test-uuid-123');  // preserved
+        expect(item.tempId).toBeUndefined();             // cleared
+        expect(item.id).toBe(1601);                      // instanceId after confirm
+    });
+
     it('should revert optimistic add', () => {
         const { result } = renderHook(() => useListeningBinStore());
 

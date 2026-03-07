@@ -138,9 +138,14 @@ class ListeningBinSyncService {
     }
 
     /**
-     * Removes an album from the bin with optimistic update
+     * Removes an album from the bin with optimistic update.
+     * 
+     * @param itemId Pass `item.id` (NOT the Discogs release ID). After `confirmAdd`,
+     *   `item.id` is set to `instanceId` (a DB row ID like 1601). Passing the raw
+     *   Discogs releaseId for a confirmed item will fail to find it in the store.
+     *   See: BinItem identity note in types/index.ts.
      */
-    public async removeAlbum(releaseId: number): Promise<Result<void>> {
+    public async removeAlbum(itemId: number): Promise<Result<void>> {
         const { username, displayName, sessionRole } = useSessionStore.getState();
         const callerUserId = username || displayName;
         const { removeAlbumOptimistic, items, revertRemove } = useListeningBinStore.getState();
@@ -151,8 +156,8 @@ class ListeningBinSyncService {
         // Note: callers should pass item.id, not the Discogs release ID, since after
         // confirmAdd item.id is set to instanceId.
         const itemToRemove = sessionRole === 'host'
-            ? items.find(i => i.id === releaseId || i.releaseId === releaseId)
-            : items.find(i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === callerUserId);
+            ? items.find(i => i.id === itemId || i.releaseId === itemId)
+            : items.find(i => (i.id === itemId || i.releaseId === itemId) && i.userId === callerUserId);
         if (!itemToRemove) return { success: false, error: new Error('Item not found in bin') };
 
         // Use the item's own userId for store scoping (host may be removing a guest's item).
@@ -160,7 +165,7 @@ class ListeningBinSyncService {
         const userId = itemToRemove.userId != null ? itemToRemove.userId : callerUserId;
 
         // 1. Optimistic Update
-        removeAlbumOptimistic(releaseId, userId);
+        removeAlbumOptimistic(itemId, userId);
 
         try {
             // 2. Send Action
@@ -184,7 +189,7 @@ class ListeningBinSyncService {
             if (isTimeout) {
                 const { items: currentItems } = useListeningBinStore.getState();
                 const stillInStore = currentItems.some(
-                    i => (i.id === releaseId || i.releaseId === releaseId) && i.userId === userId
+                    i => (i.id === itemId || i.releaseId === itemId) && i.userId === userId
                 );
                 if (stillInStore) {
                     revertRemove(itemToRemove, userId, itemToRemove.addedTimestamp);
