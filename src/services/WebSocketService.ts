@@ -260,7 +260,7 @@ class WebSocketService implements IWebSocketService {
      * Registers a new host account using an isolated temporary WebSocket connection.
      * Mirrors the login() pattern exactly — separate socket, same LoginResult shape.
      */
-    public async register(username: string, password: string): AsyncResult<LoginResult> {
+    public async register(username: string, password: string, email: string): AsyncResult<LoginResult> {
         return new Promise((resolve) => {
             const tempSocket = new WebSocket(CONFIG.WS_URL + `?username=${username}&admin=true`);
             const timeout = setTimeout(() => {
@@ -272,7 +272,8 @@ class WebSocketService implements IWebSocketService {
                 tempSocket.send(JSON.stringify({
                     action: 'register-host',
                     username,
-                    password
+                    password,
+                    email
                 }));
             };
 
