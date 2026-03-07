@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     forgotPasswordText: {
-        color: THEME.colors.textDim,
+        color: THEME.colors.primary,
         fontSize: 14,
     },
     createAccountLink: {

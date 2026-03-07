@@ -143,6 +143,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
+        alignSelf: 'stretch',
         marginTop: 8,
     },
     primaryButtonDisabled: { opacity: 0.5 },
